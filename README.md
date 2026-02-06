@@ -67,7 +67,7 @@ pintu-backend/
 ### 1. Clone/Download Project
 
 ```bash
-cd c:/DATA/SISTEM\ SEKOLAH/PINTU/pintu-backend
+git clone https://github.com/SDN-Sukapura-01-Jakarta-Utara/pintu-backend.git
 ```
 
 ### 2. Install Dependencies
