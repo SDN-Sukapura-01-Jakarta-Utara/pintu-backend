@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      - GIN_MODE=release
+      - PORT=8080
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-pintu_db}
+      - DB_SSLMODE=disable
+    networks:
+      - pintu-network
+    restart: unless-stopped
+
+networks:
+  pintu-network:
+    driver: bridge
+
+# Note: PostgreSQL database runs on local machine or external server
+# To connect from Docker container to local PostgreSQL:
+# - Use DB_HOST=host.docker.internal (Windows/Mac)
+# - Use DB_HOST=172.17.0.1 (Linux)
