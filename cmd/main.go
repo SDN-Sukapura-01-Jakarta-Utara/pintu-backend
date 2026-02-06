@@ -30,6 +30,14 @@ func main() {
 		generateController(args)
 	case "generate:dto":
 		generateDTO(args)
+	case "migrate:up":
+		migrateUp(args)
+	case "migrate:file":
+		migrateFile(args)
+	case "seed:run":
+		seedRun(args)
+	case "seed:specific":
+		seedSpecific(args)
 	default:
 		fmt.Printf("Unknown command: %s\n\n", command)
 		printUsage()
@@ -50,14 +58,22 @@ Commands:
   generate:service <model>        Generate new service file
   generate:controller <model>     Generate new controller file
   generate:dto <name>             Generate new DTO file
+  migrate:up                      Run all migrations
+  migrate:file <filename>         Run specific migration file
+  seed:run                        Run all seeders
+  seed:specific <seeder>          Run specific seeder (permission|role|role_permission|user)
 
 Examples:
-  go run cmd/main.go generate:migration create_users_table
-  go run cmd/main.go generate:model User
-  go run cmd/main.go generate:repository User
-  go run cmd/main.go generate:service User
-  go run cmd/main.go generate:controller User
-  go run cmd/main.go generate:dto User
+  go run ./cmd generate:migration create_users_table
+  go run ./cmd generate:model User
+  go run ./cmd generate:repository User
+  go run ./cmd generate:service User
+  go run ./cmd generate:controller User
+  go run ./cmd generate:dto User
+  go run ./cmd migrate:up
+  go run ./cmd migrate:file 20260206094811_create_users_table.sql
+  go run ./cmd seed:run
+  go run ./cmd seed:specific permission
 	`)
 }
 
@@ -181,7 +197,7 @@ func generateDTO(args []string) {
 
 	if fs.NArg() == 0 {
 		fmt.Println("Error: DTO name required")
-		fmt.Println("Usage: go run cmd/main.go generate:dto <name>")
+		fmt.Println("Usage: go run ./cmd generate:dto <name>")
 		return
 	}
 
@@ -192,4 +208,57 @@ func generateDTO(args []string) {
 	}
 
 	fmt.Printf("DTO file created: src/dtos/%s_dto.go\n", toLowerFirst(name))
+}
+
+func migrateUp(args []string) {
+	if err := runMigrations(); err != nil {
+		fmt.Printf("Error running migrations: %v\n", err)
+		return
+	}
+	fmt.Println("All migrations completed successfully!")
+}
+
+func seedRun(args []string) {
+	if err := runSeeders(); err != nil {
+		fmt.Printf("Error running seeders: %v\n", err)
+		return
+	}
+	fmt.Println("All seeders completed successfully!")
+}
+
+func migrateFile(args []string) {
+	fs := flag.NewFlagSet("migrate:file", flag.ExitOnError)
+	fs.Parse(args)
+
+	if fs.NArg() == 0 {
+		fmt.Println("Error: Migration filename required")
+		fmt.Println("Usage: go run ./cmd migrate:file <filename>")
+		return
+	}
+
+	filename := fs.Arg(0)
+	if err := runMigrationFile(filename); err != nil {
+		fmt.Printf("Error running migration: %v\n", err)
+		return
+	}
+	fmt.Printf("Migration %s completed successfully!\n", filename)
+}
+
+func seedSpecific(args []string) {
+	fs := flag.NewFlagSet("seed:specific", flag.ExitOnError)
+	fs.Parse(args)
+
+	if fs.NArg() == 0 {
+		fmt.Println("Error: Seeder name required")
+		fmt.Println("Usage: go run ./cmd seed:specific <seeder>")
+		fmt.Println("Available seeders: permission, role, role_permission, user")
+		return
+	}
+
+	seeder := fs.Arg(0)
+	if err := runSeedSpecific(seeder); err != nil {
+		fmt.Printf("Error running seeder: %v\n", err)
+		return
+	}
+	fmt.Printf("Seeder %s completed successfully!\n", seeder)
 }

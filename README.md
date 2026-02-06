@@ -117,20 +117,100 @@ DB_SSLMODE=disable
 
 You should see `sdn_sukapura_01` in the list.
 
-#### Step 3: Run Migrations (Manual)
-
-Edit migration files in `src/database/migrations/` and run:
-
-```bash
-"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d sdn_sukapura_01 -f src/database/migrations/20260206074547_create_users_table.sql
-```
-
 ### Option 2: Using pgAdmin
 
 1. Open pgAdmin
 2. Connect to PostgreSQL server
 3. Create new database: `sdn_sukapura_01`
-4. Run migration files through pgAdmin interface
+
+## 🚀 Running Migrations & Seeders
+
+### Run All Migrations
+
+Migrations akan membuat semua tabel sesuai skema database:
+
+```bash
+go run ./cmd migrate:up
+```
+
+Migrations yang akan dijalankan (dalam urutan):
+1. `20260206094322_create_roles_table.sql` - Tabel roles
+2. `20260206094707_create_permissions_table.sql` - Tabel permissions
+3. `20260206094811_create_users_table.sql` - Tabel users
+4. `20260206094719_create_role_permissions_table.sql` - Pivot table role-permissions
+
+### Run Specific Migration
+
+Jalankan hanya migration tertentu:
+
+```bash
+# Contoh: jalankan migration tabel users
+go run ./cmd migrate:file 20260206094811_create_users_table.sql
+
+# Atau dengan nama file yang lebih pendek
+go run ./cmd migrate:file create_users_table.sql
+```
+
+### Run All Seeders
+
+Seeders akan mengisi data initial ke database:
+
+```bash
+go run ./cmd seed:run
+```
+
+Seeders yang akan dijalankan (dalam urutan):
+1. **Permissions** - Insert 32 permissions untuk berbagai modul
+2. **Roles** - Insert 2 roles: Administrator dan Kepala Sekolah
+3. **Role Permissions** - Associate permissions ke roles
+4. **Users** - Insert 2 default users:
+   - Admin: username `admin`, password `admin123`
+   - Kepala Sekolah: username `kepala_sekolah`, password `kepala123`
+
+### Run Specific Seeder
+
+Jalankan hanya seeder tertentu:
+
+```bash
+# Run permission seeder
+go run ./cmd seed:specific permission
+
+# Run role seeder
+go run ./cmd seed:specific role
+
+# Run role-permission seeder
+go run ./cmd seed:specific role_permission
+
+# Run user seeder
+go run ./cmd seed:specific user
+```
+
+Available seeders: `permission`, `role`, `role_permission`, `user`
+
+⚠️ **Important**: Change default passwords di production!
+
+### Complete Setup Flow
+
+```bash
+# 1. Create database
+"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "CREATE DATABASE sdn_sukapura_01;"
+
+# 2. Install dependencies
+go mod tidy
+
+# 3. Configure .env file
+copy .env.example .env
+# Edit .env with your database credentials
+
+# 4. Run migrations
+go run ./cmd migrate:up
+
+# 5. Run seeders
+go run ./cmd seed:run
+
+# 6. Start application
+go run main.go
+```
 
 ## 🐳 Running the Application
 
