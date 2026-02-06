@@ -4,25 +4,42 @@ import (
 	"log"
 	"os"
 
+	"pintu-backend/src/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
-	// Load environment variables
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+	// Load .env
+	godotenv.Load()
+
+	// Database connection
+	dsn := "host=" + os.Getenv("DB_HOST") +
+		" port=" + os.Getenv("DB_PORT") +
+		" user=" + os.Getenv("DB_USER") +
+		" password=" + os.Getenv("DB_PASSWORD") +
+		" dbname=" + os.Getenv("DB_NAME") +
+		" sslmode=" + os.Getenv("DB_SSLMODE")
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect database: %v", err)
 	}
 
 	// Set Gin mode
-	if os.Getenv("GIN_MODE") == "" {
-		gin.SetMode(gin.DebugMode)
-	} else {
+	if os.Getenv("GIN_MODE") != "" {
 		gin.SetMode(os.Getenv("GIN_MODE"))
 	}
 
-	// Create Gin router
+	// Create router
 	router := gin.Default()
+
+	// Health check
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 
 	// Root endpoint
 	router.GET("/", func(c *gin.Context) {
@@ -32,22 +49,17 @@ func main() {
 		})
 	})
 
-	// Health check endpoint
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status": "ok",
-		})
-	})
-
-	// Get port from environment or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	// Register routes
+	routes.RegisterPermissionRoutes(router, db)
+	routes.RegisterRoleRoutes(router, db)
+	routes.RegisterUserRoutes(router, db)
 
 	// Start server
-	log.Printf("Starting server on port %s\n", port)
-	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v\n", err)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000"
 	}
+
+	log.Printf("Server running on port %s\n", port)
+	router.Run(":" + port)
 }

@@ -33,7 +33,7 @@ COPY --from=builder /app/pintu-backend .
 COPY .env* ./
 
 # Expose port
-EXPOSE 8080
+EXPOSE 3000
 
 # Run application
 CMD ["./pintu-backend"]

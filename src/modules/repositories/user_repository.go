@@ -11,6 +11,7 @@ type UserRepository interface {
 	Create(data *models.User) error
 	GetByID(id uint) (*models.User, error)
 	GetAll() ([]models.User, error)
+	GetByUsername(username string) (*models.User, error)
 	Update(data *models.User) error
 	Delete(id uint) error
 }
@@ -32,7 +33,7 @@ func (r *UserRepositoryImpl) Create(data *models.User) error {
 // GetByID retrieves User by ID
 func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 	var data models.User
-	if err := r.db.First(&data, id).Error; err != nil {
+	if err := r.db.Preload("Role").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -41,10 +42,19 @@ func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 // GetAll retrieves all User records
 func (r *UserRepositoryImpl) GetAll() ([]models.User, error) {
 	var data []models.User
-	if err := r.db.Find(&data).Error; err != nil {
+	if err := r.db.Preload("Role").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
+}
+
+// GetByUsername retrieves user by username
+func (r *UserRepositoryImpl) GetByUsername(username string) (*models.User, error) {
+	var data models.User
+	if err := r.db.Preload("Role").Where("username = ?", username).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
 }
 
 // Update updates User record
@@ -52,7 +62,7 @@ func (r *UserRepositoryImpl) Update(data *models.User) error {
 	return r.db.Save(data).Error
 }
 
-// Delete deletes %!s(MISSING) record by ID
-func (r *%!s(MISSING)RepositoryImpl) Delete(id uint) error {
-	return r.db.Delete(&models.%!s(MISSING){}, id).Error
+// Delete deletes User record by ID
+func (r *UserRepositoryImpl) Delete(id uint) error {
+	return r.db.Delete(&models.User{}, id).Error
 }
