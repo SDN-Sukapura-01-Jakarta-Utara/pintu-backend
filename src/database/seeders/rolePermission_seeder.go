@@ -33,10 +33,8 @@ func (s *RolePermissionSeeder) Run() error {
 			PermissionNames: []string{
 				// Informasi Sekolah
 				"CREATE_INFORMASI_SEKOLAH", "READ_INFORMASI_SEKOLAH", "UPDATE_INFORMASI_SEKOLAH", "DELETE_INFORMASI_SEKOLAH",
-				// Media
-				"CREATE_MEDIA", "READ_MEDIA", "UPDATE_MEDIA", "DELETE_MEDIA",
-				// Publikasi
-				"CREATE_PUBLIKASI", "READ_PUBLIKASI", "UPDATE_PUBLIKASI", "DELETE_PUBLIKASI",
+				// Media Publikasi
+				"CREATE_MEDIA_PUBLIKASI", "READ_MEDIA_PUBLIKASI", "UPDATE_MEDIA_PUBLIKASI", "DELETE_MEDIA_PUBLIKASI",
 				// Kepegawaian
 				"CREATE_KEPEGAWAIAN", "READ_KEPEGAWAIAN", "UPDATE_KEPEGAWAIAN", "DELETE_KEPEGAWAIAN",
 				// Peserta Didik
@@ -55,9 +53,7 @@ func (s *RolePermissionSeeder) Run() error {
 				// Informasi Sekolah - Read Only
 				"READ_INFORMASI_SEKOLAH",
 				// Media - Read Only
-				"READ_MEDIA",
-				// Publikasi - Read Only
-				"READ_PUBLIKASI",
+				"READ_MEDIA_PUBLIKASI",
 				// Kepegawaian - Read Only
 				"READ_KEPEGAWAIAN",
 				// Peserta Didik - Read Only

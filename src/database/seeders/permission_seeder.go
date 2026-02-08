@@ -37,16 +37,10 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "DELETE_INFORMASI_SEKOLAH", Description: "Delete school information", GroupName: "INFORMASI_SEKOLAH", System: "PINTU"},
 
 		// Media
-		{Name: "CREATE_MEDIA", Description: "Create media", GroupName: "MEDIA", System: "PINTU"},
-		{Name: "READ_MEDIA", Description: "Read media", GroupName: "MEDIA", System: "PINTU"},
-		{Name: "UPDATE_MEDIA", Description: "Update media", GroupName: "MEDIA", System: "PINTU"},
-		{Name: "DELETE_MEDIA", Description: "Delete media", GroupName: "MEDIA", System: "PINTU"},
-
-		// Publikasi
-		{Name: "CREATE_PUBLIKASI", Description: "Create publication", GroupName: "PUBLIKASI", System: "PINTU"},
-		{Name: "READ_PUBLIKASI", Description: "Read publication", GroupName: "PUBLIKASI", System: "PINTU"},
-		{Name: "UPDATE_PUBLIKASI", Description: "Update publication", GroupName: "PUBLIKASI", System: "PINTU"},
-		{Name: "DELETE_PUBLIKASI", Description: "Delete publication", GroupName: "PUBLIKASI", System: "PINTU"},
+		{Name: "CREATE_MEDIA_PUBLIKASI", Description: "Create media & publikasi", GroupName: "MEDIA_PUBLIKASI", System: "PINTU"},
+		{Name: "READ_MEDIA_PUBLIKASI", Description: "Read media & publikasi", GroupName: "MEDIA_PUBLIKASI", System: "PINTU"},
+		{Name: "UPDATE_MEDIA_PUBLIKASI", Description: "Update media & publikasi", GroupName: "MEDIA_PUBLIKASI", System: "PINTU"},
+		{Name: "DELETE_MEDIA_PUBLIKASI", Description: "Delete media & publikasi", GroupName: "MEDIA_PUBLIKASI", System: "PINTU"},
 
 		// Kepegawaian
 		{Name: "CREATE_KEPEGAWAIAN", Description: "Create employee data", GroupName: "KEPEGAWAIAN", System: "PINTU"},
