@@ -12,6 +12,7 @@ Portal Informasi Terpadu (PINTU) adalah sistem informasi terintegrasi untuk SDN 
 - [Database Setup](#database-setup)
 - [Code Generation](#code-generation)
 - [API Endpoints](#api-endpoints)
+- [Testing API dengan Postman](#testing-api-dengan-postman)
 - [Troubleshooting](#troubleshooting)
 
 ## 🛠 Tech Stack
@@ -504,15 +505,332 @@ func RegisterRoutes(router *gin.Engine, db *gorm.DB) {
 
 ## 📡 API Endpoints
 
-Once User module is fully set up:
+### Authentication (Public)
+```
+POST   /api/v1/auth/login         - User login (returns JWT token)
+```
 
+### Protected Routes (Require Authentication)
+
+**Permissions:**
 ```
-POST   /api/v1/users              - Create new user
-GET    /api/v1/users              - Get all users
-GET    /api/v1/users/:id          - Get user by ID
-PUT    /api/v1/users/:id          - Update user
-DELETE /api/v1/users/:id          - Delete user
+POST   /api/v1/permissions/create-permission        - Create permission
+POST   /api/v1/permissions/get-permissions          - Get all permissions (with pagination)
+POST   /api/v1/permissions/get-permission           - Get permission by ID
+POST   /api/v1/permissions/update-permission        - Update permission
+POST   /api/v1/permissions/delete-permission        - Delete permission
+POST   /api/v1/permissions/get-permissions-by-group - Get by group name
+POST   /api/v1/permissions/get-permissions-by-system- Get by system
 ```
+
+**Roles:**
+```
+POST   /api/v1/roles/create-role  - Create role
+POST   /api/v1/roles/get-roles    - Get all roles
+POST   /api/v1/roles/get-role     - Get role by ID
+POST   /api/v1/roles/update-role  - Update role
+POST   /api/v1/roles/delete-role  - Delete role
+```
+
+**Users:**
+```
+POST   /api/v1/users/create-user           - Create user
+POST   /api/v1/users/get-users             - Get all users
+POST   /api/v1/users/get-user              - Get user by ID
+POST   /api/v1/users/update-user           - Update user
+POST   /api/v1/users/update-user-password  - Update password
+POST   /api/v1/users/delete-user           - Delete user
+```
+
+**Auth (Protected):**
+```
+POST   /api/v1/auth/logout        - Logout (requires token)
+```
+
+---
+
+## 🧪 Testing API dengan Postman
+
+### Step 1: Setup Postman Environment
+
+1. **Buat Environment Baru**
+   - Buka Postman → Environments → Create New
+   - Nama: `PINTU Backend`
+   - Tambah variables:
+
+   | Variable | Initial Value | Current Value |
+   |----------|---------------|---------------|
+   | `base_url` | `http://localhost:3000` | `http://localhost:3000` |
+   | `token` | (kosong) | (akan terisi setelah login) |
+   | `username` | `admin` | `admin` |
+   | `password` | `admin123` | `admin123` |
+
+2. **Pilih Environment** dari dropdown (kanan atas Postman)
+
+### Step 2: Testing Login
+
+1. **Buat Request Baru:**
+   ```
+   Method: POST
+   URL: {{base_url}}/api/v1/auth/login
+   ```
+
+2. **Headers:**
+   ```
+   Content-Type: application/json
+   ```
+
+3. **Body (raw JSON):**
+   ```json
+   {
+     "username": "{{username}}",
+     "password": "{{password}}"
+   }
+   ```
+
+4. **Tambah Test Script** (tab Tests) untuk auto-save token:
+   ```javascript
+   if (pm.response.code === 200) {
+       var jsonData = pm.response.json();
+       var token = jsonData.data.token;
+       pm.environment.set("token", token);
+       console.log("✓ Token saved to environment!");
+   }
+   ```
+
+5. **Send Request** → Status 200 OK
+
+**Response Contoh:**
+```json
+{
+  "status": "success",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "nama": "Administrator",
+      "username": "admin",
+      "status": "active",
+      "role_id": 1,
+      "role_name": "Administrator",
+      "accessible_system": ["dashboard", "users"],
+      "created_at": "2026-02-06T10:30:45Z"
+    },
+    "expires_at": "2026-02-09T10:30:45Z"
+  }
+}
+```
+
+### Step 3: Testing Protected Routes (Dengan Authorization)
+
+Setelah login, token tersimpan otomatis di environment `{{token}}`.
+
+**Untuk setiap request ke protected route, tambahkan Authorization:**
+
+**Option A: Pakai Tab Authorization (Recommended)**
+- Tab: **Authorization**
+- Type: **Bearer Token**
+- Token: `{{token}}`
+
+**Option B: Pakai Headers**
+- Tab: **Headers**
+- Key: `Authorization`
+- Value: `Bearer {{token}}`
+
+### Step 4: Contoh Testing Endpoints
+
+#### **1. Get All Permissions**
+```
+POST {{base_url}}/api/v1/permissions/get-permissions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+Body:
+{
+  "limit": 10,
+  "offset": 0
+}
+
+Response (200):
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "CREATE_INFORMASI_SEKOLAH",
+      "description": "Create school information",
+      "group_name": "Informasi Sekolah",
+      "system": "dashboard",
+      "created_at": "2026-02-06T10:00:00Z",
+      "updated_at": "2026-02-06T10:00:00Z"
+    },
+    ...
+  ],
+  "limit": 10,
+  "offset": 0,
+  "total": 32
+}
+```
+
+#### **2. Get Permission by ID**
+```
+POST {{base_url}}/api/v1/permissions/get-permission
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+Body:
+{
+  "id": 1
+}
+
+Response (200):
+{
+  "data": {
+    "id": 1,
+    "name": "CREATE_INFORMASI_SEKOLAH",
+    ...
+  }
+}
+```
+
+#### **3. Create Permission**
+```
+POST {{base_url}}/api/v1/permissions/create-permission
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+Body:
+{
+  "name": "VIEW_DASHBOARD",
+  "description": "View dashboard",
+  "group_name": "Dashboard",
+  "system": "dashboard"
+}
+
+Response (201):
+{
+  "data": {
+    "id": 33,
+    "name": "VIEW_DASHBOARD",
+    ...
+  }
+}
+```
+
+#### **4. Get All Users**
+```
+POST {{base_url}}/api/v1/users/get-users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+Response (200):
+{
+  "data": [
+    {
+      "id": 1,
+      "nama": "Administrator",
+      "username": "admin",
+      "status": "active",
+      "role_id": 1,
+      "role_name": "Administrator",
+      "accessible_system": ["dashboard", "users"],
+      "created_at": "2026-02-06T10:00:00Z",
+      "updated_at": "2026-02-06T10:00:00Z"
+    },
+    ...
+  ]
+}
+```
+
+#### **5. Create User**
+```
+POST {{base_url}}/api/v1/users/create-user
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+Body:
+{
+  "nama": "Kepala Sekolah",
+  "username": "kepala_sekolah",
+  "password": "kepala123",
+  "role_id": 2,
+  "accessible_system": ["dashboard", "reports"],
+  "status": "active"
+}
+
+Response (201):
+{
+  "data": {
+    "id": 2,
+    "nama": "Kepala Sekolah",
+    ...
+  }
+}
+```
+
+### Step 5: Testing Error Scenarios
+
+#### **Akses tanpa Token**
+```
+POST {{base_url}}/api/v1/permissions/get-permissions
+(tanpa Authorization header)
+
+Response (401):
+{
+  "error": "missing authorization header"
+}
+```
+
+#### **Token Invalid/Expired**
+```
+POST {{base_url}}/api/v1/permissions/get-permissions
+Authorization: Bearer invalid_token_here
+
+Response (401):
+{
+  "error": "invalid or expired token"
+}
+```
+
+#### **Login dengan Password Salah**
+```
+POST {{base_url}}/api/v1/auth/login
+
+Body:
+{
+  "username": "admin",
+  "password": "password_salah"
+}
+
+Response (401):
+{
+  "error": "username atau password salah"
+}
+```
+
+#### **Logout Setelah Login**
+```
+POST {{base_url}}/api/v1/auth/logout
+Authorization: Bearer {{token}}
+
+Response (200):
+{
+  "status": "success",
+  "message": "Logout successful, please delete your token",
+  "user_id": 1
+}
+```
+
+Setelah logout, client harus delete token dari environment dan login ulang untuk akses routes lain.
+
+### Step 6: Tips & Tricks
+
+- **Lihat Request History**: Klik History di sidebar kiri
+- **Save Request ke Collection**: Klik Save setelah membuat request
+- **Use Pre-request Scripts**: Set variables sebelum request dikirim
+- **View Token Payload**: Paste token ke https://jwt.io untuk decode
+- **Enable Auto-Save**: Postman → Settings → Auto-save requests
+
+---
 
 ## 🔧 Troubleshooting
 
