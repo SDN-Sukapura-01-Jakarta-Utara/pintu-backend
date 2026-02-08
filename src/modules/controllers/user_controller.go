@@ -188,7 +188,7 @@ func (c *UserController) Delete(ctx *gin.Context) {
 	}
 
 	if err := c.service.Delete(req.ID); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 

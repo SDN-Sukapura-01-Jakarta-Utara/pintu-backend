@@ -1,6 +1,8 @@
 package services
 
 import (
+	"errors"
+
 	"pintu-backend/src/modules/models"
 	"pintu-backend/src/modules/repositories"
 )
@@ -16,7 +18,8 @@ type UserService interface {
 }
 
 type UserServiceImpl struct {
-	repository repositories.UserRepository
+	repository     repositories.UserRepository
+	roleRepository repositories.RoleRepository
 }
 
 // NewUserService creates a new User service
@@ -24,8 +27,26 @@ func NewUserService(repository repositories.UserRepository) UserService {
 	return &UserServiceImpl{repository: repository}
 }
 
+// NewUserServiceWithRole creates a new User service with role repository
+func NewUserServiceWithRole(repository repositories.UserRepository, roleRepo repositories.RoleRepository) UserService {
+	return &UserServiceImpl{
+		repository:     repository,
+		roleRepository: roleRepo,
+	}
+}
+
 // Create creates a new User
 func (s *UserServiceImpl) Create(data *models.User) error {
+	// Validate role exists if role_id is provided
+	if data.RoleID != nil && *data.RoleID > 0 {
+		if s.roleRepository != nil {
+			role, err := s.roleRepository.GetByID(*data.RoleID)
+			if err != nil || role == nil {
+				return errors.New("role tidak ditemukan atau sudah dihapus")
+			}
+		}
+	}
+
 	return s.repository.Create(data)
 }
 
@@ -46,10 +67,26 @@ func (s *UserServiceImpl) GetByUsername(username string) (*models.User, error) {
 
 // Update updates User
 func (s *UserServiceImpl) Update(data *models.User) error {
+	// Validate role exists if role_id is provided
+	if data.RoleID != nil && *data.RoleID > 0 {
+		if s.roleRepository != nil {
+			role, err := s.roleRepository.GetByID(*data.RoleID)
+			if err != nil || role == nil {
+				return errors.New("role tidak ditemukan atau sudah dihapus")
+			}
+		}
+	}
+
 	return s.repository.Update(data)
 }
 
 // Delete deletes User by ID
 func (s *UserServiceImpl) Delete(id uint) error {
+	// Validate user exists before delete
+	user, err := s.repository.GetByID(id)
+	if err != nil || user == nil {
+		return errors.New("user tidak ditemukan atau sudah dihapus")
+	}
+
 	return s.repository.Delete(id)
 }

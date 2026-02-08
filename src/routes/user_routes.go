@@ -12,9 +12,12 @@ import (
 
 // RegisterUserRoutes registers all user routes
 func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
-	// Initialize repository, service, and controller
+	// Initialize repositories
 	userRepo := repositories.NewUserRepository(db)
-	userService := services.NewUserService(userRepo)
+	roleRepo := repositories.NewRoleRepository(db)
+
+	// Initialize service with role validation
+	userService := services.NewUserServiceWithRole(userRepo, roleRepo)
 	userController := controllers.NewUserController(userService)
 
 	// Group routes under /api/v1/users with auth middleware
