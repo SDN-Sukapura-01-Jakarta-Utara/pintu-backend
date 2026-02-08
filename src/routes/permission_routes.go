@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"pintu-backend/src/middleware"
 	"pintu-backend/src/modules/controllers"
 	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
@@ -16,8 +17,9 @@ func RegisterPermissionRoutes(router *gin.Engine, db *gorm.DB) {
 	permissionService := services.NewPermissionService(permissionRepo)
 	permissionController := controllers.NewPermissionController(permissionService)
 
-	// Group routes under /api/v1/permissions
+	// Group routes under /api/v1/permissions with auth middleware
 	api := router.Group("/api/v1/permissions")
+	api.Use(middleware.AuthMiddleware()) // Require authentication
 	{
 		// CRUD operations - all POST with action-based routes
 		api.POST("/create-permission", permissionController.Create)                    // Create permission

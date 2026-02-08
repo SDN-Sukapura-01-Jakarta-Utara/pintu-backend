@@ -50,6 +50,7 @@ func main() {
 	})
 
 	// Register routes
+	routes.RegisterAuthRoutes(router, db)
 	routes.RegisterPermissionRoutes(router, db)
 	routes.RegisterRoleRoutes(router, db)
 	routes.RegisterUserRoutes(router, db)

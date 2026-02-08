@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"pintu-backend/src/middleware"
 	"pintu-backend/src/modules/controllers"
 	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
@@ -16,8 +17,9 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
 	userService := services.NewUserService(userRepo)
 	userController := controllers.NewUserController(userService)
 
-	// Group routes under /api/v1/users - all POST with action-based routes
+	// Group routes under /api/v1/users with auth middleware
 	api := router.Group("/api/v1/users")
+	api.Use(middleware.AuthMiddleware()) // Require authentication
 	{
 		api.POST("/create-user", userController.Create)           // Create user
 		api.POST("/get-users", userController.GetAll)             // Get all users
