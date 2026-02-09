@@ -54,6 +54,7 @@ func main() {
 	routes.RegisterPermissionRoutes(router, db)
 	routes.RegisterRoleRoutes(router, db)
 	routes.RegisterUserRoutes(router, db)
+	routes.RegisterTahunPelajaranRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")

@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"pintu-backend/src/modules/models"
-	"pintu-backend/src/modules/services"
 	"net/http"
-	"strconv"
+
+	"pintu-backend/src/dtos"
+	"pintu-backend/src/modules/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,65 +21,80 @@ func NewTahunPelajaranController(service services.TahunPelajaranService) *TahunP
 
 // Create creates a new TahunPelajaran
 // @Summary Create new TahunPelajaran
-// @Description Create a new TahunPelajaran
+// @Description Create a new TahunPelajaran with tahun_pelajaran and status
 // @Tags tahun_pelajaran
 // @Accept json
 // @Produce json
-// @Success 201
-// @Failure 400
-// @Router /tahun_pelajaran [post]
+// @Param body body dtos.TahunPelajaranCreateRequest true "Request body"
+// @Success 201 {object} gin.H{data=dtos.TahunPelajaranResponse}
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Router /api/v1/tahun-pelajaran/create-tahun-pelajaran [post]
 func (c *TahunPelajaranController) Create(ctx *gin.Context) {
-	var req models.TahunPelajaran
+	var req dtos.TahunPelajaranCreateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := c.service.Create(&req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Get user ID from context (set by auth middleware)
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": req})
-}
-
-// GetByID retrieves TahunPelajaran by ID
-// @Summary Get TahunPelajaran by ID
-// @Description Retrieve tahun_pelajaran details by ID
-// @Tags TahunPelajaran
-// @Produce json
-// @Param id path int true "ID"
-// @Success 200
-// @Failure 404
-// @Router /TahunPelajaran/{id} [get]
-func (c *TahunPelajaranController) GetByID(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	data, err := c.service.Create(&req, userID.(uint))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	data, err := c.service.GetByID(uint(id))
-	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	ctx.JSON(http.StatusCreated, gin.H{"data": data})
 }
 
 // GetAll retrieves all tahun_pelajaran
 // @Summary Get all TahunPelajaran
 // @Description Retrieve all TahunPelajaran records
-// @Tags TahunPelajaran
+// @Tags tahun_pelajaran
+// @Accept json
 // @Produce json
-// @Success 200
-// @Failure 500
-// @Router /tahun_pelajaran [get]
+// @Success 200 {object} gin.H{data=[]dtos.TahunPelajaranResponse}
+// @Failure 401 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/tahun-pelajaran/get-tahun-pelajaran [post]
 func (c *TahunPelajaranController) GetAll(ctx *gin.Context) {
-	data, err := c.service.GetAll()
+	data, err := c.service.GetAll(10, 0)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data.Data})
+}
+
+// GetByID retrieves TahunPelajaran by ID
+// @Summary Get TahunPelajaran by ID
+// @Description Retrieve tahun_pelajaran details by ID
+// @Tags tahun_pelajaran
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with ID"
+// @Success 200 {object} gin.H{data=dtos.TahunPelajaranResponse}
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/tahun-pelajaran/get-tahun-pelajaran-by-id [post]
+func (c *TahunPelajaranController) GetByID(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetByID(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Tahun pelajaran not found"})
 		return
 	}
 
@@ -92,53 +107,60 @@ func (c *TahunPelajaranController) GetAll(ctx *gin.Context) {
 // @Tags tahun_pelajaran
 // @Accept json
 // @Produce json
-// @Param id path int true "ID"
-// @Success 200
-// @Failure 400
-// @Failure 404
-// @Router /TahunPelajaran/{id} [put]
+// @Param body body dtos.TahunPelajaranUpdateRequest true "Request body"
+// @Success 200 {object} gin.H{data=dtos.TahunPelajaranResponse}
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/tahun-pelajaran/update-tahun-pelajaran [post]
 func (c *TahunPelajaranController) Update(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-
-	var req models.TahunPelajaran
+	var req dtos.TahunPelajaranUpdateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	req.ID = uint(id)
-	if err := c.service.Update(&req); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Get user ID from context
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": req})
+	data, err := c.service.Update(&req, userID.(uint))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
 }
 
 // Delete deletes TahunPelajaran by ID
-// @Summary Delete tahun_pelajaran
+// @Summary Delete TahunPelajaran
 // @Description Delete TahunPelajaran by ID
-// @Tags TahunPelajaran
+// @Tags tahun_pelajaran
+// @Accept json
 // @Produce json
-// @Param id path int true "ID"
-// @Success 200
-// @Failure 404
-// @Router /TahunPelajaran/{id} [delete]
+// @Param body body dtos.IDRequest true "Request body with ID"
+// @Success 200 {object} gin.H{message=string}
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/tahun-pelajaran/delete-tahun-pelajaran [post]
 func (c *TahunPelajaranController) Delete(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	if err := c.service.Delete(uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := c.service.Delete(req.ID); err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Tahun pelajaran not found"})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Tahun pelajaran deleted successfully",
+	})
 }

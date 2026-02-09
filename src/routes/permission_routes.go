@@ -24,7 +24,7 @@ func RegisterPermissionRoutes(router *gin.Engine, db *gorm.DB) {
 		// CRUD operations - all POST with action-based routes
 		api.POST("/create-permission", permissionController.Create)                    // Create permission
 		api.POST("/get-permissions", permissionController.GetAll)                     // Get all permissions (with pagination)
-		api.POST("/get-permission", permissionController.GetByID)                     // Get permission by ID
+		api.POST("/get-permission-by-id", permissionController.GetByID)                     // Get permission by ID
 		api.POST("/update-permission", permissionController.Update)                   // Update permission
 		api.POST("/delete-permission", permissionController.Delete)                   // Delete permission
 

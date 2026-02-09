@@ -10,7 +10,8 @@ import (
 type TahunPelajaranRepository interface {
 	Create(data *models.TahunPelajaran) error
 	GetByID(id uint) (*models.TahunPelajaran, error)
-	GetAll() ([]models.TahunPelajaran, error)
+	GetAll(limit int, offset int) ([]models.TahunPelajaran, int64, error)
+	GetByTahunPelajaran(tahunPelajaran string) (*models.TahunPelajaran, error)
 	Update(data *models.TahunPelajaran) error
 	Delete(id uint) error
 }
@@ -38,13 +39,31 @@ func (r *TahunPelajaranRepositoryImpl) GetByID(id uint) (*models.TahunPelajaran,
 	return &data, nil
 }
 
-// GetAll retrieves all TahunPelajaran records
-func (r *TahunPelajaranRepositoryImpl) GetAll() ([]models.TahunPelajaran, error) {
+// GetAll retrieves all TahunPelajaran records with pagination
+func (r *TahunPelajaranRepositoryImpl) GetAll(limit int, offset int) ([]models.TahunPelajaran, int64, error) {
 	var data []models.TahunPelajaran
-	if err := r.db.Find(&data).Error; err != nil {
+	var total int64
+
+	// Get total count
+	if err := r.db.Model(&models.TahunPelajaran{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	if err := r.db.Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// GetByTahunPelajaran retrieves TahunPelajaran by tahun_pelajaran
+func (r *TahunPelajaranRepositoryImpl) GetByTahunPelajaran(tahunPelajaran string) (*models.TahunPelajaran, error) {
+	var data models.TahunPelajaran
+	if err := r.db.Where("tahun_pelajaran = ?", tahunPelajaran).First(&data).Error; err != nil {
 		return nil, err
 	}
-	return data, nil
+	return &data, nil
 }
 
 // Update updates TahunPelajaran record

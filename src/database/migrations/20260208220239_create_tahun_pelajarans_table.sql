@@ -10,10 +10,13 @@ CREATE TABLE tahun_pelajarans (
     status VARCHAR(50) NOT NULL DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by_id INTEGER,
+    updated_by_id INTEGER,
     deleted_at TIMESTAMP
 );
 
 -- Create indexes for better query performance
 CREATE INDEX idx_tahun_pelajarans_tahun_pelajaran ON tahun_pelajarans(tahun_pelajaran);
+CREATE INDEX idx_tahun_pelajarans_status ON tahun_pelajarans(status);
 
 COMMIT;

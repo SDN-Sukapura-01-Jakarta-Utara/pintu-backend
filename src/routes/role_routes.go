@@ -23,7 +23,7 @@ func RegisterRoleRoutes(router *gin.Engine, db *gorm.DB) {
 	{
 		api.POST("/create-role", roleController.Create)      // Create role
 		api.POST("/get-roles", roleController.GetAll)        // Get all roles
-		api.POST("/get-role", roleController.GetByID)        // Get role by ID
+		api.POST("/get-role-by-id", roleController.GetByID)        // Get role by ID
 		api.POST("/update-role", roleController.Update)      // Update role
 		api.POST("/delete-role", roleController.Delete)      // Delete role
 	}

@@ -26,7 +26,7 @@ func RegisterUserRoutes(router *gin.Engine, db *gorm.DB) {
 	{
 		api.POST("/create-user", userController.Create)           // Create user
 		api.POST("/get-users", userController.GetAll)             // Get all users
-		api.POST("/get-user", userController.GetByID)             // Get user by ID
+		api.POST("/get-user-by-id", userController.GetByID)             // Get user by ID
 		api.POST("/update-user", userController.Update)           // Update user
 		api.POST("/update-user-password", userController.UpdatePassword) // Update password
 		api.POST("/delete-user", userController.Delete)           // Delete user
