@@ -9,8 +9,11 @@ CREATE TABLE roles (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     system VARCHAR(50),
+    status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by_id INTEGER,
+    updated_by_id INTEGER,
     deleted_at TIMESTAMP
 );
 

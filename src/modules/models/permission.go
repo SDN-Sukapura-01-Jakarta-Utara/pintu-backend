@@ -13,8 +13,11 @@ type Permission struct {
 	Description string          `json:"description"`
 	GroupName   string          `json:"group_name"`
 	System      string          `json:"system"`
+	Status      string          `gorm:"default:active" json:"status"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
+	CreatedByID *uint           `json:"created_by_id"`
+	UpdatedByID *uint           `json:"updated_by_id"`
 	DeletedAt   gorm.DeletedAt  `gorm:"index" json:"deleted_at,omitempty"`
 }
 

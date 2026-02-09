@@ -27,6 +27,7 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 		Description string `json:"description"`
 		GroupName   string `json:"group_name"`
 		System      string `json:"system"`
+		Status      string `json:"status"`
 	}
 	
 	var req CreateRequest
@@ -35,11 +36,17 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 		return
 	}
 
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	createdByID := userID.(uint)
+
 	permission := &models.Permission{
 		Name:        req.Name,
 		Description: req.Description,
 		GroupName:   req.GroupName,
 		System:      req.System,
+		Status:      req.Status,
+		CreatedByID: &createdByID,
 	}
 
 	if err := c.service.Create(permission); err != nil {
@@ -146,6 +153,7 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 		Description string `json:"description"`
 		GroupName   string `json:"group_name"`
 		System      string `json:"system"`
+		Status      string `json:"status"`
 	}
 	
 	var req UpdateRequest
@@ -172,6 +180,14 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 	if req.System != "" {
 		data.System = req.System
 	}
+	if req.Status != "" {
+		data.Status = req.Status
+	}
+
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	updatedByID := userID.(uint)
+	data.UpdatedByID = &updatedByID
 
 	if err := c.service.Update(data); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

@@ -40,6 +40,8 @@ type UserResponse struct {
 	Status           string    `json:"status"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
+	CreatedByID      *uint     `json:"created_by_id"`
+	UpdatedByID      *uint     `json:"updated_by_id"`
 }
 
 // UserListResponse represents the response payload for listing User

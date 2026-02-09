@@ -10,6 +10,7 @@ type PermissionCreateRequest struct {
 	Description string `json:"description" binding:"required"`
 	GroupName   string `json:"group_name" binding:"required"`
 	System      string `json:"system" binding:"required"`
+	Status      string `json:"status" binding:"omitempty"`
 }
 
 // PermissionUpdateRequest represents the request payload for updating Permission
@@ -18,6 +19,7 @@ type PermissionUpdateRequest struct {
 	Description string `json:"description" binding:"omitempty"`
 	GroupName   string `json:"group_name" binding:"omitempty"`
 	System      string `json:"system" binding:"omitempty"`
+	Status      string `json:"status" binding:"omitempty"`
 }
 
 // PermissionResponse represents the response payload for Permission
@@ -27,8 +29,11 @@ type PermissionResponse struct {
 	Description string    `json:"description"`
 	GroupName   string    `json:"group_name"`
 	System      string    `json:"system"`
+	Status      string    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedByID *uint     `json:"created_by_id"`
+	UpdatedByID *uint     `json:"updated_by_id"`
 }
 
 // PermissionListResponse represents the response payload for listing Permission

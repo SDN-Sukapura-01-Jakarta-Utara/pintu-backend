@@ -36,12 +36,17 @@ func (c *UserController) Create(ctx *gin.Context) {
 		return
 	}
 
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	createdByID := userID.(uint)
+
 	user := &models.User{
-		Nama:     req.Nama,
-		Username: req.Username,
-		Password: string(hashedPassword),
-		RoleID:   &req.RoleID,
-		Status:   req.Status,
+		Nama:        req.Nama,
+		Username:    req.Username,
+		Password:    string(hashedPassword),
+		RoleID:      &req.RoleID,
+		Status:      req.Status,
+		CreatedByID: &createdByID,
 	}
 
 	// Set accessible systems
@@ -126,6 +131,11 @@ func (c *UserController) Update(ctx *gin.Context) {
 		data.Status = req.Status
 	}
 
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	updatedByID := userID.(uint)
+	data.UpdatedByID = &updatedByID
+
 	if err := c.service.Update(data); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -168,6 +178,11 @@ func (c *UserController) UpdatePassword(ctx *gin.Context) {
 	}
 
 	user.Password = string(hashedPassword)
+
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	updatedByID := userID.(uint)
+	user.UpdatedByID = &updatedByID
 
 	if err := c.service.Update(user); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

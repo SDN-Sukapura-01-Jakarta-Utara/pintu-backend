@@ -150,7 +150,7 @@ func generateRepository(args []string) {
 		return
 	}
 
-	fmt.Printf("Repository file created: src/modules/repositories/%s_repository.go\n", toLowerFirst(name))
+	fmt.Printf("Repository file created: src/modules/repositories/%s_repository.go\n", toSnakeCase(name))
 }
 
 func generateService(args []string) {
@@ -169,7 +169,7 @@ func generateService(args []string) {
 		return
 	}
 
-	fmt.Printf("Service file created: src/modules/services/%s_service.go\n", toLowerFirst(name))
+	fmt.Printf("Service file created: src/modules/services/%s_service.go\n", toSnakeCase(name))
 }
 
 func generateController(args []string) {
@@ -188,7 +188,7 @@ func generateController(args []string) {
 		return
 	}
 
-	fmt.Printf("Controller file created: src/modules/controllers/%s_controller.go\n", toLowerFirst(name))
+	fmt.Printf("Controller file created: src/modules/controllers/%s_controller.go\n", toSnakeCase(name))
 }
 
 func generateDTO(args []string) {
@@ -207,7 +207,7 @@ func generateDTO(args []string) {
 		return
 	}
 
-	fmt.Printf("DTO file created: src/dtos/%s_dto.go\n", toLowerFirst(name))
+	fmt.Printf("DTO file created: src/dtos/%s_dto.go\n", toSnakeCase(name))
 }
 
 func migrateUp(args []string) {

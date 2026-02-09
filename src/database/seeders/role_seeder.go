@@ -22,6 +22,7 @@ type Role struct {
 	Name        string
 	Description string
 	System      string
+	Status      string
 }
 
 // Run executes the seeder
@@ -29,8 +30,8 @@ func (s *RoleSeeder) Run() error {
 	fmt.Println("Seeding roles...")
 
 	roles := []Role{
-		{Name: "Administrator", Description: "Administrator", System: "PINTU"},
-		{Name: "Kepala Sekolah", Description: "Kepala Sekolah", System: "PINTU"},
+		{Name: "Administrator", Description: "Administrator", System: "PINTU", Status: "active"},
+		{Name: "Kepala Sekolah", Description: "Kepala Sekolah", System: "PINTU", Status: "active"},
 	}
 
 	// Check if roles already exist
@@ -47,6 +48,7 @@ func (s *RoleSeeder) Run() error {
 			"name":        role.Name,
 			"description": role.Description,
 			"system":      role.System,
+			"status":      role.Status,
 		})
 		if result.Error != nil {
 			return fmt.Errorf("failed to seed role %s: %w", role.Name, result.Error)

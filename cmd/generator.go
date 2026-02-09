@@ -29,6 +29,19 @@ func toUpperFirst(s string) string {
 	return string(r)
 }
 
+// Helper function to convert PascalCase to snake_case
+// e.g., TahunPelajaran -> tahun_pelajaran
+func toSnakeCase(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if unicode.IsUpper(r) && i > 0 {
+			result.WriteRune('_')
+		}
+		result.WriteRune(unicode.ToLower(r))
+	}
+	return result.String()
+}
+
 // createMigrationFile generates migration file
 func createMigrationFile(name string) error {
 	timestamp := time.Now().Format("20060102150405")
@@ -117,10 +130,11 @@ func (m *%s) TableName() string {
 
 // createRepositoryFile generates repository file
 func createRepositoryFile(name string) error {
-	lowerName := toLowerFirst(name)
-	filepath := filepath.Join("src", "modules", "repositories", fmt.Sprintf("%s_repository.go", lowerName))
+	snakeName := toSnakeCase(name)
+	modelName := toUpperFirst(name)
+	filepath := filepath.Join("src", "modules", "repositories", fmt.Sprintf("%s_repository.go", snakeName))
 
-	content := fmt.Sprintf(`package repositories
+	template := `package repositories
 
 import (
 	"pintu-backend/src/modules/models"
@@ -128,124 +142,125 @@ import (
 	"gorm.io/gorm"
 )
 
-// %sRepository handles data operations for %s
-type %sRepository interface {
-	Create(data *models.%s) error
-	GetByID(id uint) (*models.%s, error)
-	GetAll() ([]models.%s, error)
-	Update(data *models.%s) error
+// ` + modelName + `Repository handles data operations for ` + modelName + `
+type ` + modelName + `Repository interface {
+	Create(data *models.` + modelName + `) error
+	GetByID(id uint) (*models.` + modelName + `, error)
+	GetAll() ([]models.` + modelName + `, error)
+	Update(data *models.` + modelName + `) error
 	Delete(id uint) error
 }
 
-type %sRepositoryImpl struct {
+type ` + modelName + `RepositoryImpl struct {
 	db *gorm.DB
 }
 
-// New%sRepository creates a new %s repository
-func New%sRepository(db *gorm.DB) %sRepository {
-	return &%sRepositoryImpl{db: db}
+// New` + modelName + `Repository creates a new ` + modelName + ` repository
+func New` + modelName + `Repository(db *gorm.DB) ` + modelName + `Repository {
+	return &` + modelName + `RepositoryImpl{db: db}
 }
 
-// Create creates a new %s record
-func (r *%sRepositoryImpl) Create(data *models.%s) error {
+// Create creates a new ` + modelName + ` record
+func (r *` + modelName + `RepositoryImpl) Create(data *models.` + modelName + `) error {
 	return r.db.Create(data).Error
 }
 
-// GetByID retrieves %s by ID
-func (r *%sRepositoryImpl) GetByID(id uint) (*models.%s, error) {
-	var data models.%s
+// GetByID retrieves ` + modelName + ` by ID
+func (r *` + modelName + `RepositoryImpl) GetByID(id uint) (*models.` + modelName + `, error) {
+	var data models.` + modelName + `
 	if err := r.db.First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-// GetAll retrieves all %s records
-func (r *%sRepositoryImpl) GetAll() ([]models.%s, error) {
-	var data []models.%s
+// GetAll retrieves all ` + modelName + ` records
+func (r *` + modelName + `RepositoryImpl) GetAll() ([]models.` + modelName + `, error) {
+	var data []models.` + modelName + `
 	if err := r.db.Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
 }
 
-// Update updates %s record
-func (r *%sRepositoryImpl) Update(data *models.%s) error {
+// Update updates ` + modelName + ` record
+func (r *` + modelName + `RepositoryImpl) Update(data *models.` + modelName + `) error {
 	return r.db.Save(data).Error
 }
 
-// Delete deletes %s record by ID
-func (r *%sRepositoryImpl) Delete(id uint) error {
-	return r.db.Delete(&models.%s{}, id).Error
+// Delete deletes ` + modelName + ` record by ID
+func (r *` + modelName + `RepositoryImpl) Delete(id uint) error {
+	return r.db.Delete(&models.` + modelName + `{}, id).Error
 }
-`, toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name))
+`
 
-	return writeFile(filepath, content)
+	return writeFile(filepath, template)
 }
 
 // createServiceFile generates service file
 func createServiceFile(name string) error {
-	lowerName := toLowerFirst(name)
-	filepath := filepath.Join("src", "modules", "services", fmt.Sprintf("%s_service.go", lowerName))
+	snakeName := toSnakeCase(name)
+	modelName := toUpperFirst(name)
+	filepath := filepath.Join("src", "modules", "services", fmt.Sprintf("%s_service.go", snakeName))
 
-	content := fmt.Sprintf(`package services
+	template := `package services
 
 import (
 	"pintu-backend/src/modules/models"
 	"pintu-backend/src/modules/repositories"
 )
 
-// %sService handles business logic for %s
-type %sService interface {
-	Create(data *models.%s) error
-	GetByID(id uint) (*models.%s, error)
-	GetAll() ([]models.%s, error)
-	Update(data *models.%s) error
+// ` + modelName + `Service handles business logic for ` + modelName + `
+type ` + modelName + `Service interface {
+	Create(data *models.` + modelName + `) error
+	GetByID(id uint) (*models.` + modelName + `, error)
+	GetAll() ([]models.` + modelName + `, error)
+	Update(data *models.` + modelName + `) error
 	Delete(id uint) error
 }
 
-type %sServiceImpl struct {
-	repository repositories.%sRepository
+type ` + modelName + `ServiceImpl struct {
+	repository repositories.` + modelName + `Repository
 }
 
-// New%sService creates a new %s service
-func New%sService(repository repositories.%sRepository) %sService {
-	return &%sServiceImpl{repository: repository}
+// New` + modelName + `Service creates a new ` + modelName + ` service
+func New` + modelName + `Service(repository repositories.` + modelName + `Repository) ` + modelName + `Service {
+	return &` + modelName + `ServiceImpl{repository: repository}
 }
 
-// Create creates a new %s
-func (s *%sServiceImpl) Create(data *models.%s) error {
+// Create creates a new ` + modelName + `
+func (s *` + modelName + `ServiceImpl) Create(data *models.` + modelName + `) error {
 	return s.repository.Create(data)
 }
 
-// GetByID retrieves %s by ID
-func (s *%sServiceImpl) GetByID(id uint) (*models.%s, error) {
+// GetByID retrieves ` + modelName + ` by ID
+func (s *` + modelName + `ServiceImpl) GetByID(id uint) (*models.` + modelName + `, error) {
 	return s.repository.GetByID(id)
 }
 
-// GetAll retrieves all %s
-func (s *%sServiceImpl) GetAll() ([]models.%s, error) {
+// GetAll retrieves all ` + modelName + `
+func (s *` + modelName + `ServiceImpl) GetAll() ([]models.` + modelName + `, error) {
 	return s.repository.GetAll()
 }
 
-// Update updates %s
-func (s *%sServiceImpl) Update(data *models.%s) error {
+// Update updates ` + modelName + `
+func (s *` + modelName + `ServiceImpl) Update(data *models.` + modelName + `) error {
 	return s.repository.Update(data)
 }
 
-// Delete deletes %s by ID
-func (s *%sServiceImpl) Delete(id uint) error {
+// Delete deletes ` + modelName + ` by ID
+func (s *` + modelName + `ServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
 }
-`, toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name))
+`
 
-	return writeFile(filepath, content)
+	return writeFile(filepath, template)
 }
 
 // createControllerFile generates controller file
 func createControllerFile(name string) error {
-	lowerName := toLowerFirst(name)
-	filepath := filepath.Join("src", "modules", "controllers", fmt.Sprintf("%s_controller.go", lowerName))
+	snakeName := toSnakeCase(name)
+	filepath := filepath.Join("src", "modules", "controllers", fmt.Sprintf("%s_controller.go", snakeName))
 
 	content := fmt.Sprintf(`package controllers
 
@@ -391,15 +406,15 @@ func (c *%sController) Delete(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Deleted successfully"})
 }
-`, toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), name, name, name, lowerName, lowerName, toUpperFirst(name), toUpperFirst(name), name, name, lowerName, toUpperFirst(name), name, name, lowerName, toUpperFirst(name), name, name, lowerName, toUpperFirst(name), name, name, name, lowerName, toUpperFirst(name), toUpperFirst(name), name, name, lowerName, toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name))
+`, toUpperFirst(name), name, toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), toUpperFirst(name), name, name, name, snakeName, snakeName, toUpperFirst(name), toUpperFirst(name), name, name, snakeName, toUpperFirst(name), name, name, snakeName, toUpperFirst(name), name, name, snakeName, toUpperFirst(name), name, name, name, snakeName, toUpperFirst(name), toUpperFirst(name), name, name, snakeName, toUpperFirst(name), toUpperFirst(name), name, toUpperFirst(name))
 
 	return writeFile(filepath, content)
 }
 
 // createDTOFile generates DTO file with Request and Response structs
 func createDTOFile(name string) error {
-	lowerName := toLowerFirst(name)
-	filePath := filepath.Join("src", "dtos", fmt.Sprintf("%s_dto.go", lowerName))
+	snakeName := toSnakeCase(name)
+	filePath := filepath.Join("src", "dtos", fmt.Sprintf("%s_dto.go", snakeName))
 
 	content := fmt.Sprintf(`package dtos
 

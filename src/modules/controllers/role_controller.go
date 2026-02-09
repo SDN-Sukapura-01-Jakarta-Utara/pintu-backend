@@ -25,6 +25,7 @@ func (c *RoleController) Create(ctx *gin.Context) {
 		Name        string `json:"name" binding:"required"`
 		Description string `json:"description"`
 		System      string `json:"system"`
+		Status      string `json:"status"`
 	}
 	
 	var req CreateRequest
@@ -33,10 +34,16 @@ func (c *RoleController) Create(ctx *gin.Context) {
 		return
 	}
 
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	createdByID := userID.(uint)
+
 	role := &models.Role{
 		Name:        req.Name,
 		Description: req.Description,
 		System:      req.System,
+		Status:      req.Status,
+		CreatedByID: &createdByID,
 	}
 
 	if err := c.service.Create(role); err != nil {
@@ -84,6 +91,7 @@ func (c *RoleController) Update(ctx *gin.Context) {
 		Name        string `json:"name"`
 		Description string `json:"description"`
 		System      string `json:"system"`
+		Status      string `json:"status"`
 	}
 	
 	var req UpdateRequest
@@ -107,6 +115,14 @@ func (c *RoleController) Update(ctx *gin.Context) {
 	if req.System != "" {
 		data.System = req.System
 	}
+	if req.Status != "" {
+		data.Status = req.Status
+	}
+
+	// Get user ID from JWT token
+	userID, _ := ctx.Get("userID")
+	updatedByID := userID.(uint)
+	data.UpdatedByID = &updatedByID
 
 	if err := c.service.Update(data); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
