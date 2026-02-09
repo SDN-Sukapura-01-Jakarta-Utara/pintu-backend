@@ -17,6 +17,5 @@ CREATE TABLE bidang_studis (
 
 -- Create indexes for better query performance
 CREATE INDEX idx_bidang_studis_name ON bidang_studis(name);
-CREATE INDEX idx_bidang_studis_status ON bidang_studis(status);
 
 COMMIT;
