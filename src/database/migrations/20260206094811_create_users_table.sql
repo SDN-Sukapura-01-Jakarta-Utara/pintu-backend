@@ -10,7 +10,7 @@ CREATE TYPE user_status AS ENUM ('active', 'inactive', 'suspended');
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     nama VARCHAR(255) NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
+    username VARCHAR(100) NOT NULL,
     password VARCHAR(255) NOT NULL,
     role_id INTEGER,
     accessible_system JSONB DEFAULT '[]'::jsonb,

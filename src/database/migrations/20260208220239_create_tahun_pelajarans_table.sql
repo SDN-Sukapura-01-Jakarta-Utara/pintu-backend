@@ -6,7 +6,7 @@ BEGIN;
 
 CREATE TABLE tahun_pelajarans (
     id SERIAL PRIMARY KEY,
-    tahun_pelajaran VARCHAR(20) NOT NULL UNIQUE,
+    tahun_pelajaran VARCHAR(20) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

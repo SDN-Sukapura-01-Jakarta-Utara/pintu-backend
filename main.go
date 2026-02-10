@@ -58,6 +58,7 @@ func main() {
 	routes.RegisterBidangStudiRoutes(router, db)
 	routes.RegisterKelasRoutes(router, db)
 	routes.RegisterRombelRoutes(router, db)
+	routes.RegisterEkstrakurikulerRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
