@@ -63,6 +63,7 @@ func main() {
 	routes.RegisterKutipanKepsekRoutes(router, db)
 	routes.RegisterVisiMisiRoutes(router, db)
 	routes.RegisterSaranaPrasaranaRoutes(router, db)
+	routes.RegisterArticleRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
