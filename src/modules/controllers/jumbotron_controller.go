@@ -144,22 +144,44 @@ func (c *JumbotronController) GetByID(ctx *gin.Context) {
 
 // Update updates Jumbotron
 // @Summary Update Jumbotron
-// @Description Update Jumbotron details (status only)
+// @Description Update Jumbotron details (status and/or file)
 // @Tags jumbotron
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param body body dtos.JumbotronUpdateRequest true "Request body"
+// @Param id formData uint true "Jumbotron ID"
+// @Param file formData file false "Image file (jpeg, png, gif, webp) - optional"
+// @Param status formData string false "Status (active/inactive) - optional"
 // @Success 200 {object} gin.H{data=dtos.JumbotronResponse}
 // @Failure 400 {object} gin.H{error=string}
 // @Failure 401 {object} gin.H{error=string}
 // @Failure 404 {object} gin.H{error=string}
 // @Router /api/v1/jumbotron/update-jumbotron [post]
 func (c *JumbotronController) Update(ctx *gin.Context) {
-	var req dtos.JumbotronUpdateRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// Parse multipart form
+	if err := ctx.Request.ParseMultipartForm(5 * 1024 * 1024); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse form"})
 		return
 	}
+
+	// Get ID from form
+	idStr := ctx.PostForm("id")
+	if idStr == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+		return
+	}
+
+	var id uint
+	if _, err := strconv.Atoi(idStr); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid id format"})
+		return
+	}
+	id = uint(toInt(idStr))
+
+	// Get file (optional)
+	file, _ := ctx.FormFile("file")
+
+	// Get status (optional)
+	status := ctx.PostForm("status")
 
 	// Get user ID from context
 	userID, exists := ctx.Get("userID")
@@ -168,13 +190,19 @@ func (c *JumbotronController) Update(ctx *gin.Context) {
 		return
 	}
 
-	data, err := c.service.Update(req.ID, &req, userID.(uint))
+	data, err := c.service.UpdateWithFile(id, file, status, userID.(uint))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}
+
+// Helper function to convert string to int
+func toInt(s string) int {
+	i, _ := strconv.Atoi(s)
+	return i
 }
 
 // Delete deletes Jumbotron by ID

@@ -15,6 +15,7 @@ type JumbotronService interface {
 	GetByID(id uint) (*dtos.JumbotronResponse, error)
 	GetAll(limit int, offset int) (*dtos.JumbotronListResponse, error)
 	Update(id uint, req *dtos.JumbotronUpdateRequest, userID uint) (*dtos.JumbotronResponse, error)
+	UpdateWithFile(id uint, file *multipart.FileHeader, status string, userID uint) (*dtos.JumbotronResponse, error)
 	Delete(id uint) error
 }
 
@@ -163,6 +164,65 @@ func (s *JumbotronServiceImpl) Delete(id uint) error {
 
 	// Delete from database
 	return s.repository.Delete(id)
+}
+
+// UpdateWithFile updates Jumbotron with optional file upload
+func (s *JumbotronServiceImpl) UpdateWithFile(id uint, file *multipart.FileHeader, status string, userID uint) (*dtos.JumbotronResponse, error) {
+	// Get existing data
+	existing, err := s.repository.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	oldFile := existing.File
+
+	// If file provided, validate and upload
+	if file != nil {
+		// Validate file
+		if file.Size > 5*1024*1024 { // 5MB
+			return nil, errors.New("file size must not exceed 5MB")
+		}
+
+		allowedTypes := map[string]bool{
+			"image/jpeg": true,
+			"image/png":  true,
+			"image/gif":  true,
+			"image/webp": true,
+		}
+		contentType := file.Header.Get("Content-Type")
+		if !allowedTypes[contentType] {
+			return nil, errors.New("only image files are allowed (jpeg, png, gif, webp)")
+		}
+
+		// Upload new file
+		newFileKey, err := s.r2Storage.UploadFile(file, "jumbotron")
+		if err != nil {
+			return nil, err
+		}
+
+		// Delete old file from R2
+		_ = s.r2Storage.DeleteFile(oldFile)
+
+		// Update file in model
+		existing.File = newFileKey
+	}
+
+	// Update status if provided
+	if status != "" {
+		existing.Status = status
+	}
+
+	existing.UpdatedByID = &userID
+
+	if err := s.repository.Update(existing); err != nil {
+		// If DB save fails, delete the uploaded file
+		if file != nil {
+			_ = s.r2Storage.DeleteFile(existing.File)
+		}
+		return nil, err
+	}
+
+	return s.mapToResponse(existing), nil
 }
 
 // mapToResponse maps model to DTO response
