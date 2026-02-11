@@ -1,13 +1,12 @@
--- Migration: create_articles__table
--- Created: 2026-02-11 13:38:45
+-- Migration: create_announcements_table
+-- Created: 2026-02-11 20:20:33
 
 BEGIN;
 
-CREATE TABLE articles (
+CREATE TABLE announcements (
     id BIGSERIAL PRIMARY KEY,
     judul VARCHAR(255) NOT NULL,
     tanggal DATE NOT NULL,
-    kategori VARCHAR(100) NOT NULL,
     deskripsi TEXT,
     gambar VARCHAR(255),
     files JSONB DEFAULT '[]'::jsonb,
@@ -20,9 +19,8 @@ CREATE TABLE articles (
     updated_by_id INTEGER,
     deleted_at TIMESTAMP
 );
- 
+
 -- Create indexes for better query performance
-CREATE INDEX idx_articles_judul ON articles(judul);
-CREATE INDEX idx_articles_kategori ON articles(kategori);
+CREATE INDEX idx_announcements_judul ON announcements(judul);
 
 COMMIT;
