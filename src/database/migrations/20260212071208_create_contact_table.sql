@@ -23,8 +23,4 @@ CREATE TABLE contacts (
     deleted_at TIMESTAMP
 );
 
--- Create indexes for better query performance
-CREATE INDEX idx_contacts_email ON contacts(email);
-CREATE INDEX idx_contacts_telepon ON contacts(telepon);
-
 COMMIT;
