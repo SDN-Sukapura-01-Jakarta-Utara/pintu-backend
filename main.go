@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"pintu-backend/src/routes"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -35,6 +36,14 @@ func main() {
 
 	// Create router
 	router := gin.Default()
+
+	// Setup CORS middleware
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowOrigins = []string{"http://localhost:3001", "http://localhost:3000"}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	corsConfig.AllowCredentials = true
+	router.Use(cors.New(corsConfig))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
