@@ -68,10 +68,26 @@ func (s *LoginServiceImpl) Login(req *dtos.LoginRequest) (*dtos.LoginResponse, e
 	// Map roles to response
 	roles := make([]dtos.RoleResponse, len(user.Roles))
 	for i, role := range user.Roles {
+		var system *dtos.SystemResponse
+		if role.System != nil {
+			system = &dtos.SystemResponse{
+				ID:          role.System.ID,
+				Nama:        role.System.Nama,
+				Description: role.System.Description,
+			}
+		}
+
 		roles[i] = dtos.RoleResponse{
 			ID:          role.ID,
 			Name:        role.Name,
 			Description: role.Description,
+			SystemID:    role.SystemID,
+			System:      system,
+			Status:      role.Status,
+			CreatedAt:   role.CreatedAt,
+			UpdatedAt:   role.UpdatedAt,
+			CreatedByID: role.CreatedByID,
+			UpdatedByID: role.UpdatedByID,
 		}
 	}
 

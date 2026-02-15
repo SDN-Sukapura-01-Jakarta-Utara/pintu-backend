@@ -22,15 +22,16 @@ type RoleUpdateRequest struct {
 
 // RoleResponse represents the response payload for Role
 type RoleResponse struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	SystemID    *uint     `json:"system_id"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	CreatedByID *uint     `json:"created_by_id"`
-	UpdatedByID *uint     `json:"updated_by_id"`
+	ID          uint             `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	SystemID    *uint            `json:"system_id"`
+	System      *SystemResponse  `json:"system"`
+	Status      string           `json:"status"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
+	CreatedByID *uint            `json:"created_by_id"`
+	UpdatedByID *uint            `json:"updated_by_id"`
 }
 
 // RoleListResponse represents the response payload for listing Role

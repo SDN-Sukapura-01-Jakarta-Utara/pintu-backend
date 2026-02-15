@@ -26,10 +26,11 @@ type UserRepositoryImpl struct {
 
 // GetUsersFilter represents filters for getting users
 type GetUsersFilter struct {
-	Nama    string
+	Nama     string
 	Username string
-	RoleIDs []uint
-	Status  string
+	RoleIDs  []uint
+	SystemID uint
+	Status   string
 }
 
 // GetUsersParams represents parameters for getting users with filters
@@ -52,7 +53,7 @@ func (r *UserRepositoryImpl) Create(data *models.User) error {
 // GetByID retrieves User by ID
 func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 	var data models.User
-	if err := r.db.Preload("Roles").First(&data, id).Error; err != nil {
+	if err := r.db.Preload("Roles.System").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -61,7 +62,7 @@ func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 // GetAll retrieves all User records
 func (r *UserRepositoryImpl) GetAll() ([]models.User, error) {
 	var data []models.User
-	if err := r.db.Preload("Roles").Find(&data).Error; err != nil {
+	if err := r.db.Preload("Roles.System").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -70,7 +71,7 @@ func (r *UserRepositoryImpl) GetAll() ([]models.User, error) {
 // GetByUsername retrieves user by username
 func (r *UserRepositoryImpl) GetByUsername(username string) (*models.User, error) {
 	var data models.User
-	if err := r.db.Preload("Roles").Where("username = ?", username).First(&data).Error; err != nil {
+	if err := r.db.Preload("Roles.System").Where("username = ?", username).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -81,21 +82,30 @@ func (r *UserRepositoryImpl) GetAllWithFilter(params GetUsersParams) ([]models.U
 	var users []models.User
 	var total int64
 
-	query := r.db.Preload("Roles")
+	query := r.db.Preload("Roles.System")
 
 	// Apply filters
 	if params.Filter.Nama != "" {
-		query = query.Where("LOWER(nama) LIKE ?", "%"+strings.ToLower(params.Filter.Nama)+"%")
+		query = query.Where("LOWER(users.nama) LIKE ?", "%"+strings.ToLower(params.Filter.Nama)+"%")
 	}
 	if params.Filter.Username != "" {
-		query = query.Where("LOWER(username) LIKE ?", "%"+strings.ToLower(params.Filter.Username)+"%")
+		query = query.Where("LOWER(users.username) LIKE ?", "%"+strings.ToLower(params.Filter.Username)+"%")
 	}
-	if len(params.Filter.RoleIDs) > 0 {
-		// Filter by multiple roles (users that have any of these roles)
-		query = query.Joins("INNER JOIN user_roles ON users.id = user_roles.user_id").Where("user_roles.role_id IN ?", params.Filter.RoleIDs)
+	if len(params.Filter.RoleIDs) > 0 || params.Filter.SystemID > 0 {
+		// Filter by roles and/or system
+		query = query.Joins("INNER JOIN user_roles ON users.id = user_roles.user_id").
+			Joins("INNER JOIN roles ON user_roles.role_id = roles.id").
+			Select("DISTINCT users.*")
+		
+		if len(params.Filter.RoleIDs) > 0 {
+			query = query.Where("user_roles.role_id IN ?", params.Filter.RoleIDs)
+		}
+		if params.Filter.SystemID > 0 {
+			query = query.Where("roles.system_id = ?", params.Filter.SystemID)
+		}
 	}
 	if params.Filter.Status != "" {
-		query = query.Where("status = ?", params.Filter.Status)
+		query = query.Where("users.status = ?", params.Filter.Status)
 	}
 
 	// Count total

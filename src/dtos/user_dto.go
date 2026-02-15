@@ -52,6 +52,7 @@ type UserGetAllRequest struct {
 		Nama     string `json:"nama"`
 		Username string `json:"username"`
 		RoleIDs  []uint `json:"role_ids"`
+		SystemID uint   `json:"system_id"`
 		Status   string `json:"status"`
 	} `json:"search"`
 	Pagination struct {

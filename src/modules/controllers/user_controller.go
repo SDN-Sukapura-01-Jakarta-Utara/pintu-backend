@@ -104,10 +104,11 @@ func (c *UserController) GetAll(ctx *gin.Context) {
 	// Call service
 	users, total, err := c.service.GetAllWithFilter(repositories.GetUsersParams{
 		Filter: repositories.GetUsersFilter{
-			Nama:    req.Search.Nama,
+			Nama:     req.Search.Nama,
 			Username: req.Search.Username,
-			RoleIDs: req.Search.RoleIDs,
-			Status:  req.Search.Status,
+			RoleIDs:  req.Search.RoleIDs,
+			SystemID: req.Search.SystemID,
+			Status:   req.Search.Status,
 		},
 		Limit:  limit,
 		Offset: offset,
@@ -261,10 +262,26 @@ func mapUserToResponse(user *models.User) *dtos.UserResponse {
 
 	roles := make([]dtos.RoleResponse, len(user.Roles))
 	for i, role := range user.Roles {
+		var system *dtos.SystemResponse
+		if role.System != nil {
+			system = &dtos.SystemResponse{
+				ID:          role.System.ID,
+				Nama:        role.System.Nama,
+				Description: role.System.Description,
+			}
+		}
+
 		roles[i] = dtos.RoleResponse{
 			ID:          role.ID,
 			Name:        role.Name,
 			Description: role.Description,
+			SystemID:    role.SystemID,
+			System:      system,
+			Status:      role.Status,
+			CreatedAt:   role.CreatedAt,
+			UpdatedAt:   role.UpdatedAt,
+			CreatedByID: role.CreatedByID,
+			UpdatedByID: role.UpdatedByID,
 		}
 	}
 
@@ -289,10 +306,26 @@ func mapUserToResponseDetail(user *models.User) *dtos.UserResponseDetail {
 
 	roles := make([]dtos.RoleResponse, len(user.Roles))
 	for i, role := range user.Roles {
+		var system *dtos.SystemResponse
+		if role.System != nil {
+			system = &dtos.SystemResponse{
+				ID:          role.System.ID,
+				Nama:        role.System.Nama,
+				Description: role.System.Description,
+			}
+		}
+
 		roles[i] = dtos.RoleResponse{
 			ID:          role.ID,
 			Name:        role.Name,
 			Description: role.Description,
+			SystemID:    role.SystemID,
+			System:      system,
+			Status:      role.Status,
+			CreatedAt:   role.CreatedAt,
+			UpdatedAt:   role.UpdatedAt,
+			CreatedByID: role.CreatedByID,
+			UpdatedByID: role.UpdatedByID,
 		}
 	}
 
