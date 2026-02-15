@@ -13,6 +13,7 @@ type UserService interface {
 	GetByID(id uint) (*models.User, error)
 	GetAll() ([]models.User, error)
 	GetByUsername(username string) (*models.User, error)
+	GetAllWithFilter(params repositories.GetUsersParams) ([]models.User, int64, error)
 	Update(data *models.User) error
 	Delete(id uint) error
 }
@@ -63,6 +64,11 @@ func (s *UserServiceImpl) GetAll() ([]models.User, error) {
 // GetByUsername retrieves user by username
 func (s *UserServiceImpl) GetByUsername(username string) (*models.User, error) {
 	return s.repository.GetByUsername(username)
+}
+
+// GetAllWithFilter retrieves users with filters and pagination
+func (s *UserServiceImpl) GetAllWithFilter(params repositories.GetUsersParams) ([]models.User, int64, error) {
+	return s.repository.GetAllWithFilter(params)
 }
 
 // Update updates User

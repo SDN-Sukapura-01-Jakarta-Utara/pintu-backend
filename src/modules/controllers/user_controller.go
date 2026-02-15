@@ -5,6 +5,7 @@ import (
 
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
+	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
 
 	"github.com/gin-gonic/gin"
@@ -81,15 +82,79 @@ func (c *UserController) GetByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": data})
 }
 
-// GetAll retrieves all Users
+// GetAll retrieves all Users with filters and pagination
 func (c *UserController) GetAll(ctx *gin.Context) {
-	data, err := c.service.GetAll()
+	var req dtos.UserGetAllRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Default values
+	limit := 10
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
+	}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
+	}
+	offset := (page - 1) * limit
+
+	// Call service
+	users, total, err := c.service.GetAllWithFilter(repositories.GetUsersParams{
+		Filter: repositories.GetUsersFilter{
+			Nama:             req.Search.Nama,
+			Username:         req.Search.Username,
+			RoleID:           req.Search.RoleID,
+			Status:           req.Search.Status,
+			AccessibleSystem: req.Search.AccessibleSystem,
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Map to response
+	var responseData []dtos.UserResponseDetail
+	for _, user := range users {
+		systems, _ := user.AccessibleSystems()
+		roleName := ""
+		if user.Role != nil {
+			roleName = user.Role.Name
+		}
+
+		responseData = append(responseData, dtos.UserResponseDetail{
+			ID:               user.ID,
+			Nama:             user.Nama,
+			Username:         user.Username,
+			RoleID:           *user.RoleID,
+			RoleName:         roleName,
+			AccessibleSystem: systems,
+			Status:           user.Status,
+			CreatedAt:        user.CreatedAt,
+			UpdatedAt:        user.UpdatedAt,
+			CreatedByID:      user.CreatedByID,
+			UpdatedByID:      user.UpdatedByID,
+		})
+	}
+
+	totalPages := (int(total) + limit - 1) / limit
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"data": responseData,
+		"pagination": gin.H{
+			"limit":       limit,
+			"offset":      offset,
+			"page":        page,
+			"total":       total,
+			"total_pages": totalPages,
+		},
+	})
 }
 
 // Update updates User
@@ -98,7 +163,7 @@ func (c *UserController) Update(ctx *gin.Context) {
 		ID               uint     `json:"id" binding:"required"`
 		Nama             string   `json:"nama"`
 		Username         string   `json:"username"`
-		RoleID           uint     `json:"role_id"`
+		RoleID           *uint    `json:"role_id"`
 		AccessibleSystem []string `json:"accessible_system"`
 		Status           string   `json:"status"`
 	}
@@ -121,8 +186,8 @@ func (c *UserController) Update(ctx *gin.Context) {
 	if req.Username != "" {
 		data.Username = req.Username
 	}
-	if req.RoleID != 0 {
-		data.RoleID = &req.RoleID
+	if req.RoleID != nil && *req.RoleID > 0 {
+		data.RoleID = req.RoleID
 	}
 	if len(req.AccessibleSystem) > 0 {
 		data.SetAccessibleSystems(req.AccessibleSystem)

@@ -50,6 +50,51 @@ type UserListResponse struct {
 	Total int64          `json:"total"`
 }
 
+// UserGetAllRequest represents the request payload for getting all users with filters
+type UserGetAllRequest struct {
+	Search struct {
+		Nama             string `json:"nama"`
+		Username         string `json:"username"`
+		RoleID           uint   `json:"role_id"`
+		Status           string `json:"status"`
+		AccessibleSystem string `json:"accessible_system"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// PaginationInfo represents pagination information
+type PaginationInfo struct {
+	Limit      int   `json:"limit"`
+	Offset     int   `json:"offset"`
+	Page       int   `json:"page"`
+	Total      int64 `json:"total"`
+	TotalPages int   `json:"total_pages"`
+}
+
+// UserResponseDetail represents the detailed response payload for User
+type UserResponseDetail struct {
+	ID               uint      `json:"id"`
+	Nama             string    `json:"nama"`
+	Username         string    `json:"username"`
+	RoleID           uint      `json:"role_id"`
+	RoleName         string    `json:"role_name"`
+	AccessibleSystem []string  `json:"accessible_system"`
+	Status           string    `json:"status"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	CreatedByID      *uint     `json:"created_by_id"`
+	UpdatedByID      *uint     `json:"updated_by_id"`
+}
+
+// UserListWithPaginationResponse represents the response with pagination
+type UserListWithPaginationResponse struct {
+	Data       []UserResponseDetail `json:"data"`
+	Pagination PaginationInfo       `json:"pagination"`
+}
+
 // UserLoginRequest represents the request payload for user login
 type UserLoginRequest struct {
 	Username string `json:"username" binding:"required"`
