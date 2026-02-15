@@ -9,7 +9,7 @@ CREATE TABLE permissions (
     group_name VARCHAR(100) NOT NULL,
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    system VARCHAR(50),
+    system_id INTEGER,
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -21,6 +21,11 @@ CREATE TABLE permissions (
 -- Create indexes
 CREATE INDEX idx_permissions_name ON permissions(name);
 CREATE INDEX idx_permissions_group_name ON permissions(group_name);
-CREATE INDEX idx_permissions_system ON permissions(system);
+CREATE INDEX idx_permissions_system_id ON permissions(system_id);
+
+-- Add foreign key constraint
+ALTER TABLE permissions
+ADD CONSTRAINT fk_permissions_system_id
+FOREIGN KEY (system_id) REFERENCES systems(id) ON DELETE SET NULL;
 
 COMMIT;

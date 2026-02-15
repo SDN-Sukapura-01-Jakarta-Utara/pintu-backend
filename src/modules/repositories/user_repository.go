@@ -16,6 +16,8 @@ type UserRepository interface {
 	GetAllWithFilter(params GetUsersParams) ([]models.User, int64, error)
 	Update(data *models.User) error
 	Delete(id uint) error
+	AssignRoles(userID uint, roleIDs []uint) error
+	RemoveRoles(userID uint) error
 }
 
 type UserRepositoryImpl struct {
@@ -24,11 +26,10 @@ type UserRepositoryImpl struct {
 
 // GetUsersFilter represents filters for getting users
 type GetUsersFilter struct {
-	Nama             string
-	Username         string
-	RoleID           uint
-	Status           string
-	AccessibleSystem string
+	Nama    string
+	Username string
+	RoleIDs []uint
+	Status  string
 }
 
 // GetUsersParams represents parameters for getting users with filters
@@ -51,7 +52,7 @@ func (r *UserRepositoryImpl) Create(data *models.User) error {
 // GetByID retrieves User by ID
 func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 	var data models.User
-	if err := r.db.Preload("Role").First(&data, id).Error; err != nil {
+	if err := r.db.Preload("Roles").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -60,7 +61,7 @@ func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 // GetAll retrieves all User records
 func (r *UserRepositoryImpl) GetAll() ([]models.User, error) {
 	var data []models.User
-	if err := r.db.Preload("Role").Find(&data).Error; err != nil {
+	if err := r.db.Preload("Roles").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -69,7 +70,7 @@ func (r *UserRepositoryImpl) GetAll() ([]models.User, error) {
 // GetByUsername retrieves user by username
 func (r *UserRepositoryImpl) GetByUsername(username string) (*models.User, error) {
 	var data models.User
-	if err := r.db.Preload("Role").Where("username = ?", username).First(&data).Error; err != nil {
+	if err := r.db.Preload("Roles").Where("username = ?", username).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -80,7 +81,7 @@ func (r *UserRepositoryImpl) GetAllWithFilter(params GetUsersParams) ([]models.U
 	var users []models.User
 	var total int64
 
-	query := r.db.Preload("Role")
+	query := r.db.Preload("Roles")
 
 	// Apply filters
 	if params.Filter.Nama != "" {
@@ -89,14 +90,12 @@ func (r *UserRepositoryImpl) GetAllWithFilter(params GetUsersParams) ([]models.U
 	if params.Filter.Username != "" {
 		query = query.Where("LOWER(username) LIKE ?", "%"+strings.ToLower(params.Filter.Username)+"%")
 	}
-	if params.Filter.RoleID > 0 {
-		query = query.Where("role_id = ?", params.Filter.RoleID)
+	if len(params.Filter.RoleIDs) > 0 {
+		// Filter by multiple roles (users that have any of these roles)
+		query = query.Joins("INNER JOIN user_roles ON users.id = user_roles.user_id").Where("user_roles.role_id IN ?", params.Filter.RoleIDs)
 	}
 	if params.Filter.Status != "" {
 		query = query.Where("status = ?", params.Filter.Status)
-	}
-	if params.Filter.AccessibleSystem != "" {
-		query = query.Where("accessible_system::text LIKE ?", "%"+params.Filter.AccessibleSystem+"%")
 	}
 
 	// Count total
@@ -116,13 +115,11 @@ func (r *UserRepositoryImpl) GetAllWithFilter(params GetUsersParams) ([]models.U
 func (r *UserRepositoryImpl) Update(data *models.User) error {
 	// Use Update with map to explicitly set fields
 	result := r.db.Model(&models.User{}).Where("id = ?", data.ID).Updates(map[string]interface{}{
-		"nama":               data.Nama,
-		"username":           data.Username,
-		"role_id":            data.RoleID,
-		"accessible_system":  data.AccessibleSystem,
-		"status":             data.Status,
-		"updated_by_id":      data.UpdatedByID,
-		"updated_at":         data.UpdatedAt,
+		"nama":          data.Nama,
+		"username":      data.Username,
+		"status":        data.Status,
+		"updated_by_id": data.UpdatedByID,
+		"updated_at":    data.UpdatedAt,
 	})
 	return result.Error
 }
@@ -130,4 +127,28 @@ func (r *UserRepositoryImpl) Update(data *models.User) error {
 // Delete deletes User record by ID
 func (r *UserRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.User{}, id).Error
+}
+
+// AssignRoles assigns multiple roles to a user
+func (r *UserRepositoryImpl) AssignRoles(userID uint, roleIDs []uint) error {
+	// Clear existing roles first
+	if err := r.db.Table("user_roles").Where("user_id = ?", userID).Delete(nil).Error; err != nil {
+		return err
+	}
+
+	// Insert new roles
+	for _, roleID := range roleIDs {
+		if err := r.db.Table("user_roles").Create(map[string]interface{}{
+			"user_id": userID,
+			"role_id": roleID,
+		}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveRoles removes all roles from a user
+func (r *UserRepositoryImpl) RemoveRoles(userID uint) error {
+	return r.db.Table("user_roles").Where("user_id = ?", userID).Delete(nil).Error
 }

@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"pintu-backend/src/modules/models"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -11,12 +12,27 @@ type RoleRepository interface {
 	Create(data *models.Role) error
 	GetByID(id uint) (*models.Role, error)
 	GetAll() ([]models.Role, error)
+	GetAllWithFilter(params GetRolesParams) ([]models.Role, int64, error)
 	Update(data *models.Role) error
 	Delete(id uint) error
 }
 
 type RoleRepositoryImpl struct {
 	db *gorm.DB
+}
+
+// GetRolesFilter represents filters for getting roles
+type GetRolesFilter struct {
+	Name     string
+	SystemID uint
+	Status   string
+}
+
+// GetRolesParams represents parameters for getting roles with filters
+type GetRolesParams struct {
+	Filter GetRolesFilter
+	Limit  int
+	Offset int
 }
 
 // NewRoleRepository creates a new Role repository
@@ -47,9 +63,48 @@ func (r *RoleRepositoryImpl) GetAll() ([]models.Role, error) {
 	return data, nil
 }
 
+// GetAllWithFilter retrieves roles with filters and pagination
+func (r *RoleRepositoryImpl) GetAllWithFilter(params GetRolesParams) ([]models.Role, int64, error) {
+	var roles []models.Role
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.Name != "" {
+		query = query.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(params.Filter.Name)+"%")
+	}
+	if params.Filter.SystemID > 0 {
+		query = query.Where("system_id = ?", params.Filter.SystemID)
+	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
+
+	// Count total
+	if err := query.Model(&models.Role{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Fetch data with pagination
+	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&roles).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return roles, total, nil
+}
+
 // Update updates Role record
 func (r *RoleRepositoryImpl) Update(data *models.Role) error {
-	return r.db.Save(data).Error
+	result := r.db.Model(&models.Role{}).Where("id = ?", data.ID).Updates(map[string]interface{}{
+		"name":           data.Name,
+		"description":    data.Description,
+		"system_id":      data.SystemID,
+		"status":         data.Status,
+		"updated_by_id":  data.UpdatedByID,
+		"updated_at":     data.UpdatedAt,
+	})
+	return result.Error
 }
 
 // Delete deletes Role record by ID

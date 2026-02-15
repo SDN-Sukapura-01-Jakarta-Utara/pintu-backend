@@ -9,12 +9,12 @@ import (
 
 // UserService handles business logic for User
 type UserService interface {
-	Create(data *models.User) error
+	Create(data *models.User, roleIDs []uint) error
 	GetByID(id uint) (*models.User, error)
 	GetAll() ([]models.User, error)
 	GetByUsername(username string) (*models.User, error)
 	GetAllWithFilter(params repositories.GetUsersParams) ([]models.User, int64, error)
-	Update(data *models.User) error
+	Update(data *models.User, roleIDs []uint) error
 	Delete(id uint) error
 }
 
@@ -37,18 +37,30 @@ func NewUserServiceWithRole(repository repositories.UserRepository, roleRepo rep
 }
 
 // Create creates a new User
-func (s *UserServiceImpl) Create(data *models.User) error {
-	// Validate role exists if role_id is provided
-	if data.RoleID != nil && *data.RoleID > 0 {
-		if s.roleRepository != nil {
-			role, err := s.roleRepository.GetByID(*data.RoleID)
+func (s *UserServiceImpl) Create(data *models.User, roleIDs []uint) error {
+	// Validate roles exist if provided
+	if len(roleIDs) > 0 && s.roleRepository != nil {
+		for _, roleID := range roleIDs {
+			role, err := s.roleRepository.GetByID(roleID)
 			if err != nil || role == nil {
-				return errors.New("role tidak ditemukan atau sudah dihapus")
+				return errors.New("salah satu role tidak ditemukan atau sudah dihapus")
 			}
 		}
 	}
 
-	return s.repository.Create(data)
+	// Create user first
+	if err := s.repository.Create(data); err != nil {
+		return err
+	}
+
+	// Assign roles to user
+	if len(roleIDs) > 0 {
+		if err := s.repository.AssignRoles(data.ID, roleIDs); err != nil {
+			return errors.New("gagal menambahkan roles ke user")
+		}
+	}
+
+	return nil
 }
 
 // GetByID retrieves User by ID
@@ -72,18 +84,35 @@ func (s *UserServiceImpl) GetAllWithFilter(params repositories.GetUsersParams) (
 }
 
 // Update updates User
-func (s *UserServiceImpl) Update(data *models.User) error {
-	// Validate role exists if role_id is provided
-	if data.RoleID != nil && *data.RoleID > 0 {
-		if s.roleRepository != nil {
-			role, err := s.roleRepository.GetByID(*data.RoleID)
+func (s *UserServiceImpl) Update(data *models.User, roleIDs []uint) error {
+	// Validate roles exist if provided
+	if len(roleIDs) > 0 && s.roleRepository != nil {
+		for _, roleID := range roleIDs {
+			role, err := s.roleRepository.GetByID(roleID)
 			if err != nil || role == nil {
-				return errors.New("role tidak ditemukan atau sudah dihapus")
+				return errors.New("salah satu role tidak ditemukan atau sudah dihapus")
 			}
 		}
 	}
 
-	return s.repository.Update(data)
+	// Update user
+	if err := s.repository.Update(data); err != nil {
+		return err
+	}
+
+	// Update roles
+	if len(roleIDs) > 0 {
+		if err := s.repository.AssignRoles(data.ID, roleIDs); err != nil {
+			return errors.New("gagal mengupdate roles user")
+		}
+	} else {
+		// If no roles provided, remove all roles
+		if err := s.repository.RemoveRoles(data.ID); err != nil {
+			return errors.New("gagal menghapus roles user")
+		}
+	}
+
+	return nil
 }
 
 // Delete deletes User by ID

@@ -8,7 +8,7 @@ import (
 type RoleCreateRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description" binding:"omitempty"`
-	System      string `json:"system" binding:"required"`
+	SystemID    uint   `json:"system_id" binding:"required"`
 	Status      string `json:"status" binding:"omitempty"`
 }
 
@@ -16,7 +16,7 @@ type RoleCreateRequest struct {
 type RoleUpdateRequest struct {
 	Name        string `json:"name" binding:"omitempty"`
 	Description string `json:"description" binding:"omitempty"`
-	System      string `json:"system" binding:"omitempty"`
+	SystemID    *uint  `json:"system_id" binding:"omitempty"`
 	Status      string `json:"status" binding:"omitempty"`
 }
 
@@ -25,7 +25,7 @@ type RoleResponse struct {
 	ID          uint      `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	System      string    `json:"system"`
+	SystemID    *uint     `json:"system_id"`
 	Status      string    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
@@ -37,4 +37,17 @@ type RoleResponse struct {
 type RoleListResponse struct {
 	Data  []RoleResponse `json:"data"`
 	Total int64          `json:"total"`
+}
+
+// RoleGetAllRequest represents the request payload for getting all roles with filters
+type RoleGetAllRequest struct {
+	Search struct {
+		Name     string `json:"name"`
+		SystemID uint   `json:"system_id"`
+		Status   string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
 }

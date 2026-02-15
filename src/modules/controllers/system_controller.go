@@ -11,26 +11,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RoleController handles HTTP requests for Role
-type RoleController struct {
-	service services.RoleService
+// SystemController handles HTTP requests for System
+type SystemController struct {
+	service services.SystemService
 }
 
-// NewRoleController creates a new Role controller
-func NewRoleController(service services.RoleService) *RoleController {
-	return &RoleController{service: service}
+// NewSystemController creates a new System controller
+func NewSystemController(service services.SystemService) *SystemController {
+	return &SystemController{service: service}
 }
 
-// Create creates a new Role
-func (c *RoleController) Create(ctx *gin.Context) {
-	type CreateRequest struct {
-		Name        string `json:"name" binding:"required"`
-		Description string `json:"description"`
-		SystemID    uint   `json:"system_id" binding:"required"`
-		Status      string `json:"status"`
-	}
-	
-	var req CreateRequest
+// Create creates a new System
+func (c *SystemController) Create(ctx *gin.Context) {
+	var req dtos.SystemCreateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -40,24 +33,23 @@ func (c *RoleController) Create(ctx *gin.Context) {
 	userID, _ := ctx.Get("userID")
 	createdByID := userID.(uint)
 
-	role := &models.Role{
-		Name:        req.Name,
+	system := &models.System{
+		Nama:        req.Nama,
 		Description: req.Description,
-		SystemID:    &req.SystemID,
 		Status:      req.Status,
 		CreatedByID: &createdByID,
 	}
 
-	if err := c.service.Create(role); err != nil {
+	if err := c.service.Create(system); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": role})
+	ctx.JSON(http.StatusCreated, gin.H{"data": system})
 }
 
-// GetByID retrieves Role by ID
-func (c *RoleController) GetByID(ctx *gin.Context) {
+// GetByID retrieves System by ID
+func (c *SystemController) GetByID(ctx *gin.Context) {
 	var req struct {
 		ID uint `json:"id" binding:"required"`
 	}
@@ -68,16 +60,16 @@ func (c *RoleController) GetByID(ctx *gin.Context) {
 
 	data, err := c.service.GetByID(req.ID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "System not found"})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"data": data})
 }
 
-// GetAll retrieves all Roles with filters and pagination
-func (c *RoleController) GetAll(ctx *gin.Context) {
-	var req dtos.RoleGetAllRequest
+// GetAll retrieves all Systems with filters and pagination
+func (c *SystemController) GetAll(ctx *gin.Context) {
+	var req dtos.SystemGetAllRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -95,11 +87,10 @@ func (c *RoleController) GetAll(ctx *gin.Context) {
 	offset := (page - 1) * limit
 
 	// Call service
-	roles, total, err := c.service.GetAllWithFilter(repositories.GetRolesParams{
-		Filter: repositories.GetRolesFilter{
-			Name:     req.Search.Name,
-			SystemID: req.Search.SystemID,
-			Status:   req.Search.Status,
+	systems, total, err := c.service.GetAllWithFilter(repositories.GetSystemsParams{
+		Filter: repositories.GetSystemsFilter{
+			Nama:   req.Search.Nama,
+			Status: req.Search.Status,
 		},
 		Limit:  limit,
 		Offset: offset,
@@ -111,18 +102,17 @@ func (c *RoleController) GetAll(ctx *gin.Context) {
 	}
 
 	// Map to response
-	var responseData []dtos.RoleResponse
-	for _, role := range roles {
-		responseData = append(responseData, dtos.RoleResponse{
-			ID:          role.ID,
-			Name:        role.Name,
-			Description: role.Description,
-			SystemID:    role.SystemID,
-			Status:      role.Status,
-			CreatedAt:   role.CreatedAt,
-			UpdatedAt:   role.UpdatedAt,
-			CreatedByID: role.CreatedByID,
-			UpdatedByID: role.UpdatedByID,
+	var responseData []dtos.SystemResponse
+	for _, system := range systems {
+		responseData = append(responseData, dtos.SystemResponse{
+			ID:          system.ID,
+			Nama:        system.Nama,
+			Description: system.Description,
+			Status:      system.Status,
+			CreatedAt:   system.CreatedAt,
+			UpdatedAt:   system.UpdatedAt,
+			CreatedByID: system.CreatedByID,
+			UpdatedByID: system.UpdatedByID,
 		})
 	}
 
@@ -140,16 +130,15 @@ func (c *RoleController) GetAll(ctx *gin.Context) {
 	})
 }
 
-// Update updates Role
-func (c *RoleController) Update(ctx *gin.Context) {
+// Update updates System
+func (c *SystemController) Update(ctx *gin.Context) {
 	type UpdateRequest struct {
 		ID          uint   `json:"id" binding:"required"`
-		Name        string `json:"name"`
+		Nama        string `json:"nama"`
 		Description string `json:"description"`
-		SystemID    *uint  `json:"system_id"`
 		Status      string `json:"status"`
 	}
-	
+
 	var req UpdateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -158,18 +147,15 @@ func (c *RoleController) Update(ctx *gin.Context) {
 
 	data, err := c.service.GetByID(req.ID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": "Role not found"})
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "System not found"})
 		return
 	}
 
-	if req.Name != "" {
-		data.Name = req.Name
+	if req.Nama != "" {
+		data.Nama = req.Nama
 	}
 	if req.Description != "" {
 		data.Description = req.Description
-	}
-	if req.SystemID != nil && *req.SystemID > 0 {
-		data.SystemID = req.SystemID
 	}
 	if req.Status != "" {
 		data.Status = req.Status
@@ -188,8 +174,8 @@ func (c *RoleController) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": data})
 }
 
-// Delete deletes Role by ID
-func (c *RoleController) Delete(ctx *gin.Context) {
+// Delete deletes System by ID
+func (c *SystemController) Delete(ctx *gin.Context) {
 	var req struct {
 		ID uint `json:"id" binding:"required"`
 	}
@@ -203,5 +189,5 @@ func (c *RoleController) Delete(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Role deleted successfully"})
+	ctx.JSON(http.StatusOK, gin.H{"message": "System deleted successfully"})
 }

@@ -26,7 +26,7 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 		Name        string `json:"name" binding:"required"`
 		Description string `json:"description"`
 		GroupName   string `json:"group_name"`
-		System      string `json:"system"`
+		SystemID    uint   `json:"system_id" binding:"required"`
 		Status      string `json:"status"`
 	}
 	
@@ -44,7 +44,7 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 		Name:        req.Name,
 		Description: req.Description,
 		GroupName:   req.GroupName,
-		System:      req.System,
+		SystemID:    &req.SystemID,
 		Status:      req.Status,
 		CreatedByID: &createdByID,
 	}
@@ -152,7 +152,7 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 		Name        string `json:"name"`
 		Description string `json:"description"`
 		GroupName   string `json:"group_name"`
-		System      string `json:"system"`
+		SystemID    *uint  `json:"system_id"`
 		Status      string `json:"status"`
 	}
 	
@@ -177,8 +177,8 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 	if req.GroupName != "" {
 		data.GroupName = req.GroupName
 	}
-	if req.System != "" {
-		data.System = req.System
+	if req.SystemID != nil && *req.SystemID > 0 {
+		data.SystemID = req.SystemID
 	}
 	if req.Status != "" {
 		data.Status = req.Status

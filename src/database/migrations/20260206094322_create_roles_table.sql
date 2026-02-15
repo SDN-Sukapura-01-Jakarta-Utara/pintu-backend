@@ -8,7 +8,7 @@ CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    system VARCHAR(50),
+    system_id INTEGER,
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -19,6 +19,10 @@ CREATE TABLE roles (
 
 -- Create indexes
 CREATE INDEX idx_roles_name ON roles(name);
-CREATE INDEX idx_roles_system ON roles(system);
+CREATE INDEX idx_roles_system_id ON roles(system_id);
+
+ALTER TABLE roles
+ADD CONSTRAINT fk_roles_system_id
+FOREIGN KEY (system_id) REFERENCES systems(id) ON DELETE SET NULL;
 
 COMMIT;

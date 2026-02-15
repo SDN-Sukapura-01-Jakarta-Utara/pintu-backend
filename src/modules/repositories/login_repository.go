@@ -23,7 +23,7 @@ func NewLoginRepository(db *gorm.DB) LoginRepository {
 // GetByUsername retrieves user by username
 func (r *LoginRepositoryImpl) GetByUsername(username string) (*models.User, error) {
 	var user models.User
-	if err := r.db.Preload("Role").Where("username = ?", username).First(&user).Error; err != nil {
+	if err := r.db.Preload("Roles").Where("username = ?", username).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

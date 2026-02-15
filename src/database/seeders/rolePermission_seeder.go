@@ -29,7 +29,7 @@ func (s *RolePermissionSeeder) Run() error {
 	// Define role-permission mappings
 	mappings := []RolePermissionMap{
 		{
-			RoleName: "Administrator",
+			RoleName: "Administrator (PINTU)",
 			PermissionNames: []string{
 				// Informasi Sekolah
 				"CREATE_INFORMASI_SEKOLAH", "READ_INFORMASI_SEKOLAH", "UPDATE_INFORMASI_SEKOLAH", "DELETE_INFORMASI_SEKOLAH",
@@ -48,7 +48,7 @@ func (s *RolePermissionSeeder) Run() error {
 			},
 		},
 		{
-			RoleName: "Kepala Sekolah",
+			RoleName: "Kepala Sekolah (PINTU)",
 			PermissionNames: []string{
 				// Informasi Sekolah - Read Only
 				"READ_INFORMASI_SEKOLAH",

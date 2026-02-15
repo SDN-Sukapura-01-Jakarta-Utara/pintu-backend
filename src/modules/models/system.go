@@ -6,13 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// Permission represents the Permission model
-type Permission struct {
+// System represents the System model
+type System struct {
 	ID          uint            `gorm:"primaryKey" json:"id"`
-	Name        string          `gorm:"not null" json:"name"`
+	Nama        string          `gorm:"not null" json:"nama"`
 	Description string          `json:"description"`
-	GroupName   string          `json:"group_name"`
-	SystemID    *uint           `json:"system_id"`
 	Status      string          `gorm:"default:active" json:"status"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
@@ -21,7 +19,7 @@ type Permission struct {
 	DeletedAt   gorm.DeletedAt  `gorm:"index" json:"deleted_at,omitempty"`
 }
 
-// TableName specifies the table name for Permission
-func (m *Permission) TableName() string {
-	return "permissions"
+// TableName specifies the table name for System
+func (m *System) TableName() string {
+	return "systems"
 }

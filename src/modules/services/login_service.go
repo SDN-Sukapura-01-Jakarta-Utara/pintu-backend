@@ -43,41 +43,49 @@ func (s *LoginServiceImpl) Login(req *dtos.LoginRequest) (*dtos.LoginResponse, e
 		return nil, errors.New("user tidak aktif")
 	}
 
+	// Check if user has role with system_id = 1 (PINTU)
+	var hasAccessToPINTU bool
+	var roleID uint
+	for _, role := range user.Roles {
+		if role.SystemID != nil && *role.SystemID == 1 {
+			hasAccessToPINTU = true
+			if roleID == 0 {
+				roleID = role.ID // Use first PINTU role for token
+			}
+		}
+	}
+
+	if !hasAccessToPINTU {
+		return nil, errors.New("anda tidak memiliki akses ke sistem PINTU")
+	}
+
 	// Generate JWT token
-	token, err := utils.GenerateToken(user.ID, user.Username, user.Nama, user.RoleID, user.Status)
+	token, err := utils.GenerateToken(user.ID, user.Username, user.Nama, &roleID, user.Status)
 	if err != nil {
 		return nil, errors.New("gagal membuat token")
 	}
 
-	// Parse accessible systems
-	var accessibleSystems []string
-	if systems, err := user.AccessibleSystems(); err == nil {
-		accessibleSystems = systems
-	}
-
-	// Prepare response
-	roleID := uint(0)
-	if user.RoleID != nil {
-		roleID = *user.RoleID
+	// Map roles to response
+	roles := make([]dtos.RoleResponse, len(user.Roles))
+	for i, role := range user.Roles {
+		roles[i] = dtos.RoleResponse{
+			ID:          role.ID,
+			Name:        role.Name,
+			Description: role.Description,
+		}
 	}
 
 	response := &dtos.LoginResponse{
 		Token:     token,
 		ExpiresAt: time.Now().Add(24 * time.Hour),
 		User: dtos.UserLoginResponse{
-			ID:               user.ID,
-			Nama:             user.Nama,
-			Username:         user.Username,
-			Status:           user.Status,
-			RoleID:           roleID,
-			AccessibleSystem: accessibleSystems,
-			CreatedAt:        user.CreatedAt,
+			ID:        user.ID,
+			Nama:      user.Nama,
+			Username:  user.Username,
+			Status:    user.Status,
+			Roles:     roles,
+			CreatedAt: user.CreatedAt,
 		},
-	}
-
-	// Set role name if exists
-	if user.Role != nil {
-		response.User.RoleName = user.Role.Name
 	}
 
 	return response, nil

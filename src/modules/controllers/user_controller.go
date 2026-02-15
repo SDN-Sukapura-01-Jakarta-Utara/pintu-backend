@@ -45,22 +45,21 @@ func (c *UserController) Create(ctx *gin.Context) {
 		Nama:        req.Nama,
 		Username:    req.Username,
 		Password:    string(hashedPassword),
-		RoleID:      &req.RoleID,
 		Status:      req.Status,
 		CreatedByID: &createdByID,
 	}
 
-	// Set accessible systems
-	if len(req.AccessibleSystem) > 0 {
-		user.SetAccessibleSystems(req.AccessibleSystem)
-	}
-
-	if err := c.service.Create(user); err != nil {
+	if err := c.service.Create(user, req.RoleIDs); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": user})
+	// Reload user to get roles
+	user, _ = c.service.GetByID(user.ID)
+
+	// Map to response
+	response := mapUserToResponse(user)
+	ctx.JSON(http.StatusCreated, gin.H{"data": response})
 }
 
 // GetByID retrieves User by ID
@@ -79,7 +78,8 @@ func (c *UserController) GetByID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	response := mapUserToResponse(data)
+	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 // GetAll retrieves all Users with filters and pagination
@@ -104,11 +104,10 @@ func (c *UserController) GetAll(ctx *gin.Context) {
 	// Call service
 	users, total, err := c.service.GetAllWithFilter(repositories.GetUsersParams{
 		Filter: repositories.GetUsersFilter{
-			Nama:             req.Search.Nama,
-			Username:         req.Search.Username,
-			RoleID:           req.Search.RoleID,
-			Status:           req.Search.Status,
-			AccessibleSystem: req.Search.AccessibleSystem,
+			Nama:    req.Search.Nama,
+			Username: req.Search.Username,
+			RoleIDs: req.Search.RoleIDs,
+			Status:  req.Search.Status,
 		},
 		Limit:  limit,
 		Offset: offset,
@@ -122,25 +121,7 @@ func (c *UserController) GetAll(ctx *gin.Context) {
 	// Map to response
 	var responseData []dtos.UserResponseDetail
 	for _, user := range users {
-		systems, _ := user.AccessibleSystems()
-		roleName := ""
-		if user.Role != nil {
-			roleName = user.Role.Name
-		}
-
-		responseData = append(responseData, dtos.UserResponseDetail{
-			ID:               user.ID,
-			Nama:             user.Nama,
-			Username:         user.Username,
-			RoleID:           *user.RoleID,
-			RoleName:         roleName,
-			AccessibleSystem: systems,
-			Status:           user.Status,
-			CreatedAt:        user.CreatedAt,
-			UpdatedAt:        user.UpdatedAt,
-			CreatedByID:      user.CreatedByID,
-			UpdatedByID:      user.UpdatedByID,
-		})
+		responseData = append(responseData, *mapUserToResponseDetail(&user))
 	}
 
 	totalPages := (int(total) + limit - 1) / limit
@@ -160,14 +141,13 @@ func (c *UserController) GetAll(ctx *gin.Context) {
 // Update updates User
 func (c *UserController) Update(ctx *gin.Context) {
 	type UpdateRequest struct {
-		ID               uint     `json:"id" binding:"required"`
-		Nama             string   `json:"nama"`
-		Username         string   `json:"username"`
-		RoleID           *uint    `json:"role_id"`
-		AccessibleSystem []string `json:"accessible_system"`
-		Status           string   `json:"status"`
+		ID       uint   `json:"id" binding:"required"`
+		Nama     string `json:"nama"`
+		Username string `json:"username"`
+		RoleIDs  []uint `json:"role_ids"`
+		Status   string `json:"status"`
 	}
-	
+
 	var req UpdateRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -186,12 +166,6 @@ func (c *UserController) Update(ctx *gin.Context) {
 	if req.Username != "" {
 		data.Username = req.Username
 	}
-	if req.RoleID != nil && *req.RoleID > 0 {
-		data.RoleID = req.RoleID
-	}
-	if len(req.AccessibleSystem) > 0 {
-		data.SetAccessibleSystems(req.AccessibleSystem)
-	}
 	if req.Status != "" {
 		data.Status = req.Status
 	}
@@ -201,12 +175,15 @@ func (c *UserController) Update(ctx *gin.Context) {
 	updatedByID := userID.(uint)
 	data.UpdatedByID = &updatedByID
 
-	if err := c.service.Update(data); err != nil {
+	if err := c.service.Update(data, req.RoleIDs); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Reload user to get updated roles
+	data, _ = c.service.GetByID(req.ID)
+	response := mapUserToResponse(data)
+	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 // UpdatePassword updates user password
@@ -249,7 +226,8 @@ func (c *UserController) UpdatePassword(ctx *gin.Context) {
 	updatedByID := userID.(uint)
 	user.UpdatedByID = &updatedByID
 
-	if err := c.service.Update(user); err != nil {
+	// Keep existing roles when updating password
+	if err := c.service.Update(user, []uint{}); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -273,4 +251,60 @@ func (c *UserController) Delete(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+}
+
+// Helper function to map User model to UserResponse DTO
+func mapUserToResponse(user *models.User) *dtos.UserResponse {
+	if user == nil {
+		return nil
+	}
+
+	roles := make([]dtos.RoleResponse, len(user.Roles))
+	for i, role := range user.Roles {
+		roles[i] = dtos.RoleResponse{
+			ID:          role.ID,
+			Name:        role.Name,
+			Description: role.Description,
+		}
+	}
+
+	return &dtos.UserResponse{
+		ID:          user.ID,
+		Nama:        user.Nama,
+		Username:    user.Username,
+		Roles:       roles,
+		Status:      user.Status,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		CreatedByID: user.CreatedByID,
+		UpdatedByID: user.UpdatedByID,
+	}
+}
+
+// Helper function to map User model to UserResponseDetail DTO
+func mapUserToResponseDetail(user *models.User) *dtos.UserResponseDetail {
+	if user == nil {
+		return nil
+	}
+
+	roles := make([]dtos.RoleResponse, len(user.Roles))
+	for i, role := range user.Roles {
+		roles[i] = dtos.RoleResponse{
+			ID:          role.ID,
+			Name:        role.Name,
+			Description: role.Description,
+		}
+	}
+
+	return &dtos.UserResponseDetail{
+		ID:          user.ID,
+		Nama:        user.Nama,
+		Username:    user.Username,
+		Roles:       roles,
+		Status:      user.Status,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
+		CreatedByID: user.CreatedByID,
+		UpdatedByID: user.UpdatedByID,
+	}
 }

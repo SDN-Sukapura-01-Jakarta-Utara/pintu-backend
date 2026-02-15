@@ -65,10 +65,10 @@ func (r *PermissionRepositoryImpl) GetByGroupName(groupName string) ([]models.Pe
 	return data, nil
 }
 
-// GetBySystem retrieves permissions by system
-func (r *PermissionRepositoryImpl) GetBySystem(system string) ([]models.Permission, error) {
+// GetBySystem retrieves permissions by system ID
+func (r *PermissionRepositoryImpl) GetBySystem(systemID string) ([]models.Permission, error) {
 	var data []models.Permission
-	if err := r.db.Where("system = ?", system).Find(&data).Error; err != nil {
+	if err := r.db.Where("system_id = ?", systemID).Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -76,7 +76,16 @@ func (r *PermissionRepositoryImpl) GetBySystem(system string) ([]models.Permissi
 
 // Update updates Permission record
 func (r *PermissionRepositoryImpl) Update(data *models.Permission) error {
-	return r.db.Save(data).Error
+	result := r.db.Model(&models.Permission{}).Where("id = ?", data.ID).Updates(map[string]interface{}{
+		"name":           data.Name,
+		"description":    data.Description,
+		"group_name":     data.GroupName,
+		"system_id":      data.SystemID,
+		"status":         data.Status,
+		"updated_by_id":  data.UpdatedByID,
+		"updated_at":     data.UpdatedAt,
+	})
+	return result.Error
 }
 
 // Delete deletes Permission record by ID

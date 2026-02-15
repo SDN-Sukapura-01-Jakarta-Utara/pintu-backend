@@ -47,6 +47,7 @@ func runSeeders() error {
 		name   string
 		seeder func(*gorm.DB) error
 	}{
+		{"System", runSystemSeeder},
 		{"Permissions", runPermissionSeeder},
 		{"Roles", runRoleSeeder},
 		{"Role Permissions", runRolePermissionSeeder},
@@ -61,6 +62,10 @@ func runSeeders() error {
 	}
 
 	return nil
+}
+
+func runSystemSeeder(db *gorm.DB) error {
+	return seeders.SystemSeeder(db)
 }
 
 func runPermissionSeeder(db *gorm.DB) error {

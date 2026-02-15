@@ -21,7 +21,7 @@ type Role struct {
 	ID          uint
 	Name        string
 	Description string
-	System      string
+	SystemID    uint
 	Status      string
 }
 
@@ -30,8 +30,10 @@ func (s *RoleSeeder) Run() error {
 	fmt.Println("Seeding roles...")
 
 	roles := []Role{
-		{Name: "Administrator", Description: "Administrator", System: "PINTU", Status: "active"},
-		{Name: "Kepala Sekolah", Description: "Kepala Sekolah", System: "PINTU", Status: "active"},
+		{Name: "Administrator (PINTU)", Description: "Administrator Khusus Sistem PINTU", SystemID: 1, Status: "active"},
+		{Name: "Kepala Sekolah (PINTU)", Description: "Kepala Sekolah Khusus Sistem PINTU", SystemID: 1, Status: "active"},
+		{Name: "Administrator (SIEKSA)", Description: "Administrator Khusus Sistem SIEKSA", SystemID: 2, Status: "active"},
+		{Name: "Kepala Sekolah (SIEKSA)", Description: "Kepala Sekolah Khusus Sistem SIEKSA", SystemID: 2, Status: "active"},
 	}
 
 	// Check if roles already exist
@@ -47,7 +49,7 @@ func (s *RoleSeeder) Run() error {
 		result := s.db.Table("roles").Create(map[string]interface{}{
 			"name":        role.Name,
 			"description": role.Description,
-			"system":      role.System,
+			"system_id":   role.SystemID,
 			"status":      role.Status,
 		})
 		if result.Error != nil {

@@ -1,7 +1,6 @@
 package seeders
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -20,12 +19,11 @@ func NewUserSeeders(db *gorm.DB) *UserSeeder {
 
 // UserData represents user record for seeding
 type UserData struct {
-	Nama             string
-	Username         string
-	Password         string
-	RoleName         string
-	AccessibleSystem string
-	Status           string
+	Nama    string
+	Username string
+	Password string
+	RoleIDs  []uint // Many-to-many: array of role IDs
+	Status   string
 }
 
 // Run executes the seeder
@@ -34,20 +32,18 @@ func (s *UserSeeder) Run() error {
 
 	users := []UserData{
 		{
-			Nama:             "Administrator",
-			Username:         "admin",
-			Password:         "admin01", // Change this in production
-			RoleName:         "Administrator",
-			AccessibleSystem: `["PINTU"]`,
-			Status:           "active",
+			Nama:    "Administrator",
+			Username: "admin",
+			Password: "admin01",
+			RoleIDs: []uint{1, 3}, // Role ID 1 = Administrator
+			Status:   "active",
 		},
 		{
-			Nama:             "Kepala Sekolah",
-			Username:         "kepsek",
-			Password:         "kepsek01", // Change this in production
-			RoleName:         "Kepala Sekolah",
-			AccessibleSystem: `["PINTU"]`,
-			Status:           "active",
+			Nama:    "Kepala Sekolah",
+			Username: "kepsek",
+			Password: "kepsek01",
+			RoleIDs: []uint{2, 4}, // Role ID 2 = Kepala Sekolah
+			Status:   "active",
 		},
 	}
 
@@ -67,29 +63,30 @@ func (s *UserSeeder) Run() error {
 			return fmt.Errorf("failed to hash password for %s: %w", user.Username, err)
 		}
 
-		// Get role ID by name
-		var roleID uint
-		if err := s.db.Table("roles").Where("name = ?", user.RoleName).Select("id").Row().Scan(&roleID); err != nil {
-			return fmt.Errorf("failed to find role %s: %w", user.RoleName, err)
-		}
-
-		// Validate accessible_system is valid JSON
-		var validJSON interface{}
-		if err := json.Unmarshal([]byte(user.AccessibleSystem), &validJSON); err != nil {
-			return fmt.Errorf("invalid JSON for accessible_system: %w", err)
-		}
-
 		// Create user
 		result := s.db.Table("users").Create(map[string]interface{}{
-			"nama":              user.Nama,
-			"username":          user.Username,
-			"password":          string(hashedPassword),
-			"role_id":           roleID,
-			"accessible_system": user.AccessibleSystem,
-			"status":            user.Status,
+			"nama":     user.Nama,
+			"username": user.Username,
+			"password": string(hashedPassword),
+			"status":   user.Status,
 		})
 		if result.Error != nil {
 			return fmt.Errorf("failed to seed user %s: %w", user.Username, result.Error)
+		}
+
+		// Get user ID
+		var userID uint
+		s.db.Table("users").Where("username = ?", user.Username).Select("id").Row().Scan(&userID)
+
+		// Assign roles to user (many-to-many)
+		for _, roleID := range user.RoleIDs {
+			// Insert into user_roles pivot table
+			if err := s.db.Table("user_roles").Create(map[string]interface{}{
+				"user_id": userID,
+				"role_id": roleID,
+			}).Error; err != nil {
+				return fmt.Errorf("failed to assign role %d to user %s: %w", roleID, user.Username, err)
+			}
 		}
 	}
 

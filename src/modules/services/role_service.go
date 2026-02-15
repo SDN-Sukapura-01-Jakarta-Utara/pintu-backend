@@ -10,6 +10,7 @@ type RoleService interface {
 	Create(data *models.Role) error
 	GetByID(id uint) (*models.Role, error)
 	GetAll() ([]models.Role, error)
+	GetAllWithFilter(params repositories.GetRolesParams) ([]models.Role, int64, error)
 	Update(data *models.Role) error
 	Delete(id uint) error
 }
@@ -36,6 +37,11 @@ func (s *RoleServiceImpl) GetByID(id uint) (*models.Role, error) {
 // GetAll retrieves all Role
 func (s *RoleServiceImpl) GetAll() ([]models.Role, error) {
 	return s.repository.GetAll()
+}
+
+// GetAllWithFilter retrieves roles with filters and pagination
+func (s *RoleServiceImpl) GetAllWithFilter(params repositories.GetRolesParams) ([]models.Role, int64, error) {
+	return s.repository.GetAllWithFilter(params)
 }
 
 // Update updates Role

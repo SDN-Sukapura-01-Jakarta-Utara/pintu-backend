@@ -11,7 +11,7 @@ type Role struct {
 	ID          uint            `gorm:"primaryKey" json:"id"`
 	Name        string          `gorm:"not null" json:"name"`
 	Description string          `json:"description"`
-	System      string          `json:"system"`
+	SystemID    *uint           `json:"system_id"`
 	Status      string          `gorm:"default:active" json:"status"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
