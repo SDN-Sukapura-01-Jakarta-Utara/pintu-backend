@@ -48,7 +48,7 @@ func (r *RoleRepositoryImpl) Create(data *models.Role) error {
 // GetByID retrieves Role by ID
 func (r *RoleRepositoryImpl) GetByID(id uint) (*models.Role, error) {
 	var data models.Role
-	if err := r.db.First(&data, id).Error; err != nil {
+	if err := r.db.Preload("System").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -57,7 +57,7 @@ func (r *RoleRepositoryImpl) GetByID(id uint) (*models.Role, error) {
 // GetAll retrieves all Role records
 func (r *RoleRepositoryImpl) GetAll() ([]models.Role, error) {
 	var data []models.Role
-	if err := r.db.Find(&data).Error; err != nil {
+	if err := r.db.Preload("System").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -68,7 +68,7 @@ func (r *RoleRepositoryImpl) GetAllWithFilter(params GetRolesParams) ([]models.R
 	var roles []models.Role
 	var total int64
 
-	query := r.db
+	query := r.db.Preload("System")
 
 	// Apply filters
 	if params.Filter.Name != "" {

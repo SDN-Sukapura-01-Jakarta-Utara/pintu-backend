@@ -53,7 +53,38 @@ func (c *RoleController) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": role})
+	// Reload to get system data
+	roleData, _ := c.service.GetByID(role.ID)
+
+	// Map to response
+	var systemResponse *dtos.SystemResponse
+	if roleData.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          roleData.System.ID,
+			Nama:        roleData.System.Nama,
+			Description: roleData.System.Description,
+			Status:      roleData.System.Status,
+			CreatedAt:   roleData.System.CreatedAt,
+			UpdatedAt:   roleData.System.UpdatedAt,
+			CreatedByID: roleData.System.CreatedByID,
+			UpdatedByID: roleData.System.UpdatedByID,
+		}
+	}
+
+	response := dtos.RoleResponse{
+		ID:          roleData.ID,
+		Name:        roleData.Name,
+		Description: roleData.Description,
+		SystemID:    roleData.SystemID,
+		System:      systemResponse,
+		Status:      roleData.Status,
+		CreatedAt:   roleData.CreatedAt,
+		UpdatedAt:   roleData.UpdatedAt,
+		CreatedByID: roleData.CreatedByID,
+		UpdatedByID: roleData.UpdatedByID,
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{"data": response})
 }
 
 // GetByID retrieves Role by ID
@@ -72,7 +103,35 @@ func (c *RoleController) GetByID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Map to response
+	var systemResponse *dtos.SystemResponse
+	if data.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          data.System.ID,
+			Nama:        data.System.Nama,
+			Description: data.System.Description,
+			Status:      data.System.Status,
+			CreatedAt:   data.System.CreatedAt,
+			UpdatedAt:   data.System.UpdatedAt,
+			CreatedByID: data.System.CreatedByID,
+			UpdatedByID: data.System.UpdatedByID,
+		}
+	}
+
+	response := dtos.RoleResponse{
+		ID:          data.ID,
+		Name:        data.Name,
+		Description: data.Description,
+		SystemID:    data.SystemID,
+		System:      systemResponse,
+		Status:      data.Status,
+		CreatedAt:   data.CreatedAt,
+		UpdatedAt:   data.UpdatedAt,
+		CreatedByID: data.CreatedByID,
+		UpdatedByID: data.UpdatedByID,
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 // GetAll retrieves all Roles with filters and pagination
@@ -113,11 +172,26 @@ func (c *RoleController) GetAll(ctx *gin.Context) {
 	// Map to response
 	var responseData []dtos.RoleResponse
 	for _, role := range roles {
+		var systemResponse *dtos.SystemResponse
+		if role.System != nil {
+			systemResponse = &dtos.SystemResponse{
+				ID:          role.System.ID,
+				Nama:        role.System.Nama,
+				Description: role.System.Description,
+				Status:      role.System.Status,
+				CreatedAt:   role.System.CreatedAt,
+				UpdatedAt:   role.System.UpdatedAt,
+				CreatedByID: role.System.CreatedByID,
+				UpdatedByID: role.System.UpdatedByID,
+			}
+		}
+
 		responseData = append(responseData, dtos.RoleResponse{
 			ID:          role.ID,
 			Name:        role.Name,
 			Description: role.Description,
 			SystemID:    role.SystemID,
+			System:      systemResponse,
 			Status:      role.Status,
 			CreatedAt:   role.CreatedAt,
 			UpdatedAt:   role.UpdatedAt,
@@ -185,7 +259,38 @@ func (c *RoleController) Update(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Reload to get system data
+	roleData, _ := c.service.GetByID(data.ID)
+
+	// Map to response
+	var systemResponse *dtos.SystemResponse
+	if roleData.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          roleData.System.ID,
+			Nama:        roleData.System.Nama,
+			Description: roleData.System.Description,
+			Status:      roleData.System.Status,
+			CreatedAt:   roleData.System.CreatedAt,
+			UpdatedAt:   roleData.System.UpdatedAt,
+			CreatedByID: roleData.System.CreatedByID,
+			UpdatedByID: roleData.System.UpdatedByID,
+		}
+	}
+
+	response := dtos.RoleResponse{
+		ID:          roleData.ID,
+		Name:        roleData.Name,
+		Description: roleData.Description,
+		SystemID:    roleData.SystemID,
+		System:      systemResponse,
+		Status:      roleData.Status,
+		CreatedAt:   roleData.CreatedAt,
+		UpdatedAt:   roleData.UpdatedAt,
+		CreatedByID: roleData.CreatedByID,
+		UpdatedByID: roleData.UpdatedByID,
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 // Delete deletes Role by ID
@@ -204,4 +309,38 @@ func (c *RoleController) Delete(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Role deleted successfully"})
+}
+
+// Helper function to map Role model to RoleResponse DTO
+func mapRoleToResponse(role *models.Role) *dtos.RoleResponse {
+	if role == nil {
+		return nil
+	}
+
+	var systemResponse *dtos.SystemResponse
+	if role.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          role.System.ID,
+			Nama:        role.System.Nama,
+			Description: role.System.Description,
+			Status:      role.System.Status,
+			CreatedAt:   role.System.CreatedAt,
+			UpdatedAt:   role.System.UpdatedAt,
+			CreatedByID: role.System.CreatedByID,
+			UpdatedByID: role.System.UpdatedByID,
+		}
+	}
+
+	return &dtos.RoleResponse{
+		ID:          role.ID,
+		Name:        role.Name,
+		Description: role.Description,
+		SystemID:    role.SystemID,
+		System:      systemResponse,
+		Status:      role.Status,
+		CreatedAt:   role.CreatedAt,
+		UpdatedAt:   role.UpdatedAt,
+		CreatedByID: role.CreatedByID,
+		UpdatedByID: role.UpdatedByID,
+	}
 }
