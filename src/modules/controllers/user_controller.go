@@ -145,6 +145,7 @@ func (c *UserController) Update(ctx *gin.Context) {
 		ID       uint   `json:"id" binding:"required"`
 		Nama     string `json:"nama"`
 		Username string `json:"username"`
+		Password string `json:"password"`
 		RoleIDs  []uint `json:"role_ids"`
 		Status   string `json:"status"`
 	}
@@ -166,6 +167,15 @@ func (c *UserController) Update(ctx *gin.Context) {
 	}
 	if req.Username != "" {
 		data.Username = req.Username
+	}
+	if req.Password != "" {
+		// Hash password if provided
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+			return
+		}
+		data.Password = string(hashedPassword)
 	}
 	if req.Status != "" {
 		data.Status = req.Status

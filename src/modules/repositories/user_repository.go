@@ -127,6 +127,7 @@ func (r *UserRepositoryImpl) Update(data *models.User) error {
 	result := r.db.Model(&models.User{}).Where("id = ?", data.ID).Updates(map[string]interface{}{
 		"nama":          data.Nama,
 		"username":      data.Username,
+		"password":      data.Password,
 		"status":        data.Status,
 		"updated_by_id": data.UpdatedByID,
 		"updated_at":    data.UpdatedAt,
