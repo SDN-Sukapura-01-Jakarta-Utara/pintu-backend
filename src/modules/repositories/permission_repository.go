@@ -51,7 +51,7 @@ func (r *PermissionRepositoryImpl) Create(data *models.Permission) error {
 // GetByID retrieves Permission by ID
 func (r *PermissionRepositoryImpl) GetByID(id uint) (*models.Permission, error) {
 	var data models.Permission
-	if err := r.db.First(&data, id).Error; err != nil {
+	if err := r.db.Preload("System").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
