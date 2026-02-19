@@ -10,6 +10,7 @@ type PermissionService interface {
 	Create(data *models.Permission) error
 	GetByID(id uint) (*models.Permission, error)
 	GetAll(limit, offset int) ([]models.Permission, int64, error)
+	GetAllWithFilter(params repositories.GetPermissionsParams) ([]models.Permission, int64, error)
 	GetByGroupName(groupName string) ([]models.Permission, error)
 	GetBySystem(system string) ([]models.Permission, error)
 	Update(data *models.Permission) error
@@ -38,6 +39,11 @@ func (s *PermissionServiceImpl) GetByID(id uint) (*models.Permission, error) {
 // GetAll retrieves all Permissions
 func (s *PermissionServiceImpl) GetAll(limit, offset int) ([]models.Permission, int64, error) {
 	return s.repository.GetAll(limit, offset)
+}
+
+// GetAllWithFilter retrieves permissions with filters and pagination
+func (s *PermissionServiceImpl) GetAllWithFilter(params repositories.GetPermissionsParams) ([]models.Permission, int64, error) {
+	return s.repository.GetAllWithFilter(params)
 }
 
 // GetByGroupName retrieves permissions by group name

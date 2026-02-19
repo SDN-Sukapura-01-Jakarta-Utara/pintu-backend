@@ -24,16 +24,17 @@ type PermissionUpdateRequest struct {
 
 // PermissionResponse represents the response payload for Permission
 type PermissionResponse struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	GroupName   string    `json:"group_name"`
-	SystemID    *uint     `json:"system_id"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	CreatedByID *uint     `json:"created_by_id"`
-	UpdatedByID *uint     `json:"updated_by_id"`
+	ID          uint             `json:"id"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	GroupName   string           `json:"group_name"`
+	SystemID    *uint            `json:"system_id"`
+	System      *SystemResponse  `json:"system"`
+	Status      string           `json:"status"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
+	CreatedByID *uint            `json:"created_by_id"`
+	UpdatedByID *uint            `json:"updated_by_id"`
 }
 
 // PermissionListResponse represents the response payload for listing Permission
@@ -42,4 +43,18 @@ type PermissionListResponse struct {
 	Total  int64                `json:"total"`
 	Limit  int                  `json:"limit"`
 	Offset int                  `json:"offset"`
+}
+
+// PermissionGetAllRequest represents the request payload for getting all permissions with filters
+type PermissionGetAllRequest struct {
+	Search struct {
+		Name     string `json:"name"`
+		GroupName string `json:"group_name"`
+		SystemID uint   `json:"system_id"`
+		Status   string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
 }

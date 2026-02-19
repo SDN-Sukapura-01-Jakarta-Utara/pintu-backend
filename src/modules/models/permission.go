@@ -13,6 +13,7 @@ type Permission struct {
 	Description string          `json:"description"`
 	GroupName   string          `json:"group_name"`
 	SystemID    *uint           `json:"system_id"`
+	System      *System         `gorm:"foreignKey:SystemID" json:"system,omitempty"`
 	Status      string          `gorm:"default:active" json:"status"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`

@@ -2,9 +2,10 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
 
+	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
+	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
 
 	"github.com/gin-gonic/gin"
@@ -54,7 +55,39 @@ func (c *PermissionController) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": permission})
+	// Reload to get system data
+	permissionData, _ := c.service.GetByID(permission.ID)
+
+	// Map to response
+	var systemResponse *dtos.SystemResponse
+	if permissionData.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          permissionData.System.ID,
+			Nama:        permissionData.System.Nama,
+			Description: permissionData.System.Description,
+			Status:      permissionData.System.Status,
+			CreatedAt:   permissionData.System.CreatedAt,
+			UpdatedAt:   permissionData.System.UpdatedAt,
+			CreatedByID: permissionData.System.CreatedByID,
+			UpdatedByID: permissionData.System.UpdatedByID,
+		}
+	}
+
+	response := dtos.PermissionResponse{
+		ID:          permissionData.ID,
+		Name:        permissionData.Name,
+		Description: permissionData.Description,
+		GroupName:   permissionData.GroupName,
+		SystemID:    permissionData.SystemID,
+		System:      systemResponse,
+		Status:      permissionData.Status,
+		CreatedAt:   permissionData.CreatedAt,
+		UpdatedAt:   permissionData.UpdatedAt,
+		CreatedByID: permissionData.CreatedByID,
+		UpdatedByID: permissionData.UpdatedByID,
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{"data": response})
 }
 
 // GetByID retrieves Permission by ID
@@ -73,37 +106,117 @@ func (c *PermissionController) GetByID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Map to response
+	var systemResponse *dtos.SystemResponse
+	if data.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          data.System.ID,
+			Nama:        data.System.Nama,
+			Description: data.System.Description,
+			Status:      data.System.Status,
+			CreatedAt:   data.System.CreatedAt,
+			UpdatedAt:   data.System.UpdatedAt,
+			CreatedByID: data.System.CreatedByID,
+			UpdatedByID: data.System.UpdatedByID,
+		}
+	}
+
+	response := dtos.PermissionResponse{
+		ID:          data.ID,
+		Name:        data.Name,
+		Description: data.Description,
+		GroupName:   data.GroupName,
+		SystemID:    data.SystemID,
+		System:      systemResponse,
+		Status:      data.Status,
+		CreatedAt:   data.CreatedAt,
+		UpdatedAt:   data.UpdatedAt,
+		CreatedByID: data.CreatedByID,
+		UpdatedByID: data.UpdatedByID,
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
 
-// GetAll retrieves all Permissions
+// GetAll retrieves all Permissions with filters and pagination
 func (c *PermissionController) GetAll(ctx *gin.Context) {
+	var req dtos.PermissionGetAllRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Default values
 	limit := 10
-	offset := 0
-
-	if l := ctx.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
-		}
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
 	}
-
-	if o := ctx.Query("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
-			offset = parsed
-		}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
 	}
+	offset := (page - 1) * limit
 
-	data, total, err := c.service.GetAll(limit, offset)
+	// Call service
+	permissions, total, err := c.service.GetAllWithFilter(repositories.GetPermissionsParams{
+		Filter: repositories.GetPermissionsFilter{
+			Name:     req.Search.Name,
+			GroupName: req.Search.GroupName,
+			SystemID: req.Search.SystemID,
+			Status:   req.Search.Status,
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Map to response
+	var responseData []dtos.PermissionResponse
+	for _, permission := range permissions {
+		var systemResponse *dtos.SystemResponse
+		if permission.System != nil {
+			systemResponse = &dtos.SystemResponse{
+				ID:          permission.System.ID,
+				Nama:        permission.System.Nama,
+				Description: permission.System.Description,
+				Status:      permission.System.Status,
+				CreatedAt:   permission.System.CreatedAt,
+				UpdatedAt:   permission.System.UpdatedAt,
+				CreatedByID: permission.System.CreatedByID,
+				UpdatedByID: permission.System.UpdatedByID,
+			}
+		}
+
+		responseData = append(responseData, dtos.PermissionResponse{
+			ID:          permission.ID,
+			Name:        permission.Name,
+			Description: permission.Description,
+			GroupName:   permission.GroupName,
+			SystemID:    permission.SystemID,
+			System:      systemResponse,
+			Status:      permission.Status,
+			CreatedAt:   permission.CreatedAt,
+			UpdatedAt:   permission.UpdatedAt,
+			CreatedByID: permission.CreatedByID,
+			UpdatedByID: permission.UpdatedByID,
+		})
+	}
+
+	totalPages := (int(total) + limit - 1) / limit
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"data":   data,
-		"total":  total,
-		"limit":  limit,
-		"offset": offset,
+		"data": responseData,
+		"pagination": gin.H{
+			"limit":       limit,
+			"offset":      offset,
+			"page":        page,
+			"total":       total,
+			"total_pages": totalPages,
+		},
 	})
 }
 
@@ -194,7 +307,39 @@ func (c *PermissionController) Update(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Reload to get system data
+	permissionData, _ := c.service.GetByID(data.ID)
+
+	// Map to response
+	var systemResponse *dtos.SystemResponse
+	if permissionData.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          permissionData.System.ID,
+			Nama:        permissionData.System.Nama,
+			Description: permissionData.System.Description,
+			Status:      permissionData.System.Status,
+			CreatedAt:   permissionData.System.CreatedAt,
+			UpdatedAt:   permissionData.System.UpdatedAt,
+			CreatedByID: permissionData.System.CreatedByID,
+			UpdatedByID: permissionData.System.UpdatedByID,
+		}
+	}
+
+	response := dtos.PermissionResponse{
+		ID:          permissionData.ID,
+		Name:        permissionData.Name,
+		Description: permissionData.Description,
+		GroupName:   permissionData.GroupName,
+		SystemID:    permissionData.SystemID,
+		System:      systemResponse,
+		Status:      permissionData.Status,
+		CreatedAt:   permissionData.CreatedAt,
+		UpdatedAt:   permissionData.UpdatedAt,
+		CreatedByID: permissionData.CreatedByID,
+		UpdatedByID: permissionData.UpdatedByID,
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
 
 // Delete deletes Permission by ID
@@ -213,4 +358,39 @@ func (c *PermissionController) Delete(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Permission deleted successfully"})
+}
+
+// Helper function to map Permission model to PermissionResponse DTO
+func mapPermissionToResponse(permission *models.Permission) *dtos.PermissionResponse {
+	if permission == nil {
+		return nil
+	}
+
+	var systemResponse *dtos.SystemResponse
+	if permission.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          permission.System.ID,
+			Nama:        permission.System.Nama,
+			Description: permission.System.Description,
+			Status:      permission.System.Status,
+			CreatedAt:   permission.System.CreatedAt,
+			UpdatedAt:   permission.System.UpdatedAt,
+			CreatedByID: permission.System.CreatedByID,
+			UpdatedByID: permission.System.UpdatedByID,
+		}
+	}
+
+	return &dtos.PermissionResponse{
+		ID:          permission.ID,
+		Name:        permission.Name,
+		Description: permission.Description,
+		GroupName:   permission.GroupName,
+		SystemID:    permission.SystemID,
+		System:      systemResponse,
+		Status:      permission.Status,
+		CreatedAt:   permission.CreatedAt,
+		UpdatedAt:   permission.UpdatedAt,
+		CreatedByID: permission.CreatedByID,
+		UpdatedByID: permission.UpdatedByID,
+	}
 }
