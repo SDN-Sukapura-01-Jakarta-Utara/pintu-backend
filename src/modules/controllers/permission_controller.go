@@ -242,20 +242,52 @@ func (c *PermissionController) GetByGroupName(ctx *gin.Context) {
 // GetBySystem retrieves permissions by system
 func (c *PermissionController) GetBySystem(ctx *gin.Context) {
 	var req struct {
-		System string `json:"system" binding:"required"`
+		SystemID uint `json:"system_id" binding:"required"`
 	}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	data, err := c.service.GetBySystem(req.System)
+	data, err := c.service.GetBySystem(req.SystemID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data})
+	// Map to response
+	var responseData []dtos.PermissionResponse
+	for _, permission := range data {
+		var systemResponse *dtos.SystemResponse
+		if permission.System != nil {
+			systemResponse = &dtos.SystemResponse{
+				ID:          permission.System.ID,
+				Nama:        permission.System.Nama,
+				Description: permission.System.Description,
+				Status:      permission.System.Status,
+				CreatedAt:   permission.System.CreatedAt,
+				UpdatedAt:   permission.System.UpdatedAt,
+				CreatedByID: permission.System.CreatedByID,
+				UpdatedByID: permission.System.UpdatedByID,
+			}
+		}
+
+		responseData = append(responseData, dtos.PermissionResponse{
+			ID:          permission.ID,
+			Name:        permission.Name,
+			Description: permission.Description,
+			GroupName:   permission.GroupName,
+			SystemID:    permission.SystemID,
+			System:      systemResponse,
+			Status:      permission.Status,
+			CreatedAt:   permission.CreatedAt,
+			UpdatedAt:   permission.UpdatedAt,
+			CreatedByID: permission.CreatedByID,
+			UpdatedByID: permission.UpdatedByID,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": responseData})
 }
 
 // Update updates Permission

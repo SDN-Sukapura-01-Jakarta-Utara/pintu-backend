@@ -12,7 +12,7 @@ type PermissionService interface {
 	GetAll(limit, offset int) ([]models.Permission, int64, error)
 	GetAllWithFilter(params repositories.GetPermissionsParams) ([]models.Permission, int64, error)
 	GetByGroupName(groupName string) ([]models.Permission, error)
-	GetBySystem(system string) ([]models.Permission, error)
+	GetBySystem(systemID uint) ([]models.Permission, error)
 	Update(data *models.Permission) error
 	Delete(id uint) error
 }
@@ -52,8 +52,8 @@ func (s *PermissionServiceImpl) GetByGroupName(groupName string) ([]models.Permi
 }
 
 // GetBySystem retrieves permissions by system
-func (s *PermissionServiceImpl) GetBySystem(system string) ([]models.Permission, error) {
-	return s.repository.GetBySystem(system)
+func (s *PermissionServiceImpl) GetBySystem(systemID uint) ([]models.Permission, error) {
+	return s.repository.GetBySystem(systemID)
 }
 
 // Update updates Permission

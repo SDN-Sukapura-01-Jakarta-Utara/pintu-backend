@@ -14,7 +14,7 @@ type PermissionRepository interface {
 	GetAll(limit, offset int) ([]models.Permission, int64, error)
 	GetAllWithFilter(params GetPermissionsParams) ([]models.Permission, int64, error)
 	GetByGroupName(groupName string) ([]models.Permission, error)
-	GetBySystem(system string) ([]models.Permission, error)
+	GetBySystem(systemID uint) ([]models.Permission, error)
 	GetByIDs(ids []uint) ([]models.Permission, error)
 	Update(data *models.Permission) error
 	Delete(id uint) error
@@ -117,10 +117,10 @@ func (r *PermissionRepositoryImpl) GetByGroupName(groupName string) ([]models.Pe
 	return data, nil
 }
 
-// GetBySystem retrieves permissions by system ID
-func (r *PermissionRepositoryImpl) GetBySystem(systemID string) ([]models.Permission, error) {
+// GetBySystem retrieves permissions by system ID sorted by created_at DESC
+func (r *PermissionRepositoryImpl) GetBySystem(systemID uint) ([]models.Permission, error) {
 	var data []models.Permission
-	if err := r.db.Where("system_id = ?", systemID).Find(&data).Error; err != nil {
+	if err := r.db.Preload("System").Where("system_id = ?", systemID).Order("created_at DESC").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
