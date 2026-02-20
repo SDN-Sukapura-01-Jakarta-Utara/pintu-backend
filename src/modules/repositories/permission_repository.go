@@ -15,6 +15,7 @@ type PermissionRepository interface {
 	GetAllWithFilter(params GetPermissionsParams) ([]models.Permission, int64, error)
 	GetByGroupName(groupName string) ([]models.Permission, error)
 	GetBySystem(system string) ([]models.Permission, error)
+	GetByIDs(ids []uint) ([]models.Permission, error)
 	Update(data *models.Permission) error
 	Delete(id uint) error
 }
@@ -57,7 +58,7 @@ func (r *PermissionRepositoryImpl) GetByID(id uint) (*models.Permission, error) 
 	return &data, nil
 }
 
-// GetAll retrieves all Permission records with pagination
+// GetAll retrieves all Permission records with pagination sorted by created_at DESC
 func (r *PermissionRepositoryImpl) GetAll(limit, offset int) ([]models.Permission, int64, error) {
 	var data []models.Permission
 	var total int64
@@ -66,7 +67,7 @@ func (r *PermissionRepositoryImpl) GetAll(limit, offset int) ([]models.Permissio
 		return nil, 0, err
 	}
 
-	if err := r.db.Preload("System").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+	if err := r.db.Preload("System").Order("created_at DESC").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -99,8 +100,8 @@ func (r *PermissionRepositoryImpl) GetAllWithFilter(params GetPermissionsParams)
 		return nil, 0, err
 	}
 
-	// Fetch data with pagination
-	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&permissions).Error; err != nil {
+	// Fetch data with pagination and sorting by created_at DESC (newest first)
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&permissions).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -120,6 +121,15 @@ func (r *PermissionRepositoryImpl) GetByGroupName(groupName string) ([]models.Pe
 func (r *PermissionRepositoryImpl) GetBySystem(systemID string) ([]models.Permission, error) {
 	var data []models.Permission
 	if err := r.db.Where("system_id = ?", systemID).Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetByIDs retrieves permissions by multiple IDs
+func (r *PermissionRepositoryImpl) GetByIDs(ids []uint) ([]models.Permission, error) {
+	var data []models.Permission
+	if err := r.db.Preload("System").Where("id IN ?", ids).Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil

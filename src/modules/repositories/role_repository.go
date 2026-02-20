@@ -15,6 +15,10 @@ type RoleRepository interface {
 	GetAllWithFilter(params GetRolesParams) ([]models.Role, int64, error)
 	Update(data *models.Role) error
 	Delete(id uint) error
+	CreateRolePermissions(roleID uint, permissionIDs []uint) error
+	GetRolePermissions(roleID uint) ([]models.RolePermission, error)
+	DeleteRolePermissions(roleID uint) error
+	GetPermissionsByIDs(ids []uint) ([]models.Permission, error)
 }
 
 type RoleRepositoryImpl struct {
@@ -54,10 +58,10 @@ func (r *RoleRepositoryImpl) GetByID(id uint) (*models.Role, error) {
 	return &data, nil
 }
 
-// GetAll retrieves all Role records
+// GetAll retrieves all Role records sorted by created_at DESC
 func (r *RoleRepositoryImpl) GetAll() ([]models.Role, error) {
 	var data []models.Role
-	if err := r.db.Preload("System").Find(&data).Error; err != nil {
+	if err := r.db.Preload("System").Order("created_at DESC").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -86,8 +90,8 @@ func (r *RoleRepositoryImpl) GetAllWithFilter(params GetRolesParams) ([]models.R
 		return nil, 0, err
 	}
 
-	// Fetch data with pagination
-	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&roles).Error; err != nil {
+	// Fetch data with pagination and sorting by created_at DESC (newest first)
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&roles).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -110,4 +114,47 @@ func (r *RoleRepositoryImpl) Update(data *models.Role) error {
 // Delete deletes Role record by ID
 func (r *RoleRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.Role{}, id).Error
+}
+
+// CreateRolePermissions creates multiple role-permission associations
+func (r *RoleRepositoryImpl) CreateRolePermissions(roleID uint, permissionIDs []uint) error {
+	if len(permissionIDs) == 0 {
+		return nil
+	}
+	
+	rolePermissions := make([]models.RolePermission, len(permissionIDs))
+	for i, permissionID := range permissionIDs {
+		rolePermissions[i] = models.RolePermission{
+			RoleID:       roleID,
+			PermissionID: permissionID,
+		}
+	}
+	
+	return r.db.CreateInBatches(rolePermissions, 100).Error
+}
+
+// GetRolePermissions retrieves all permissions for a role
+func (r *RoleRepositoryImpl) GetRolePermissions(roleID uint) ([]models.RolePermission, error) {
+	var permissions []models.RolePermission
+	if err := r.db.Where("role_id = ?", roleID).Find(&permissions).Error; err != nil {
+		return nil, err
+	}
+	return permissions, nil
+}
+
+// DeleteRolePermissions deletes all permissions for a role
+func (r *RoleRepositoryImpl) DeleteRolePermissions(roleID uint) error {
+	return r.db.Where("role_id = ?", roleID).Delete(&models.RolePermission{}).Error
+}
+
+// GetPermissionsByIDs retrieves permissions by multiple IDs
+func (r *RoleRepositoryImpl) GetPermissionsByIDs(ids []uint) ([]models.Permission, error) {
+	var permissions []models.Permission
+	if len(ids) == 0 {
+		return permissions, nil
+	}
+	if err := r.db.Preload("System").Where("id IN ?", ids).Find(&permissions).Error; err != nil {
+		return nil, err
+	}
+	return permissions, nil
 }

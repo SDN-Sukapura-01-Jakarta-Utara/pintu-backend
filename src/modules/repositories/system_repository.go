@@ -53,10 +53,10 @@ func (r *SystemRepositoryImpl) GetByID(id uint) (*models.System, error) {
 	return &data, nil
 }
 
-// GetAll retrieves all System records
+// GetAll retrieves all System records sorted by created_at DESC
 func (r *SystemRepositoryImpl) GetAll() ([]models.System, error) {
 	var data []models.System
-	if err := r.db.Find(&data).Error; err != nil {
+	if err := r.db.Order("created_at DESC").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -82,8 +82,8 @@ func (r *SystemRepositoryImpl) GetAllWithFilter(params GetSystemsParams) ([]mode
 		return nil, 0, err
 	}
 
-	// Fetch data with pagination
-	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&systems).Error; err != nil {
+	// Fetch data with pagination and sorting by created_at DESC (newest first)
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&systems).Error; err != nil {
 		return nil, 0, err
 	}
 

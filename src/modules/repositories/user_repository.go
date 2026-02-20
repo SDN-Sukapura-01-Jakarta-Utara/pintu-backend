@@ -59,10 +59,10 @@ func (r *UserRepositoryImpl) GetByID(id uint) (*models.User, error) {
 	return &data, nil
 }
 
-// GetAll retrieves all User records
+// GetAll retrieves all User records sorted by created_at DESC
 func (r *UserRepositoryImpl) GetAll() ([]models.User, error) {
 	var data []models.User
-	if err := r.db.Preload("Roles.System").Find(&data).Error; err != nil {
+	if err := r.db.Preload("Roles.System").Order("created_at DESC").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -113,8 +113,8 @@ func (r *UserRepositoryImpl) GetAllWithFilter(params GetUsersParams) ([]models.U
 		return nil, 0, err
 	}
 
-	// Fetch data with pagination
-	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&users).Error; err != nil {
+	// Fetch data with pagination and sorting by created_at DESC (newest first)
+	if err := query.Order("users.created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 

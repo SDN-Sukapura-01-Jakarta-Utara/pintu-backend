@@ -24,10 +24,11 @@ func NewRoleController(service services.RoleService) *RoleController {
 // Create creates a new Role
 func (c *RoleController) Create(ctx *gin.Context) {
 	type CreateRequest struct {
-		Name        string `json:"name" binding:"required"`
-		Description string `json:"description"`
-		SystemID    uint   `json:"system_id" binding:"required"`
-		Status      string `json:"status"`
+		Name          string `json:"name" binding:"required"`
+		Description   string `json:"description"`
+		SystemID      uint   `json:"system_id" binding:"required"`
+		Status        string `json:"status"`
+		PermissionIDs []uint `json:"permission_ids"`
 	}
 	
 	var req CreateRequest
@@ -48,41 +49,17 @@ func (c *RoleController) Create(ctx *gin.Context) {
 		CreatedByID: &createdByID,
 	}
 
-	if err := c.service.Create(role); err != nil {
+	// Create role with permissions
+	if err := c.service.CreateWithPermissions(role, req.PermissionIDs); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Reload to get system data
+	// Reload to get system data and permission details
 	roleData, _ := c.service.GetByID(role.ID)
+	_, permissionDetails, _ := c.service.GetRoleWithPermissionDetails(role.ID)
 
-	// Map to response
-	var systemResponse *dtos.SystemResponse
-	if roleData.System != nil {
-		systemResponse = &dtos.SystemResponse{
-			ID:          roleData.System.ID,
-			Nama:        roleData.System.Nama,
-			Description: roleData.System.Description,
-			Status:      roleData.System.Status,
-			CreatedAt:   roleData.System.CreatedAt,
-			UpdatedAt:   roleData.System.UpdatedAt,
-			CreatedByID: roleData.System.CreatedByID,
-			UpdatedByID: roleData.System.UpdatedByID,
-		}
-	}
-
-	response := dtos.RoleResponse{
-		ID:          roleData.ID,
-		Name:        roleData.Name,
-		Description: roleData.Description,
-		SystemID:    roleData.SystemID,
-		System:      systemResponse,
-		Status:      roleData.Status,
-		CreatedAt:   roleData.CreatedAt,
-		UpdatedAt:   roleData.UpdatedAt,
-		CreatedByID: roleData.CreatedByID,
-		UpdatedByID: roleData.UpdatedByID,
-	}
+	response := c.mapRoleToResponseWithPermissionDetails(roleData, permissionDetails)
 
 	ctx.JSON(http.StatusCreated, gin.H{"data": response})
 }
@@ -103,33 +80,10 @@ func (c *RoleController) GetByID(ctx *gin.Context) {
 		return
 	}
 
-	// Map to response
-	var systemResponse *dtos.SystemResponse
-	if data.System != nil {
-		systemResponse = &dtos.SystemResponse{
-			ID:          data.System.ID,
-			Nama:        data.System.Nama,
-			Description: data.System.Description,
-			Status:      data.System.Status,
-			CreatedAt:   data.System.CreatedAt,
-			UpdatedAt:   data.System.UpdatedAt,
-			CreatedByID: data.System.CreatedByID,
-			UpdatedByID: data.System.UpdatedByID,
-		}
-	}
+	// Get role with permission details
+	_, permissionDetails, _ := c.service.GetRoleWithPermissionDetails(req.ID)
 
-	response := dtos.RoleResponse{
-		ID:          data.ID,
-		Name:        data.Name,
-		Description: data.Description,
-		SystemID:    data.SystemID,
-		System:      systemResponse,
-		Status:      data.Status,
-		CreatedAt:   data.CreatedAt,
-		UpdatedAt:   data.UpdatedAt,
-		CreatedByID: data.CreatedByID,
-		UpdatedByID: data.UpdatedByID,
-	}
+	response := c.mapRoleToResponseWithPermissionDetails(data, permissionDetails)
 
 	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
@@ -172,32 +126,11 @@ func (c *RoleController) GetAll(ctx *gin.Context) {
 	// Map to response
 	var responseData []dtos.RoleResponse
 	for _, role := range roles {
-		var systemResponse *dtos.SystemResponse
-		if role.System != nil {
-			systemResponse = &dtos.SystemResponse{
-				ID:          role.System.ID,
-				Nama:        role.System.Nama,
-				Description: role.System.Description,
-				Status:      role.System.Status,
-				CreatedAt:   role.System.CreatedAt,
-				UpdatedAt:   role.System.UpdatedAt,
-				CreatedByID: role.System.CreatedByID,
-				UpdatedByID: role.System.UpdatedByID,
-			}
-		}
-
-		responseData = append(responseData, dtos.RoleResponse{
-			ID:          role.ID,
-			Name:        role.Name,
-			Description: role.Description,
-			SystemID:    role.SystemID,
-			System:      systemResponse,
-			Status:      role.Status,
-			CreatedAt:   role.CreatedAt,
-			UpdatedAt:   role.UpdatedAt,
-			CreatedByID: role.CreatedByID,
-			UpdatedByID: role.UpdatedByID,
-		})
+		// Get role with permission details
+		_, permissionDetails, _ := c.service.GetRoleWithPermissionDetails(role.ID)
+		
+		response := c.mapRoleToResponseWithPermissionDetails(&role, permissionDetails)
+		responseData = append(responseData, *response)
 	}
 
 	totalPages := (int(total) + limit - 1) / limit
@@ -217,11 +150,12 @@ func (c *RoleController) GetAll(ctx *gin.Context) {
 // Update updates Role
 func (c *RoleController) Update(ctx *gin.Context) {
 	type UpdateRequest struct {
-		ID          uint   `json:"id" binding:"required"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		SystemID    *uint  `json:"system_id"`
-		Status      string `json:"status"`
+		ID            uint   `json:"id" binding:"required"`
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+		SystemID      *uint  `json:"system_id"`
+		Status        string `json:"status"`
+		PermissionIDs []uint `json:"permission_ids"`
 	}
 	
 	var req UpdateRequest
@@ -259,36 +193,18 @@ func (c *RoleController) Update(ctx *gin.Context) {
 		return
 	}
 
-	// Reload to get system data
+	// Update permissions if permission_ids is provided
+	// Always update if the field is sent (even if empty array means clear all permissions)
+	if err := c.service.AssignPermissions(req.ID, req.PermissionIDs); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Reload to get system data and permission details
 	roleData, _ := c.service.GetByID(data.ID)
+	_, permissionDetails, _ := c.service.GetRoleWithPermissionDetails(data.ID)
 
-	// Map to response
-	var systemResponse *dtos.SystemResponse
-	if roleData.System != nil {
-		systemResponse = &dtos.SystemResponse{
-			ID:          roleData.System.ID,
-			Nama:        roleData.System.Nama,
-			Description: roleData.System.Description,
-			Status:      roleData.System.Status,
-			CreatedAt:   roleData.System.CreatedAt,
-			UpdatedAt:   roleData.System.UpdatedAt,
-			CreatedByID: roleData.System.CreatedByID,
-			UpdatedByID: roleData.System.UpdatedByID,
-		}
-	}
-
-	response := dtos.RoleResponse{
-		ID:          roleData.ID,
-		Name:        roleData.Name,
-		Description: roleData.Description,
-		SystemID:    roleData.SystemID,
-		System:      systemResponse,
-		Status:      roleData.Status,
-		CreatedAt:   roleData.CreatedAt,
-		UpdatedAt:   roleData.UpdatedAt,
-		CreatedByID: roleData.CreatedByID,
-		UpdatedByID: roleData.UpdatedByID,
-	}
+	response := c.mapRoleToResponseWithPermissionDetails(roleData, permissionDetails)
 
 	ctx.JSON(http.StatusOK, gin.H{"data": response})
 }
@@ -338,6 +254,59 @@ func mapRoleToResponse(role *models.Role) *dtos.RoleResponse {
 		SystemID:    role.SystemID,
 		System:      systemResponse,
 		Status:      role.Status,
+		CreatedAt:   role.CreatedAt,
+		UpdatedAt:   role.UpdatedAt,
+		CreatedByID: role.CreatedByID,
+		UpdatedByID: role.UpdatedByID,
+	}
+}
+
+// Helper function to map Role model with full Permission details to RoleResponse DTO
+func (c *RoleController) mapRoleToResponseWithPermissionDetails(role *models.Role, permissions []models.Permission) *dtos.RoleResponse {
+	if role == nil {
+		return nil
+	}
+
+	var systemResponse *dtos.SystemResponse
+	if role.System != nil {
+		systemResponse = &dtos.SystemResponse{
+			ID:          role.System.ID,
+			Nama:        role.System.Nama,
+			Description: role.System.Description,
+			Status:      role.System.Status,
+			CreatedAt:   role.System.CreatedAt,
+			UpdatedAt:   role.System.UpdatedAt,
+			CreatedByID: role.System.CreatedByID,
+			UpdatedByID: role.System.UpdatedByID,
+		}
+	}
+
+	// Map permissions to permission data
+	var permissionData []dtos.PermissionData
+	if len(permissions) > 0 {
+		permissionData = make([]dtos.PermissionData, len(permissions))
+		for i, perm := range permissions {
+			permissionData[i] = dtos.PermissionData{
+				ID:          perm.ID,
+				Name:        perm.Name,
+				Description: perm.Description,
+				GroupName:   perm.GroupName,
+				System:      "", // Will be populated if System data exists
+			}
+			if perm.System != nil {
+				permissionData[i].System = perm.System.Nama
+			}
+		}
+	}
+
+	return &dtos.RoleResponse{
+		ID:          role.ID,
+		Name:        role.Name,
+		Description: role.Description,
+		SystemID:    role.SystemID,
+		System:      systemResponse,
+		Status:      role.Status,
+		Permissions: permissionData,
 		CreatedAt:   role.CreatedAt,
 		UpdatedAt:   role.UpdatedAt,
 		CreatedByID: role.CreatedByID,
