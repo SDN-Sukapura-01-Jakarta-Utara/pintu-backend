@@ -12,6 +12,7 @@ type TahunPelajaranService interface {
 	Create(req *dtos.TahunPelajaranCreateRequest, userID uint) (*dtos.TahunPelajaranResponse, error)
 	GetByID(id uint) (*dtos.TahunPelajaranResponse, error)
 	GetAll(limit int, offset int) (*dtos.TahunPelajaranListResponse, error)
+	GetAllWithFilter(params repositories.GetTahunPelajaranParams) (*dtos.TahunPelajaranListWithPaginationResponse, error)
 	Update(req *dtos.TahunPelajaranUpdateRequest, userID uint) (*dtos.TahunPelajaranResponse, error)
 	Delete(id uint) error
 }
@@ -118,6 +119,44 @@ func (s *TahunPelajaranServiceImpl) Update(req *dtos.TahunPelajaranUpdateRequest
 // Delete deletes TahunPelajaran by ID
 func (s *TahunPelajaranServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
+}
+
+// GetAllWithFilter retrieves TahunPelajaran with filters and pagination
+func (s *TahunPelajaranServiceImpl) GetAllWithFilter(params repositories.GetTahunPelajaranParams) (*dtos.TahunPelajaranListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.TahunPelajaranResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.TahunPelajaranListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
 }
 
 // mapToResponse maps model to DTO response

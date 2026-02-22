@@ -30,3 +30,21 @@ type TahunPelajaranResponse struct {
 type TahunPelajaranListResponse struct {
 	Data []TahunPelajaranResponse `json:"data"`
 }
+
+// TahunPelajaranGetAllRequest represents the request payload for getting all tahun pelajaran with filters
+type TahunPelajaranGetAllRequest struct {
+	Search struct {
+		TahunPelajaran string `json:"tahun_pelajaran"`
+		Status         string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// TahunPelajaranListWithPaginationResponse represents the response with pagination
+type TahunPelajaranListWithPaginationResponse struct {
+	Data       []TahunPelajaranResponse `json:"data"`
+	Pagination PaginationInfo           `json:"pagination"`
+}

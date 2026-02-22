@@ -6,11 +6,25 @@ import (
 	"gorm.io/gorm"
 )
 
+// GetTahunPelajaranFilter represents filter parameters for GetAll
+type GetTahunPelajaranFilter struct {
+	TahunPelajaran string
+	Status         string
+}
+
+// GetTahunPelajaranParams represents parameters for GetAll with filters
+type GetTahunPelajaranParams struct {
+	Filter GetTahunPelajaranFilter
+	Limit  int
+	Offset int
+}
+
 // TahunPelajaranRepository handles data operations for TahunPelajaran
 type TahunPelajaranRepository interface {
 	Create(data *models.TahunPelajaran) error
 	GetByID(id uint) (*models.TahunPelajaran, error)
 	GetAll(limit int, offset int) ([]models.TahunPelajaran, int64, error)
+	GetAllWithFilter(params GetTahunPelajaranParams) ([]models.TahunPelajaran, int64, error)
 	GetByTahunPelajaran(tahunPelajaran string) (*models.TahunPelajaran, error)
 	Update(data *models.TahunPelajaran) error
 	Delete(id uint) error
@@ -74,4 +88,32 @@ func (r *TahunPelajaranRepositoryImpl) Update(data *models.TahunPelajaran) error
 // Delete deletes TahunPelajaran record by ID
 func (r *TahunPelajaranRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.TahunPelajaran{}, id).Error
+}
+
+// GetAllWithFilter retrieves TahunPelajaran records with filters and pagination
+func (r *TahunPelajaranRepositoryImpl) GetAllWithFilter(params GetTahunPelajaranParams) ([]models.TahunPelajaran, int64, error) {
+	var data []models.TahunPelajaran
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.TahunPelajaran != "" {
+		query = query.Where("tahun_pelajaran ILIKE ?", "%"+params.Filter.TahunPelajaran+"%")
+	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
+
+	// Get total count
+	if err := query.Model(&models.TahunPelajaran{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
 }
