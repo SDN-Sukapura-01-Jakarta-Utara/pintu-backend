@@ -12,6 +12,7 @@ type EkstrakurikulerService interface {
 	Create(req *dtos.EkstrakurikulerCreateRequest, userID uint) (*dtos.EkstrakurikulerResponse, error)
 	GetByID(id uint) (*dtos.EkstrakurikulerResponse, error)
 	GetAll(limit int, offset int) (*dtos.EkstrakurikulerListResponse, error)
+	GetAllWithFilter(params repositories.GetEkstrakurikulerParams) (*dtos.EkstrakurikulerListWithPaginationResponse, error)
 	Update(req *dtos.EkstrakurikulerUpdateRequest, userID uint) (*dtos.EkstrakurikulerResponse, error)
 	Delete(id uint) error
 }
@@ -154,13 +155,66 @@ func (s *EkstrakurikulerServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
 }
 
+// GetAllWithFilter retrieves Ekstrakurikuler with filters and pagination
+func (s *EkstrakurikulerServiceImpl) GetAllWithFilter(params repositories.GetEkstrakurikulerParams) (*dtos.EkstrakurikulerListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.EkstrakurikulerResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.EkstrakurikulerListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
+}
+
 // mapToResponse maps model to DTO response
 func (s *EkstrakurikulerServiceImpl) mapToResponse(data *models.Ekstrakurikuler) *dtos.EkstrakurikulerResponse {
 	kelasIDs := []uint(data.KelasIDs)
+	
+	// Get kelas details for each kelas_id
+	var kelasDetails []dtos.KelasInfo
+	for _, kelasID := range kelasIDs {
+		kelas, err := s.kelasRepository.GetByID(kelasID)
+		if err == nil && kelas != nil {
+			kelasDetails = append(kelasDetails, dtos.KelasInfo{
+				ID:     kelas.ID,
+				Name:   kelas.Name,
+				Status: kelas.Status,
+			})
+		}
+	}
+
 	return &dtos.EkstrakurikulerResponse{
 		ID:          data.ID,
 		Name:        data.Name,
 		KelasIDs:    kelasIDs,
+		Kelas:       kelasDetails,
 		Kategori:    data.Kategori,
 		Status:      data.Status,
 		CreatedAt:   data.CreatedAt,
