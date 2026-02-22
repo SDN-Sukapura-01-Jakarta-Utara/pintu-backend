@@ -30,3 +30,21 @@ type KelasResponse struct {
 type KelasListResponse struct {
 	Data []KelasResponse `json:"data"`
 }
+
+// KelasGetAllRequest represents the request payload for getting all kelas with filters
+type KelasGetAllRequest struct {
+	Search struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// KelasListWithPaginationResponse represents the response with pagination
+type KelasListWithPaginationResponse struct {
+	Data       []KelasResponse `json:"data"`
+	Pagination PaginationInfo  `json:"pagination"`
+}

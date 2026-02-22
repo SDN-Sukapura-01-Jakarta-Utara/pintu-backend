@@ -12,6 +12,7 @@ type KelasService interface {
 	Create(req *dtos.KelasCreateRequest, userID uint) (*dtos.KelasResponse, error)
 	GetByID(id uint) (*dtos.KelasResponse, error)
 	GetAll(limit int, offset int) (*dtos.KelasListResponse, error)
+	GetAllWithFilter(params repositories.GetKelasParams) (*dtos.KelasListWithPaginationResponse, error)
 	Update(req *dtos.KelasUpdateRequest, userID uint) (*dtos.KelasResponse, error)
 	Delete(id uint) error
 }
@@ -118,6 +119,44 @@ func (s *KelasServiceImpl) Update(req *dtos.KelasUpdateRequest, userID uint) (*d
 // Delete deletes Kelas by ID
 func (s *KelasServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
+}
+
+// GetAllWithFilter retrieves Kelas with filters and pagination
+func (s *KelasServiceImpl) GetAllWithFilter(params repositories.GetKelasParams) (*dtos.KelasListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.KelasResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.KelasListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
 }
 
 // mapToResponse maps model to DTO response

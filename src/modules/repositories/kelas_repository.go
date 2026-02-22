@@ -6,11 +6,25 @@ import (
 	"gorm.io/gorm"
 )
 
+// GetKelasFilter represents filter parameters for GetAll
+type GetKelasFilter struct {
+	Name   string
+	Status string
+}
+
+// GetKelasParams represents parameters for GetAll with filters
+type GetKelasParams struct {
+	Filter GetKelasFilter
+	Limit  int
+	Offset int
+}
+
 // KelasRepository handles data operations for Kelas
 type KelasRepository interface {
 	Create(data *models.Kelas) error
 	GetByID(id uint) (*models.Kelas, error)
 	GetAll(limit int, offset int) ([]models.Kelas, int64, error)
+	GetAllWithFilter(params GetKelasParams) ([]models.Kelas, int64, error)
 	GetByName(name string) (*models.Kelas, error)
 	Update(data *models.Kelas) error
 	Delete(id uint) error
@@ -49,8 +63,8 @@ func (r *KelasRepositoryImpl) GetAll(limit int, offset int) ([]models.Kelas, int
 		return nil, 0, err
 	}
 
-	// Get paginated data
-	if err := r.db.Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by created_at DESC
+	if err := r.db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -74,4 +88,32 @@ func (r *KelasRepositoryImpl) Update(data *models.Kelas) error {
 // Delete deletes Kelas record by ID
 func (r *KelasRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.Kelas{}, id).Error
+}
+
+// GetAllWithFilter retrieves Kelas records with filters and pagination
+func (r *KelasRepositoryImpl) GetAllWithFilter(params GetKelasParams) ([]models.Kelas, int64, error) {
+	var data []models.Kelas
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.Name != "" {
+		query = query.Where("name ILIKE ?", "%"+params.Filter.Name+"%")
+	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
+
+	// Get total count
+	if err := query.Model(&models.Kelas{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data ordered by created_at DESC
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
 }
