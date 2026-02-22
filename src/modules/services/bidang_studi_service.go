@@ -12,6 +12,7 @@ type BidangStudiService interface {
 	Create(req *dtos.BidangStudiCreateRequest, userID uint) (*dtos.BidangStudiResponse, error)
 	GetByID(id uint) (*dtos.BidangStudiResponse, error)
 	GetAll(limit int, offset int) (*dtos.BidangStudiListResponse, error)
+	GetAllWithFilter(params repositories.GetBidangStudiParams) (*dtos.BidangStudiListWithPaginationResponse, error)
 	Update(req *dtos.BidangStudiUpdateRequest, userID uint) (*dtos.BidangStudiResponse, error)
 	Delete(id uint) error
 }
@@ -118,6 +119,44 @@ func (s *BidangStudiServiceImpl) Update(req *dtos.BidangStudiUpdateRequest, user
 // Delete deletes BidangStudi by ID
 func (s *BidangStudiServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
+}
+
+// GetAllWithFilter retrieves BidangStudi with filters and pagination
+func (s *BidangStudiServiceImpl) GetAllWithFilter(params repositories.GetBidangStudiParams) (*dtos.BidangStudiListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.BidangStudiResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.BidangStudiListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
 }
 
 // mapToResponse maps model to DTO response

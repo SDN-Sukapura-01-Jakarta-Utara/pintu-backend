@@ -30,3 +30,21 @@ type BidangStudiResponse struct {
 type BidangStudiListResponse struct {
 	Data []BidangStudiResponse `json:"data"`
 }
+
+// BidangStudiGetAllRequest represents the request payload for getting all bidang studi with filters
+type BidangStudiGetAllRequest struct {
+	Search struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// BidangStudiListWithPaginationResponse represents the response with pagination
+type BidangStudiListWithPaginationResponse struct {
+	Data       []BidangStudiResponse `json:"data"`
+	Pagination PaginationInfo        `json:"pagination"`
+}
