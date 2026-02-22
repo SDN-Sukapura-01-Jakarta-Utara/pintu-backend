@@ -292,6 +292,7 @@ func (c *RoleController) mapRoleToResponseWithPermissionDetails(role *models.Rol
 				Description: perm.Description,
 				GroupName:   perm.GroupName,
 				System:      "", // Will be populated if System data exists
+				Status:      perm.Status,
 			}
 			if perm.System != nil {
 				permissionData[i].System = perm.System.Nama

@@ -45,6 +45,7 @@ type PermissionData struct {
 	Description string `json:"description"`
 	GroupName   string `json:"group_name"`
 	System      string `json:"system"`
+	Status      string `json:"status"`
 }
 
 // RoleListResponse represents the response payload for listing Role
