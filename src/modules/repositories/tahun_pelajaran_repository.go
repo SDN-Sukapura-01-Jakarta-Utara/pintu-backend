@@ -28,6 +28,7 @@ type TahunPelajaranRepository interface {
 	GetByTahunPelajaran(tahunPelajaran string) (*models.TahunPelajaran, error)
 	Update(data *models.TahunPelajaran) error
 	Delete(id uint) error
+	UpdateAllStatusToInactive() error
 }
 
 type TahunPelajaranRepositoryImpl struct {
@@ -63,8 +64,8 @@ func (r *TahunPelajaranRepositoryImpl) GetAll(limit int, offset int) ([]models.T
 		return nil, 0, err
 	}
 
-	// Get paginated data
-	if err := r.db.Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by created_at DESC
+	if err := r.db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -110,10 +111,15 @@ func (r *TahunPelajaranRepositoryImpl) GetAllWithFilter(params GetTahunPelajaran
 		return nil, 0, err
 	}
 
-	// Get paginated data
-	if err := query.Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by created_at DESC
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
 	return data, total, nil
+}
+
+// UpdateAllStatusToInactive updates all tahun_pelajaran status to inactive
+func (r *TahunPelajaranRepositoryImpl) UpdateAllStatusToInactive() error {
+	return r.db.Model(&models.TahunPelajaran{}).Where("status = ?", "active").Update("status", "inactive").Error
 }

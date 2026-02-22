@@ -40,6 +40,13 @@ func (s *TahunPelajaranServiceImpl) Create(req *dtos.TahunPelajaranCreateRequest
 		status = "active"
 	}
 
+	// If status is active, set all others to inactive
+	if status == "active" {
+		if err := s.repository.UpdateAllStatusToInactive(); err != nil {
+			return nil, err
+		}
+	}
+
 	data := &models.TahunPelajaran{
 		TahunPelajaran: req.TahunPelajaran,
 		Status:         status,
@@ -108,6 +115,13 @@ func (s *TahunPelajaranServiceImpl) Update(req *dtos.TahunPelajaranUpdateRequest
 	}
 
 	existing.UpdatedByID = &userID
+
+	// If status is being set to active, set all others to inactive
+	if req.Status != nil && *req.Status == "active" {
+		if err := s.repository.UpdateAllStatusToInactive(); err != nil {
+			return nil, err
+		}
+	}
 
 	if err := s.repository.Update(existing); err != nil {
 		return nil, err
