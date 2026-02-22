@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"pintu-backend/src/dtos"
+	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
 
 	"github.com/gin-gonic/gin"
@@ -64,13 +65,48 @@ func (c *RombelController) Create(ctx *gin.Context) {
 // @Failure 500 {object} gin.H{error=string}
 // @Router /api/v1/rombel/get-rombel [post]
 func (c *RombelController) GetAll(ctx *gin.Context) {
-	data, err := c.service.GetAll(10, 0)
+	var req dtos.RombelGetAllRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Default values
+	limit := 10
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
+	}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
+	}
+	offset := (page - 1) * limit
+
+	// Call service with filters
+	data, err := c.service.GetAllWithFilter(repositories.GetRombelParams{
+		Filter: repositories.GetRombelFilter{
+			Name:    req.Search.Name,
+			Status:  req.Search.Status,
+			KelasID: req.Search.KelasID,
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"data": data.Data})
+	ctx.JSON(http.StatusOK, gin.H{
+		"data": data.Data,
+		"pagination": gin.H{
+			"limit":       data.Pagination.Limit,
+			"offset":      data.Pagination.Offset,
+			"page":        data.Pagination.Page,
+			"total":       data.Pagination.Total,
+			"total_pages": data.Pagination.TotalPages,
+		},
+	})
 }
 
 // GetByID retrieves Rombel by ID

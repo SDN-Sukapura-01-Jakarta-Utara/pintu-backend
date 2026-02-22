@@ -12,6 +12,7 @@ type Rombel struct {
 	Name        string          `gorm:"uniqueIndex;not null" json:"name"`
 	Status      string          `gorm:"default:active" json:"status"`
 	KelasID     uint            `gorm:"index" json:"kelas_id"`
+	Kelas       *Kelas          `gorm:"foreignKey:KelasID" json:"kelas,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
 	CreatedByID *uint           `json:"created_by_id"`

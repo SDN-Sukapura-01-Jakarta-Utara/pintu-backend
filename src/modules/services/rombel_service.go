@@ -12,6 +12,7 @@ type RombelService interface {
 	Create(req *dtos.RombelCreateRequest, userID uint) (*dtos.RombelResponse, error)
 	GetByID(id uint) (*dtos.RombelResponse, error)
 	GetAll(limit int, offset int) (*dtos.RombelListResponse, error)
+	GetAllWithFilter(params repositories.GetRombelParams) (*dtos.RombelListWithPaginationResponse, error)
 	Update(req *dtos.RombelUpdateRequest, userID uint) (*dtos.RombelResponse, error)
 	Delete(id uint) error
 }
@@ -142,13 +143,61 @@ func (s *RombelServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
 }
 
+// GetAllWithFilter retrieves Rombel with filters and pagination
+func (s *RombelServiceImpl) GetAllWithFilter(params repositories.GetRombelParams) (*dtos.RombelListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.RombelResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.RombelListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
+}
+
 // mapToResponse maps model to DTO response
 func (s *RombelServiceImpl) mapToResponse(data *models.Rombel) *dtos.RombelResponse {
+	var kelasDetail dtos.KelasDetail
+	if data.Kelas != nil {
+		kelasDetail = dtos.KelasDetail{
+			ID:     data.Kelas.ID,
+			Name:   data.Kelas.Name,
+			Status: data.Kelas.Status,
+		}
+	}
+
 	return &dtos.RombelResponse{
 		ID:          data.ID,
 		Name:        data.Name,
 		Status:      data.Status,
 		KelasID:     data.KelasID,
+		Kelas:       kelasDetail,
 		CreatedAt:   data.CreatedAt,
 		UpdatedAt:   data.UpdatedAt,
 		CreatedByID: data.CreatedByID,

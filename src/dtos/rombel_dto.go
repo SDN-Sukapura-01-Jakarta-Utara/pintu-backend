@@ -17,19 +17,46 @@ type RombelUpdateRequest struct {
 	KelasID *uint   `json:"kelas_id" binding:"omitempty"`
 }
 
+// KelasDetail represents basic kelas information for RombelResponse
+type KelasDetail struct {
+	ID     uint   `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
 // RombelResponse represents the response payload for Rombel
 type RombelResponse struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	Status      string    `json:"status"`
-	KelasID     uint      `json:"kelas_id"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	CreatedByID *uint     `json:"created_by_id"`
-	UpdatedByID *uint     `json:"updated_by_id"`
+	ID          uint        `json:"id"`
+	Name        string      `json:"name"`
+	Status      string      `json:"status"`
+	KelasID     uint        `json:"kelas_id"`
+	Kelas       KelasDetail `json:"kelas"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	CreatedByID *uint       `json:"created_by_id"`
+	UpdatedByID *uint       `json:"updated_by_id"`
 }
 
 // RombelListResponse represents the response payload for listing Rombel
 type RombelListResponse struct {
 	Data []RombelResponse `json:"data"`
+}
+
+// RombelGetAllRequest represents the request payload for getting all rombel with filters
+type RombelGetAllRequest struct {
+	Search struct {
+		Name    string `json:"name"`
+		Status  string `json:"status"`
+		KelasID uint   `json:"kelas_id"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// RombelListWithPaginationResponse represents the response with pagination
+type RombelListWithPaginationResponse struct {
+	Data       []RombelResponse `json:"data"`
+	Pagination PaginationInfo   `json:"pagination"`
 }
