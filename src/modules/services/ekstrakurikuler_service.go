@@ -128,14 +128,11 @@ func (s *EkstrakurikulerServiceImpl) Update(req *dtos.EkstrakurikulerUpdateReque
 		existing.Status = *req.Status
 	}
 	if len(req.KelasIDs) > 0 {
-		// Validate all kelas_ids exist and are active
+		// Validate all kelas_ids exist
 		for _, kelasID := range req.KelasIDs {
-			kelas, err := s.kelasRepository.GetByID(kelasID)
+			_, err := s.kelasRepository.GetByID(kelasID)
 			if err != nil {
 				return nil, errors.New("kelas dengan id " + string(rune(kelasID)) + " tidak ditemukan")
-			}
-			if kelas.Status != "active" {
-				return nil, errors.New("kelas dengan id " + string(rune(kelasID)) + " sudah tidak aktif")
 			}
 		}
 		existing.KelasIDs = models.KelasIDs(req.KelasIDs)
