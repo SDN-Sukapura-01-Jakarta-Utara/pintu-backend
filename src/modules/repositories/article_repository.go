@@ -2,15 +2,36 @@ package repositories
 
 import (
 	"pintu-backend/src/modules/models"
+	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
+
+// GetArticleFilter represents filter parameters for GetAllWithFilter
+type GetArticleFilter struct {
+	Judul            string
+	StartDate        time.Time
+	EndDate          time.Time
+	Kategori         string
+	Penulis          string
+	StatusPublikasi  string
+	Status           string
+}
+
+// GetArticleParams represents parameters for GetAllWithFilter with filters
+type GetArticleParams struct {
+	Filter GetArticleFilter
+	Limit  int
+	Offset int
+}
 
 // ArticleRepository handles data operations for Article
 type ArticleRepository interface {
 	Create(data *models.Article) error
 	GetByID(id uint) (*models.Article, error)
 	GetAll(limit int, offset int) ([]models.Article, int64, error)
+	GetAllWithFilter(params GetArticleParams) ([]models.Article, int64, error)
 	Update(data *models.Article) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -51,6 +72,50 @@ func (r *ArticleRepositoryImpl) GetAll(limit int, offset int) ([]models.Article,
 
 	// Get paginated data, ordered by created_at descending
 	if err := r.db.Limit(limit).Offset(offset).Order("created_at DESC").Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// GetAllWithFilter retrieves Article records with filters and pagination
+func (r *ArticleRepositoryImpl) GetAllWithFilter(params GetArticleParams) ([]models.Article, int64, error) {
+	var data []models.Article
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.Judul != "" {
+		query = query.Where("LOWER(judul) LIKE ?", "%"+strings.ToLower(params.Filter.Judul)+"%")
+	}
+	if !params.Filter.StartDate.IsZero() && !params.Filter.EndDate.IsZero() {
+		query = query.Where("tanggal >= ? AND tanggal <= ?", params.Filter.StartDate, params.Filter.EndDate)
+	} else if !params.Filter.StartDate.IsZero() {
+		query = query.Where("tanggal >= ?", params.Filter.StartDate)
+	} else if !params.Filter.EndDate.IsZero() {
+		query = query.Where("tanggal <= ?", params.Filter.EndDate)
+	}
+	if params.Filter.Kategori != "" {
+		query = query.Where("LOWER(kategori) = ?", strings.ToLower(params.Filter.Kategori))
+	}
+	if params.Filter.Penulis != "" {
+		query = query.Where("LOWER(penulis) LIKE ?", "%"+strings.ToLower(params.Filter.Penulis)+"%")
+	}
+	if params.Filter.StatusPublikasi != "" {
+		query = query.Where("status_publikasi = ?", params.Filter.StatusPublikasi)
+	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
+
+	// Get total count
+	if err := query.Model(&models.Article{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data ordered by created_at DESC
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 

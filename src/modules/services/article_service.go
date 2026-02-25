@@ -17,6 +17,7 @@ type ArticleService interface {
 	Create(gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.ArticleCreateRequest, userID uint) (*dtos.ArticleResponse, error)
 	GetByID(id uint) (*dtos.ArticleResponse, error)
 	GetAll(limit int, offset int) (*dtos.ArticleListResponse, error)
+	GetAllWithFilter(params repositories.GetArticleParams) (*dtos.ArticleListWithPaginationResponse, error)
 	Update(id uint, gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.ArticleUpdateRequest, userID uint) (*dtos.ArticleResponse, error)
 	Delete(id uint) error
 }
@@ -196,6 +197,44 @@ func (s *ArticleServiceImpl) GetAll(limit int, offset int) (*dtos.ArticleListRes
 		Limit:  limit,
 		Offset: offset,
 		Total:  total,
+	}, nil
+}
+
+// GetAllWithFilter retrieves Articles with filters and pagination
+func (s *ArticleServiceImpl) GetAllWithFilter(params repositories.GetArticleParams) (*dtos.ArticleListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.ArticleResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.ArticleListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
 	}, nil
 }
 

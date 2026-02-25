@@ -61,3 +61,26 @@ type ArticleListResponse struct {
 	Offset int               `json:"offset"`
 	Total  int64             `json:"total"`
 }
+
+// ArticleGetAllRequest represents the request payload for getting all articles with filters
+type ArticleGetAllRequest struct {
+	Search struct {
+		Judul            string `json:"judul"`
+		StartDate        string `json:"start_date"` // Format: YYYY-MM-DD
+		EndDate          string `json:"end_date"`   // Format: YYYY-MM-DD
+		Kategori         string `json:"kategori"`
+		Penulis          string `json:"penulis"`
+		StatusPublikasi  string `json:"status_publikasi"`
+		Status           string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// ArticleListWithPaginationResponse represents the response with pagination
+type ArticleListWithPaginationResponse struct {
+	Data       []ArticleResponse `json:"data"`
+	Pagination PaginationInfo    `json:"pagination"`
+}
