@@ -2,15 +2,30 @@ package repositories
 
 import (
 	"pintu-backend/src/modules/models"
+	"strings"
 
 	"gorm.io/gorm"
 )
+
+// GetSaranaPrasaranaFilter represents filter parameters for GetAllWithFilter
+type GetSaranaPrasaranaFilter struct {
+	Name   string
+	Status string
+}
+
+// GetSaranaPrasaranaParams represents parameters for GetAllWithFilter with filters
+type GetSaranaPrasaranaParams struct {
+	Filter GetSaranaPrasaranaFilter
+	Limit  int
+	Offset int
+}
 
 // SaranaPrasaranaRepository handles data operations for SaranaPrasarana
 type SaranaPrasaranaRepository interface {
 	Create(data *models.SaranaPrasarana) error
 	GetByID(id uint) (*models.SaranaPrasarana, error)
 	GetAll(limit int, offset int) ([]models.SaranaPrasarana, int64, error)
+	GetAllWithFilter(params GetSaranaPrasaranaParams) ([]models.SaranaPrasarana, int64, error)
 	Update(data *models.SaranaPrasarana) error
 	Delete(id uint) error
 }
@@ -48,8 +63,36 @@ func (r *SaranaPrasaranaRepositoryImpl) GetAll(limit int, offset int) ([]models.
 		return nil, 0, err
 	}
 
-	// Get paginated data
-	if err := r.db.Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by created_at DESC
+	if err := r.db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// GetAllWithFilter retrieves SaranaPrasarana records with filters and pagination
+func (r *SaranaPrasaranaRepositoryImpl) GetAllWithFilter(params GetSaranaPrasaranaParams) ([]models.SaranaPrasarana, int64, error) {
+	var data []models.SaranaPrasarana
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.Name != "" {
+		query = query.Where("LOWER(name) LIKE ?", "%"+strings.ToLower(params.Filter.Name)+"%")
+	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
+
+	// Get total count
+	if err := query.Model(&models.SaranaPrasarana{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data ordered by created_at DESC
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 

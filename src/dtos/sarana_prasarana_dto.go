@@ -34,3 +34,21 @@ type SaranaPrasaranaListResponse struct {
 	Offset int                       `json:"offset"`
 	Total  int64                     `json:"total"`
 }
+
+// SaranaPrasaranaGetAllRequest represents the request payload for getting all sarana prasarana with filters
+type SaranaPrasaranaGetAllRequest struct {
+	Search struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// SaranaPrasaranaListWithPaginationResponse represents the response with pagination
+type SaranaPrasaranaListWithPaginationResponse struct {
+	Data       []SaranaPrasaranaResponse `json:"data"`
+	Pagination PaginationInfo            `json:"pagination"`
+}

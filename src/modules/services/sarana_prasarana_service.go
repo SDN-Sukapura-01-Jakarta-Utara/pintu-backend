@@ -14,6 +14,7 @@ type SaranaPrasaranaService interface {
 	Create(file *multipart.FileHeader, req *dtos.SaranaPrasaranaCreateRequest, userID uint) (*dtos.SaranaPrasaranaResponse, error)
 	GetByID(id uint) (*dtos.SaranaPrasaranaResponse, error)
 	GetAll(limit int, offset int) (*dtos.SaranaPrasaranaListResponse, error)
+	GetAllWithFilter(params repositories.GetSaranaPrasaranaParams) (*dtos.SaranaPrasaranaListWithPaginationResponse, error)
 	UpdateWithFile(id uint, file *multipart.FileHeader, req *dtos.SaranaPrasaranaUpdateRequest, userID uint) (*dtos.SaranaPrasaranaResponse, error)
 	Delete(id uint) error
 }
@@ -122,6 +123,44 @@ func (s *SaranaPrasaranaServiceImpl) GetAll(limit int, offset int) (*dtos.Sarana
 		Limit:  limit,
 		Offset: offset,
 		Total:  total,
+	}, nil
+}
+
+// GetAllWithFilter retrieves SaranaPrasarana with filters and pagination
+func (s *SaranaPrasaranaServiceImpl) GetAllWithFilter(params repositories.GetSaranaPrasaranaParams) (*dtos.SaranaPrasaranaListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.SaranaPrasaranaResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.SaranaPrasaranaListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
 	}, nil
 }
 

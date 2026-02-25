@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"pintu-backend/src/dtos"
+	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
 
 	"github.com/gin-gonic/gin"
@@ -67,35 +68,48 @@ func (c *SaranaPrasaranaController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{"data": data})
 }
 
-// GetAll retrieves all SaranaPrasarana
+// GetAll retrieves all SaranaPrasarana with filters and pagination
 func (c *SaranaPrasaranaController) GetAll(ctx *gin.Context) {
-	// Parse query parameters
+	var req dtos.SaranaPrasaranaGetAllRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Default values
 	limit := 10
-	offset := 0
-
-	if l := ctx.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil {
-			limit = parsed
-		}
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
 	}
-
-	if o := ctx.Query("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil {
-			offset = parsed
-		}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
 	}
+	offset := (page - 1) * limit
 
-	data, err := c.service.GetAll(limit, offset)
+	// Call service with filters
+	data, err := c.service.GetAllWithFilter(repositories.GetSaranaPrasaranaParams{
+		Filter: repositories.GetSaranaPrasaranaFilter{
+			Name:   req.Search.Name,
+			Status: req.Search.Status,
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"data":   data.Data,
-		"limit":  data.Limit,
-		"offset": data.Offset,
-		"total":  data.Total,
+		"data": data.Data,
+		"pagination": gin.H{
+			"limit":       data.Pagination.Limit,
+			"offset":      data.Pagination.Offset,
+			"page":        data.Pagination.Page,
+			"total":       data.Pagination.Total,
+			"total_pages": data.Pagination.TotalPages,
+		},
 	})
 }
 
