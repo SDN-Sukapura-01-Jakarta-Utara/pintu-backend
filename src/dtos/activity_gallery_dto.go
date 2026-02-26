@@ -43,3 +43,24 @@ type ActivityGalleryListResponse struct {
 	Offset int                       `json:"offset"`
 	Total  int64                     `json:"total"`
 }
+
+// ActivityGalleryGetAllRequest represents the request payload for getting all activity galleries with filters
+type ActivityGalleryGetAllRequest struct {
+	Search struct {
+		Judul            string `json:"judul"`
+		StartDate        string `json:"start_date"` // Format: YYYY-MM-DD
+		EndDate          string `json:"end_date"`   // Format: YYYY-MM-DD
+		StatusPublikasi  string `json:"status_publikasi"`
+		Status           string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// ActivityGalleryListWithPaginationResponse represents the response with pagination
+type ActivityGalleryListWithPaginationResponse struct {
+	Data       []ActivityGalleryResponse `json:"data"`
+	Pagination PaginationInfo            `json:"pagination"`
+}

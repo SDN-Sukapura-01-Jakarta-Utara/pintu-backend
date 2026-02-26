@@ -17,6 +17,7 @@ type ActivityGalleryService interface {
 	Create(fotos []*multipart.FileHeader, req *dtos.ActivityGalleryCreateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
 	GetByID(id uint) (*dtos.ActivityGalleryResponse, error)
 	GetAll(limit int, offset int) (*dtos.ActivityGalleryListResponse, error)
+	GetAllWithFilter(params repositories.GetActivityGalleryParams) (*dtos.ActivityGalleryListWithPaginationResponse, error)
 	Update(id uint, fotos []*multipart.FileHeader, req *dtos.ActivityGalleryUpdateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
 	Delete(id uint) error
 }
@@ -158,6 +159,44 @@ func (s *ActivityGalleryServiceImpl) GetAll(limit int, offset int) (*dtos.Activi
 		Limit:  limit,
 		Offset: offset,
 		Total:  total,
+	}, nil
+}
+
+// GetAllWithFilter retrieves ActivityGalleries with filters and pagination
+func (s *ActivityGalleryServiceImpl) GetAllWithFilter(params repositories.GetActivityGalleryParams) (*dtos.ActivityGalleryListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.ActivityGalleryResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.ActivityGalleryListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
 	}, nil
 }
 

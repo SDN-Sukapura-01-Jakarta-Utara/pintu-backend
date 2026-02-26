@@ -5,8 +5,10 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"time"
 
 	"pintu-backend/src/dtos"
+	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
 
 	"github.com/gin-gonic/gin"
@@ -112,46 +114,75 @@ func (c *AnnouncementController) Create(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, gin.H{"data": data})
 }
 
-// GetAll retrieves all announcements
+// GetAll retrieves all announcements with filters and pagination
 // @Summary Get all Announcements
-// @Description Retrieve all Announcement records with pagination
+// @Description Retrieve all Announcement records with filters and pagination
 // @Tags announcement
 // @Accept json
 // @Produce json
-// @Param limit query int false "Limit (default: 10, max: 100)"
-// @Param offset query int false "Offset (default: 0)"
-// @Success 200 {object} gin.H{data=dtos.AnnouncementListResponse}
+// @Success 200 {object} gin.H{data=dtos.AnnouncementListWithPaginationResponse}
 // @Failure 401 {object} gin.H{error=string}
 // @Failure 500 {object} gin.H{error=string}
 // @Router /api/v1/announcements/get-announcements [post]
 func (c *AnnouncementController) GetAll(ctx *gin.Context) {
-	// Parse query parameters
+	var req dtos.AnnouncementGetAllRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Default values
 	limit := 10
-	offset := 0
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
+	}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
+	}
+	offset := (page - 1) * limit
 
-	if l := ctx.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil {
-			limit = parsed
+	// Parse date filters
+	var startDate, endDate time.Time
+	if req.Search.StartDate != "" {
+		if parsed, err := time.Parse("2006-01-02", req.Search.StartDate); err == nil {
+			startDate = parsed
+		}
+	}
+	if req.Search.EndDate != "" {
+		if parsed, err := time.Parse("2006-01-02", req.Search.EndDate); err == nil {
+			// Set to end of day for inclusive range
+			endDate = parsed.Add(time.Hour * 24).Add(-time.Nanosecond)
 		}
 	}
 
-	if o := ctx.Query("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil {
-			offset = parsed
-		}
-	}
-
-	data, err := c.service.GetAll(limit, offset)
+	// Call service with filters
+	data, err := c.service.GetAllWithFilter(repositories.GetAnnouncementParams{
+		Filter: repositories.GetAnnouncementFilter{
+			Judul:            req.Search.Judul,
+			StartDate:        startDate,
+			EndDate:          endDate,
+			Penulis:          req.Search.Penulis,
+			StatusPublikasi:  req.Search.StatusPublikasi,
+			Status:           req.Search.Status,
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"data":   data.Data,
-		"limit":  data.Limit,
-		"offset": data.Offset,
-		"total":  data.Total,
+		"data": data.Data,
+		"pagination": gin.H{
+			"limit":       data.Pagination.Limit,
+			"offset":      data.Pagination.Offset,
+			"page":        data.Pagination.Page,
+			"total":       data.Pagination.Total,
+			"total_pages": data.Pagination.TotalPages,
+		},
 	})
 }
 

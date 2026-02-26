@@ -17,6 +17,7 @@ type AnnouncementService interface {
 	Create(gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.AnnouncementCreateRequest, userID uint) (*dtos.AnnouncementResponse, error)
 	GetByID(id uint) (*dtos.AnnouncementResponse, error)
 	GetAll(limit int, offset int) (*dtos.AnnouncementListResponse, error)
+	GetAllWithFilter(params repositories.GetAnnouncementParams) (*dtos.AnnouncementListWithPaginationResponse, error)
 	Update(id uint, gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.AnnouncementUpdateRequest, userID uint) (*dtos.AnnouncementResponse, error)
 	Delete(id uint) error
 }
@@ -195,6 +196,44 @@ func (s *AnnouncementServiceImpl) GetAll(limit int, offset int) (*dtos.Announcem
 		Limit:  limit,
 		Offset: offset,
 		Total:  total,
+	}, nil
+}
+
+// GetAllWithFilter retrieves Announcements with filters and pagination
+func (s *AnnouncementServiceImpl) GetAllWithFilter(params repositories.GetAnnouncementParams) (*dtos.AnnouncementListWithPaginationResponse, error) {
+	// Validate and set default limit and offset
+	if params.Limit == 0 {
+		params.Limit = 10
+	}
+	if params.Limit > 100 {
+		params.Limit = 100
+	}
+	if params.Offset < 0 {
+		params.Offset = 0
+	}
+
+	data, total, err := s.repository.GetAllWithFilter(params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.AnnouncementResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	totalPages := (int(total) + params.Limit - 1) / params.Limit
+
+	return &dtos.AnnouncementListWithPaginationResponse{
+		Data: responses,
+		Pagination: dtos.PaginationInfo{
+			Limit:      params.Limit,
+			Offset:     params.Offset,
+			Page:       (params.Offset / params.Limit) + 1,
+			Total:      total,
+			TotalPages: totalPages,
+		},
 	}, nil
 }
 

@@ -50,3 +50,25 @@ type AnnouncementListResponse struct {
 	Offset int                    `json:"offset"`
 	Total  int64                  `json:"total"`
 }
+
+// AnnouncementGetAllRequest represents the request payload for getting all announcements with filters
+type AnnouncementGetAllRequest struct {
+	Search struct {
+		Judul            string `json:"judul"`
+		StartDate        string `json:"start_date"` // Format: YYYY-MM-DD
+		EndDate          string `json:"end_date"`   // Format: YYYY-MM-DD
+		Penulis          string `json:"penulis"`
+		StatusPublikasi  string `json:"status_publikasi"`
+		Status           string `json:"status"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// AnnouncementListWithPaginationResponse represents the response with pagination
+type AnnouncementListWithPaginationResponse struct {
+	Data       []AnnouncementResponse `json:"data"`
+	Pagination PaginationInfo         `json:"pagination"`
+}

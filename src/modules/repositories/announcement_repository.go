@@ -2,15 +2,35 @@ package repositories
 
 import (
 	"pintu-backend/src/modules/models"
+	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
+
+// GetAnnouncementFilter represents filter parameters for GetAllWithFilter
+type GetAnnouncementFilter struct {
+	Judul            string
+	StartDate        time.Time
+	EndDate          time.Time
+	Penulis          string
+	StatusPublikasi  string
+	Status           string
+}
+
+// GetAnnouncementParams represents parameters for GetAllWithFilter with filters
+type GetAnnouncementParams struct {
+	Filter GetAnnouncementFilter
+	Limit  int
+	Offset int
+}
 
 // AnnouncementRepository handles data operations for Announcement
 type AnnouncementRepository interface {
 	Create(data *models.Announcement) error
 	GetByID(id uint) (*models.Announcement, error)
 	GetAll(limit int, offset int) ([]models.Announcement, int64, error)
+	GetAllWithFilter(params GetAnnouncementParams) ([]models.Announcement, int64, error)
 	Update(data *models.Announcement) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -51,6 +71,47 @@ func (r *AnnouncementRepositoryImpl) GetAll(limit int, offset int) ([]models.Ann
 
 	// Get paginated data, ordered by created_at descending
 	if err := r.db.Limit(limit).Offset(offset).Order("created_at DESC").Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// GetAllWithFilter retrieves Announcement records with filters and pagination
+func (r *AnnouncementRepositoryImpl) GetAllWithFilter(params GetAnnouncementParams) ([]models.Announcement, int64, error) {
+	var data []models.Announcement
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.Judul != "" {
+		query = query.Where("LOWER(judul) LIKE ?", "%"+strings.ToLower(params.Filter.Judul)+"%")
+	}
+	if !params.Filter.StartDate.IsZero() && !params.Filter.EndDate.IsZero() {
+		query = query.Where("tanggal >= ? AND tanggal <= ?", params.Filter.StartDate, params.Filter.EndDate)
+	} else if !params.Filter.StartDate.IsZero() {
+		query = query.Where("tanggal >= ?", params.Filter.StartDate)
+	} else if !params.Filter.EndDate.IsZero() {
+		query = query.Where("tanggal <= ?", params.Filter.EndDate)
+	}
+	if params.Filter.Penulis != "" {
+		query = query.Where("LOWER(penulis) LIKE ?", "%"+strings.ToLower(params.Filter.Penulis)+"%")
+	}
+	if params.Filter.StatusPublikasi != "" {
+		query = query.Where("status_publikasi = ?", params.Filter.StatusPublikasi)
+	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
+
+	// Get total count
+	if err := query.Model(&models.Announcement{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data ordered by created_at DESC
+	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
