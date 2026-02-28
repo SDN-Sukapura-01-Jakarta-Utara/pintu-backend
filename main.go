@@ -4,10 +4,12 @@ import (
 	"log"
 	"os"
 
+	"pintu-backend/src/middleware"
 	"pintu-backend/src/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -44,6 +46,12 @@ func main() {
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	corsConfig.AllowCredentials = true
 	router.Use(cors.New(corsConfig))
+
+	// Setup Prometheus middleware
+	router.Use(middleware.PrometheusMiddleware())
+
+	// Metrics endpoint (Prometheus)
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
