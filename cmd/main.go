@@ -6,6 +6,51 @@ import (
 	"os"
 )
 
+// Shared Grafana types
+type Dashboard struct {
+	Dashboard DashboardBody `json:"dashboard"`
+	Overwrite bool          `json:"overwrite"`
+}
+
+type DashboardBody struct {
+	Title    string    `json:"title"`
+	Tags     []string  `json:"tags"`
+	Panels   []Panel   `json:"panels"`
+	Refresh  string    `json:"refresh"`
+	Time     TimeRange `json:"time"`
+	Timezone string    `json:"timezone"`
+}
+
+type Panel struct {
+	ID        int       `json:"id"`
+	Title     string    `json:"title"`
+	Type      string    `json:"type"`
+	GridPos   GridPos   `json:"gridPos"`
+	Targets   []Target  `json:"targets"`
+	Datasource string   `json:"datasource,omitempty"`
+	Options   interface{} `json:"options,omitempty"`
+	FieldConfig interface{} `json:"fieldConfig,omitempty"`
+}
+
+type GridPos struct {
+	H int `json:"h"`
+	W int `json:"w"`
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
+type Target struct {
+	RefID        string `json:"refId"`
+	Expr         string `json:"expr"`
+	Interval     string `json:"interval,omitempty"`
+	LegendFormat string `json:"legendFormat,omitempty"`
+}
+
+type TimeRange struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
