@@ -20,5 +20,5 @@ type Jumbotron struct {
 
 // TableName specifies the table name for Jumbotron
 func (m *Jumbotron) TableName() string {
-	return "jumbotrons"
+	return "jumbotron"
 }

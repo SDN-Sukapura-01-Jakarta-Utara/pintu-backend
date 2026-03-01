@@ -1,13 +1,12 @@
--- Migration: create_sarana_prasaranas_table
--- Created: 2026-02-11 12:58:04
--- Description: Create sarana_prasaranas table for school facilities management
+-- Migration: create_jumbotron_table
+-- Created: 2026-02-10 07:57:12
+-- Description: Create jumbotron table for banner/image management
 
 BEGIN;
 
-CREATE TABLE sarana_prasaranas (
+CREATE TABLE jumbotron (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    foto VARCHAR(512) NOT NULL,
+    file VARCHAR(512) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

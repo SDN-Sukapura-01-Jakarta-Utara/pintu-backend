@@ -21,5 +21,5 @@ type SaranaPrasarana struct {
 
 // TableName specifies the table name for SaranaPrasarana
 func (m *SaranaPrasarana) TableName() string {
-	return "sarana_prasaranas"
+	return "sarana_prasarana"
 }

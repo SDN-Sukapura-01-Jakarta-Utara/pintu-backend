@@ -20,5 +20,5 @@ type BidangStudi struct {
 
 // TableName specifies the table name for BidangStudi
 func (m *BidangStudi) TableName() string {
-	return "bidang_studis"
+	return "bidang_studi"
 }

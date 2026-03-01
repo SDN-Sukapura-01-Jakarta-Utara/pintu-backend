@@ -1,10 +1,10 @@
--- Migration: create_tahun_pelajarans_table
+-- Migration: create_tahun_pelajaran_table
 -- Created: 2026-02-08 22:02:39
--- Description: Create tahun_pelajarans table for academic year management
+-- Description: Create tahun_pelajaran table for academic year management
 
 BEGIN;
 
-CREATE TABLE tahun_pelajarans (
+CREATE TABLE tahun_pelajaran (
     id SERIAL PRIMARY KEY,
     tahun_pelajaran VARCHAR(20) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active',
@@ -16,7 +16,7 @@ CREATE TABLE tahun_pelajarans (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_tahun_pelajarans_tahun_pelajaran ON tahun_pelajarans(tahun_pelajaran);
-CREATE INDEX idx_tahun_pelajarans_status ON tahun_pelajarans(status);
+CREATE INDEX idx_tahun_pelajaran_tahun_pelajaran ON tahun_pelajaran(tahun_pelajaran);
+CREATE INDEX idx_tahun_pelajaran_status ON tahun_pelajaran(status);
 
 COMMIT;

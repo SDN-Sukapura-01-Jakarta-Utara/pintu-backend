@@ -1,10 +1,10 @@
--- Migration: create_ekstrakurikulers_table
+-- Migration: create_ekstrakurikuler_table
 -- Created: 2026-02-10 06:59:23
--- Description: Create ekstrakurikulers table with jsonb for multiple kelas
+-- Description: Create ekstrakurikuler table with jsonb for multiple kelas
 
 BEGIN;
 
-CREATE TABLE ekstrakurikulers (
+CREATE TABLE ekstrakurikuler (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     kelas_ids JSONB NOT NULL DEFAULT '[]',
@@ -18,8 +18,8 @@ CREATE TABLE ekstrakurikulers (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_ekstrakurikulers_name ON ekstrakurikulers(name);
-CREATE INDEX idx_ekstrakurikulers_kategori ON ekstrakurikulers(kategori);
-CREATE INDEX idx_ekstrakurikulers_kelas_ids ON ekstrakurikulers USING GIN(kelas_ids);
+CREATE INDEX idx_ekstrakurikuler_name ON ekstrakurikuler(name);
+CREATE INDEX idx_ekstrakurikuler_kategori ON ekstrakurikuler(kategori);
+CREATE INDEX idx_ekstrakurikuler_kelas_ids ON ekstrakurikuler USING GIN(kelas_ids);
 
 COMMIT;

@@ -1,10 +1,10 @@
--- Migration: create_bidang_studis_table
+-- Migration: create_bidang_studi_table
 -- Created: 2026-02-09 20:25:38
--- Description: Create bidang_studis table for field of study management
+-- Description: Create bidang_studi table for field of study management
 
 BEGIN;
 
-CREATE TABLE bidang_studis (
+CREATE TABLE bidang_studi (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active',
@@ -16,6 +16,6 @@ CREATE TABLE bidang_studis (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_bidang_studis_name ON bidang_studis(name);
+CREATE INDEX idx_bidang_studi_name ON bidang_studi(name);
 
 COMMIT;

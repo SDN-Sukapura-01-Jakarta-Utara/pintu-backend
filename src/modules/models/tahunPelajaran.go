@@ -20,5 +20,5 @@ type TahunPelajaran struct {
 
 // TableName specifies the table name for TahunPelajaran
 func (m *TahunPelajaran) TableName() string {
-	return "tahun_pelajarans"
+	return "tahun_pelajaran"
 }

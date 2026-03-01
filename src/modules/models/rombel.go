@@ -22,5 +22,5 @@ type Rombel struct {
 
 // TableName specifies the table name for Rombel
 func (m *Rombel) TableName() string {
-	return "rombels"
+	return "rombel"
 }

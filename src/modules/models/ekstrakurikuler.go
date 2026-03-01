@@ -41,5 +41,5 @@ type Ekstrakurikuler struct {
 
 // TableName specifies the table name for Ekstrakurikuler
 func (m *Ekstrakurikuler) TableName() string {
-	return "ekstrakurikulers"
+	return "ekstrakurikuler"
 }
