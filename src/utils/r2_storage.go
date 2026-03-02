@@ -107,6 +107,10 @@ func (r *R2Storage) DeleteFile(fileKey string) error {
 
 // GetPublicURL returns the public URL for a file
 func (r *R2Storage) GetPublicURL(fileKey string) string {
+	// Return empty string if fileKey is empty
+	if fileKey == "" {
+		return ""
+	}
 	// Format: https://pintu-storage.sdnsukapura01.sch.id/<fileKey>
 	return fmt.Sprintf("https://%s/%s", r.publicURL, fileKey)
 }

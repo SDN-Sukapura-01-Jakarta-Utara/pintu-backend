@@ -85,6 +85,7 @@ func main() {
 	routes.RegisterAnnouncementRoutes(router, db)
 	routes.RegisterActivityGalleryRoutes(router, db)
 	routes.RegisterContactRoutes(router, db)
+	routes.RegisterKepegawaianRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
