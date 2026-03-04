@@ -76,6 +76,7 @@ func (s *KepegawaianServiceImpl) Create(req *dtos.KepegawaianCreateRequest, user
 		NKKI:              req.NKKI,
 		Kategori:          req.Kategori,
 		Jabatan:           req.Jabatan,
+		BidangStudiID:     req.BidangStudiID,
 		RombelGuruKelasID: req.RombelGuruKelasID,
 		RombelBidangStudi: rombelBidangStudiJSON,
 		Status:            status,
@@ -229,6 +230,9 @@ func (s *KepegawaianServiceImpl) Update(id uint, foto *multipart.FileHeader, doc
 	}
 	if req.Jabatan != "" {
 		existing.Jabatan = req.Jabatan
+	}
+	if req.BidangStudiID != nil {
+		existing.BidangStudiID = req.BidangStudiID
 	}
 	if req.RombelGuruKelasID != nil {
 		existing.RombelGuruKelasID = req.RombelGuruKelasID
@@ -471,6 +475,7 @@ func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.K
 		Foto:                  s.stringOrNil(s.r2Storage.GetPublicURL(data.Foto)),
 		Kategori:              data.Kategori,
 		Jabatan:               data.Jabatan,
+		BidangStudiID:         data.BidangStudiID,
 		RombelGuruKelasID:     data.RombelGuruKelasID,
 		RombelBidangStudi:     rombelBidangStudi,
 		KK:                    s.stringOrNil(s.r2Storage.GetPublicURL(data.KK)),

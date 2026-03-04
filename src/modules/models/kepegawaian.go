@@ -18,6 +18,7 @@ type Kepegawaian struct {
 	Foto                  string         `gorm:"column:foto" json:"foto"`
 	Kategori              string         `gorm:"column:kategori" json:"kategori"`
 	Jabatan               string         `gorm:"column:jabatan" json:"jabatan"`
+	BidangStudiID         *uint          `gorm:"column:bidang_studi_id" json:"bidang_studi_id"`
 	RombelGuruKelasID     *uint          `gorm:"column:rombel_guru_kelas_id" json:"rombel_guru_kelas_id"`
 	RombelBidangStudi     datatypes.JSON `gorm:"column:rombel_bidang_studi;type:jsonb;default:'[]'" json:"rombel_bidang_studi"`
 	KK                    string         `gorm:"column:kk" json:"kk"`

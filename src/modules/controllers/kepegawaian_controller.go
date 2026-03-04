@@ -167,6 +167,15 @@ func (c *KepegawaianController) Update(ctx *gin.Context) {
 	jabatan := ctx.PostForm("jabatan")
 	status := ctx.PostForm("status")
 
+	// Get bidang_studi_id (optional)
+	var bidangStudiID *uint
+	if bidangStudiIDStr := ctx.PostForm("bidang_studi_id"); bidangStudiIDStr != "" {
+		if bidangStudiIDUint, err := strconv.ParseUint(bidangStudiIDStr, 10, 32); err == nil {
+			bidangID := uint(bidangStudiIDUint)
+			bidangStudiID = &bidangID
+		}
+	}
+
 	// Get rombel_guru_kelas_id (optional)
 	var rombelGuruKelasID *uint
 	if rombelIDStr := ctx.PostForm("rombel_guru_kelas_id"); rombelIDStr != "" {
@@ -221,6 +230,7 @@ func (c *KepegawaianController) Update(ctx *gin.Context) {
 		NKKI:                  nkki,
 		Kategori:              kategori,
 		Jabatan:               jabatan,
+		BidangStudiID:         bidangStudiID,
 		RombelGuruKelasID:     rombelGuruKelasID,
 		RombelBidangStudi:     rombelBidangStudi,
 		Status:                status,

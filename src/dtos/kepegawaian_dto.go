@@ -13,6 +13,7 @@ type KepegawaianCreateRequest struct {
 	NKKI              string `json:"nkki" binding:"omitempty"`
 	Kategori          string `json:"kategori" binding:"omitempty"`
 	Jabatan           string `json:"jabatan" binding:"omitempty"`
+	BidangStudiID     *uint  `json:"bidang_studi_id" binding:"omitempty"`
 	RombelGuruKelasID *uint  `json:"rombel_guru_kelas_id" binding:"omitempty"`
 	RombelBidangStudi []uint `json:"rombel_bidang_studi" binding:"omitempty"`
 	RoleIDs           []uint `json:"role_ids" binding:"omitempty"`
@@ -29,6 +30,7 @@ type KepegawaianUpdateRequest struct {
 	NKKI                      string  `json:"nkki" binding:"omitempty"`
 	Kategori                  string  `json:"kategori" binding:"omitempty"`
 	Jabatan                   string  `json:"jabatan" binding:"omitempty"`
+	BidangStudiID             *uint   `json:"bidang_studi_id" binding:"omitempty"`
 	RombelGuruKelasID         *uint   `json:"rombel_guru_kelas_id" binding:"omitempty"`
 	RombelBidangStudi         []uint  `json:"rombel_bidang_studi" binding:"omitempty"`
 	RoleIDs                   []uint  `json:"role_ids" binding:"omitempty"`
@@ -47,6 +49,7 @@ type KepegawaianResponse struct {
 	Foto                  *string    `json:"foto"`
 	Kategori              string     `json:"kategori"`
 	Jabatan               string     `json:"jabatan"`
+	BidangStudiID         *uint      `json:"bidang_studi_id"`
 	RombelGuruKelasID     *uint      `json:"rombel_guru_kelas_id"`
 	RombelBidangStudi     []uint     `json:"rombel_bidang_studi"`
 	KK                    *string    `json:"kk"`

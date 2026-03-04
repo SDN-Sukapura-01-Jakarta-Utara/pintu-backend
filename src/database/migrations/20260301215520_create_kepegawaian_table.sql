@@ -14,6 +14,7 @@ CREATE TABLE kepegawaian (
     foto VARCHAR(512),
     kategori VARCHAR(20),
     jabatan VARCHAR(100),
+    bidang_studi_id INTEGER,
     rombel_guru_kelas_id INTEGER,
     rombel_bidang_studi JSONB DEFAULT '[]'::jsonb,
     kk TEXT,
@@ -35,11 +36,13 @@ CREATE TABLE kepegawaian (
     created_by_id INTEGER,
     updated_by_id INTEGER,
     deleted_at TIMESTAMP,
+    CONSTRAINT fk_kepegawaian_bidang_studi FOREIGN KEY (bidang_studi_id) REFERENCES bidang_studi(id) ON DELETE SET NULL,
     CONSTRAINT fk_kepegawaian_rombel FOREIGN KEY (rombel_guru_kelas_id) REFERENCES rombel(id) ON DELETE SET NULL
 );
 
 -- Create indexes for better query performance
 CREATE INDEX idx_kepegawaian_nama ON kepegawaian(nama);
+CREATE INDEX idx_kepegawaian_bidang_studi_id ON kepegawaian(bidang_studi_id);
 CREATE INDEX idx_kepegawaian_rombel_guru_kelas_id ON kepegawaian(rombel_guru_kelas_id);
 
 COMMIT;
