@@ -41,35 +41,36 @@ type KepegawaianUpdateRequest struct {
 
 // KepegawaianResponse represents the response payload for Kepegawaian
 type KepegawaianResponse struct {
-	ID                    uint       `json:"id"`
-	Nama                  string     `json:"nama"`
-	Username              string     `json:"username"`
-	NIP                   string     `json:"nip"`
-	NKKI                  string     `json:"nkki"`
-	Foto                  *string    `json:"foto"`
-	Kategori              string     `json:"kategori"`
-	Jabatan               string     `json:"jabatan"`
-	BidangStudiID         *uint      `json:"bidang_studi_id"`
-	RombelGuruKelasID     *uint      `json:"rombel_guru_kelas_id"`
-	RombelBidangStudi     []uint     `json:"rombel_bidang_studi"`
-	KK                    *string    `json:"kk"`
-	AktaLahir             *string    `json:"akta_lahir"`
-	KTP                   *string    `json:"ktp"`
-	IjazahSD              *string    `json:"ijazah_sd"`
-	IjazahSMP             *string    `json:"ijazah_smp"`
-	IjazahSMA             *string    `json:"ijazah_sma"`
-	IjazahS1              *string    `json:"ijazah_s1"`
-	IjazahS2              *string    `json:"ijazah_s2"`
-	IjazahS3              *string    `json:"ijazah_s3"`
-	SertifikatPendidik    *string    `json:"sertifikat_pendidik"`
-	SertifikatLainnya     []string   `json:"sertifikat_lainnya"`
-	SK                    *string    `json:"sk"`
-	DokumenLainnya        []string   `json:"dokumen_lainnya"`
-	Status                string     `json:"status"`
-	CreatedAt             time.Time  `json:"created_at"`
-	UpdatedAt             time.Time  `json:"updated_at"`
-	CreatedByID           *uint      `json:"created_by_id"`
-	UpdatedByID           *uint      `json:"updated_by_id"`
+	ID                    uint           `json:"id"`
+	Nama                  string         `json:"nama"`
+	Username              string         `json:"username"`
+	NIP                   string         `json:"nip"`
+	NKKI                  string         `json:"nkki"`
+	Foto                  *string        `json:"foto"`
+	Kategori              string         `json:"kategori"`
+	Jabatan               string         `json:"jabatan"`
+	BidangStudiID         *uint          `json:"bidang_studi_id"`
+	RombelGuruKelasID     *uint          `json:"rombel_guru_kelas_id"`
+	RombelBidangStudi     []uint         `json:"rombel_bidang_studi"`
+	KK                    *string        `json:"kk"`
+	AktaLahir             *string        `json:"akta_lahir"`
+	KTP                   *string        `json:"ktp"`
+	IjazahSD              *string        `json:"ijazah_sd"`
+	IjazahSMP             *string        `json:"ijazah_smp"`
+	IjazahSMA             *string        `json:"ijazah_sma"`
+	IjazahS1              *string        `json:"ijazah_s1"`
+	IjazahS2              *string        `json:"ijazah_s2"`
+	IjazahS3              *string        `json:"ijazah_s3"`
+	SertifikatPendidik    *string        `json:"sertifikat_pendidik"`
+	SertifikatLainnya     []string       `json:"sertifikat_lainnya"`
+	SK                    *string        `json:"sk"`
+	DokumenLainnya        []string       `json:"dokumen_lainnya"`
+	Status                string         `json:"status"`
+	Roles                 []RoleResponse `json:"roles"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
+	CreatedByID           *uint          `json:"created_by_id"`
+	UpdatedByID           *uint          `json:"updated_by_id"`
 }
 
 // KepegawaianListResponse represents the response payload for listing Kepegawaian

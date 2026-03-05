@@ -40,6 +40,8 @@ type Kepegawaian struct {
 	CreatedByID           *uint          `gorm:"column:created_by_id" json:"created_by_id"`
 	UpdatedByID           *uint          `gorm:"column:updated_by_id" json:"updated_by_id"`
 	DeletedAt             gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deleted_at,omitempty"`
+	// Many-to-many relationship
+	Roles                 []Role         `gorm:"many2many:kepegawaian_roles" json:"roles,omitempty"`
 }
 
 // TableName specifies the table name for Kepegawaian

@@ -87,11 +87,9 @@ func (s *KepegawaianServiceImpl) Create(req *dtos.KepegawaianCreateRequest, user
 		return nil, err
 	}
 
-	// Assign roles if provided
-	if len(req.RoleIDs) > 0 {
-		if err := s.repository.AssignRoles(data.ID, req.RoleIDs); err != nil {
-			return nil, err
-		}
+	// Assign roles (clear existing and assign new ones)
+	if err := s.repository.AssignRoles(data.ID, req.RoleIDs); err != nil {
+		return nil, err
 	}
 
 	return s.mapToResponse(data), nil
@@ -99,7 +97,7 @@ func (s *KepegawaianServiceImpl) Create(req *dtos.KepegawaianCreateRequest, user
 
 // GetByID retrieves Kepegawaian by ID
 func (s *KepegawaianServiceImpl) GetByID(id uint) (*dtos.KepegawaianResponse, error) {
-	data, err := s.repository.GetByID(id)
+	data, err := s.repository.GetByIDWithRoles(id)
 	if err != nil {
 		return nil, err
 	}
@@ -369,11 +367,9 @@ func (s *KepegawaianServiceImpl) Update(id uint, foto *multipart.FileHeader, doc
 		return nil, err
 	}
 
-	// Assign roles if provided
-	if len(req.RoleIDs) > 0 {
-		if err := s.repository.AssignRoles(id, req.RoleIDs); err != nil {
-			return nil, err
-		}
+	// Assign roles (clear existing and assign new ones)
+	if err := s.repository.AssignRoles(id, req.RoleIDs); err != nil {
+		return nil, err
 	}
 
 	return s.mapToResponse(existing), nil
@@ -466,6 +462,32 @@ func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.K
 	var dokumenLainnya []string
 	json.Unmarshal(data.DokumenLainnya, &dokumenLainnya)
 
+	// Map roles
+	roles := make([]dtos.RoleResponse, len(data.Roles))
+	for i, role := range data.Roles {
+		var system *dtos.SystemResponse
+		if role.System != nil {
+			system = &dtos.SystemResponse{
+				ID:          role.System.ID,
+				Nama:        role.System.Nama,
+				Description: role.System.Description,
+			}
+		}
+
+		roles[i] = dtos.RoleResponse{
+			ID:          role.ID,
+			Name:        role.Name,
+			Description: role.Description,
+			SystemID:    role.SystemID,
+			System:      system,
+			Status:      role.Status,
+			CreatedAt:   role.CreatedAt,
+			UpdatedAt:   role.UpdatedAt,
+			CreatedByID: role.CreatedByID,
+			UpdatedByID: role.UpdatedByID,
+		}
+	}
+
 	return &dtos.KepegawaianResponse{
 		ID:                    data.ID,
 		Nama:                  data.Nama,
@@ -492,6 +514,7 @@ func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.K
 		SK:                    s.stringOrNil(s.r2Storage.GetPublicURL(data.SK)),
 		DokumenLainnya:        s.mapURLsToPublic(dokumenLainnya),
 		Status:                data.Status,
+		Roles:                 roles,
 		CreatedAt:             data.CreatedAt,
 		UpdatedAt:             data.UpdatedAt,
 		CreatedByID:           data.CreatedByID,

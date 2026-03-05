@@ -30,6 +30,7 @@ type GetKepegawaianParams struct {
 type KepegawaianRepository interface {
 	Create(data *models.Kepegawaian) error
 	GetByID(id uint) (*models.Kepegawaian, error)
+	GetByIDWithRoles(id uint) (*models.Kepegawaian, error)
 	GetByNIP(nip string) (*models.Kepegawaian, error)
 	GetByUsername(username string) (*models.Kepegawaian, error)
 	GetAll(limit int, offset int) ([]models.Kepegawaian, int64, error)
@@ -58,6 +59,15 @@ func (r *KepegawaianRepositoryImpl) Create(data *models.Kepegawaian) error {
 func (r *KepegawaianRepositoryImpl) GetByID(id uint) (*models.Kepegawaian, error) {
 	var data models.Kepegawaian
 	if err := r.db.First(&data, id).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetByIDWithRoles retrieves Kepegawaian by ID with roles and system preloaded
+func (r *KepegawaianRepositoryImpl) GetByIDWithRoles(id uint) (*models.Kepegawaian, error) {
+	var data models.Kepegawaian
+	if err := r.db.Distinct().Preload("Roles.System").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -158,13 +168,27 @@ func (r *KepegawaianRepositoryImpl) Delete(id uint) error {
 
 // AssignRoles assigns multiple roles to a kepegawaian
 func (r *KepegawaianRepositoryImpl) AssignRoles(kepegawaianID uint, roleIDs []uint) error {
+	// Only process if there are roles to assign
+	if len(roleIDs) == 0 {
+		return nil
+	}
+
 	// Clear existing roles first
 	if err := r.db.Table("kepegawaian_roles").Where("kepegawaian_id = ?", kepegawaianID).Delete(nil).Error; err != nil {
 		return err
 	}
 
-	// Insert new roles
+	// Insert new roles (deduplicate first)
+	roleMap := make(map[uint]bool)
+	var uniqueRoleIDs []uint
 	for _, roleID := range roleIDs {
+		if !roleMap[roleID] {
+			uniqueRoleIDs = append(uniqueRoleIDs, roleID)
+			roleMap[roleID] = true
+		}
+	}
+
+	for _, roleID := range uniqueRoleIDs {
 		if err := r.db.Table("kepegawaian_roles").Create(map[string]interface{}{
 			"kepegawaian_id": kepegawaianID,
 			"role_id":        roleID,
