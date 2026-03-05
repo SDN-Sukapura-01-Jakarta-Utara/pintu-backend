@@ -273,6 +273,74 @@ func (s *KepegawaianServiceImpl) Update(id uint, foto *multipart.FileHeader, doc
 		existing.Foto = newFileKey
 	}
 
+	// Delete files if specified
+	if len(req.FilesToDelete) > 0 {
+		for _, fileType := range req.FilesToDelete {
+			switch fileType {
+			case "kk":
+				if existing.KK != "" {
+					_ = s.r2Storage.DeleteFile(existing.KK)
+					existing.KK = ""
+				}
+			case "akta_lahir":
+				if existing.AktaLahir != "" {
+					_ = s.r2Storage.DeleteFile(existing.AktaLahir)
+					existing.AktaLahir = ""
+				}
+			case "ktp":
+				if existing.KTP != "" {
+					_ = s.r2Storage.DeleteFile(existing.KTP)
+					existing.KTP = ""
+				}
+			case "ijazah_sd":
+				if existing.IjazahSD != "" {
+					_ = s.r2Storage.DeleteFile(existing.IjazahSD)
+					existing.IjazahSD = ""
+				}
+			case "ijazah_smp":
+				if existing.IjazahSMP != "" {
+					_ = s.r2Storage.DeleteFile(existing.IjazahSMP)
+					existing.IjazahSMP = ""
+				}
+			case "ijazah_sma":
+				if existing.IjazahSMA != "" {
+					_ = s.r2Storage.DeleteFile(existing.IjazahSMA)
+					existing.IjazahSMA = ""
+				}
+			case "ijazah_s1":
+				if existing.IjazahS1 != "" {
+					_ = s.r2Storage.DeleteFile(existing.IjazahS1)
+					existing.IjazahS1 = ""
+				}
+			case "ijazah_s2":
+				if existing.IjazahS2 != "" {
+					_ = s.r2Storage.DeleteFile(existing.IjazahS2)
+					existing.IjazahS2 = ""
+				}
+			case "ijazah_s3":
+				if existing.IjazahS3 != "" {
+					_ = s.r2Storage.DeleteFile(existing.IjazahS3)
+					existing.IjazahS3 = ""
+				}
+			case "sertifikat_pendidik":
+				if existing.SertifikatPendidik != "" {
+					_ = s.r2Storage.DeleteFile(existing.SertifikatPendidik)
+					existing.SertifikatPendidik = ""
+				}
+			case "sk":
+				if existing.SK != "" {
+					_ = s.r2Storage.DeleteFile(existing.SK)
+					existing.SK = ""
+				}
+			case "foto":
+				if existing.Foto != "" {
+					_ = s.r2Storage.DeleteFile(existing.Foto)
+					existing.Foto = ""
+				}
+			}
+		}
+	}
+
 	// Delete documents if specified
 	if len(req.SertifikatLainnyaToDelete) > 0 {
 		s.deleteDocumentsFromJSONB(&existing.SertifikatLainnya, req.SertifikatLainnyaToDelete)
@@ -350,12 +418,19 @@ func (s *KepegawaianServiceImpl) Update(id uint, foto *multipart.FileHeader, doc
 					existing.SK = result.fileKey
 				}
 			} else {
-				// Multiple file result
-				fileKeysJSON, _ := json.Marshal(result.fileKeys)
+				// Multiple file result - append to existing
 				if docType == "sertifikat_lainnya" {
-					existing.SertifikatLainnya = fileKeysJSON
+					var existingKeys []string
+					json.Unmarshal(existing.SertifikatLainnya, &existingKeys)
+					existingKeys = append(existingKeys, result.fileKeys...)
+					updatedJSON, _ := json.Marshal(existingKeys)
+					existing.SertifikatLainnya = updatedJSON
 				} else if docType == "dokumen_lainnya" {
-					existing.DokumenLainnya = fileKeysJSON
+					var existingKeys []string
+					json.Unmarshal(existing.DokumenLainnya, &existingKeys)
+					existingKeys = append(existingKeys, result.fileKeys...)
+					updatedJSON, _ := json.Marshal(existingKeys)
+					existing.DokumenLainnya = updatedJSON
 				}
 			}
 		}

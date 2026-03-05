@@ -35,6 +35,7 @@ type KepegawaianUpdateRequest struct {
 	RombelBidangStudi         []uint  `json:"rombel_bidang_studi" binding:"omitempty"`
 	RoleIDs                   []uint  `json:"role_ids" binding:"omitempty"`
 	Status                    string  `json:"status" binding:"omitempty,oneof=active inactive"`
+	FilesToDelete             []string `json:"files_to_delete" binding:"omitempty"` // e.g., ["kk", "ktp", "ijazah_s1"]
 	SertifikatLainnyaToDelete []string `json:"sertifikat_lainnya_to_delete" binding:"omitempty"`
 	DokumenLainnyaToDelete    []string `json:"dokumen_lainnya_to_delete" binding:"omitempty"`
 }
