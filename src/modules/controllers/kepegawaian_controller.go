@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"pintu-backend/src/dtos"
+	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
 	"pintu-backend/src/utils"
 
@@ -90,14 +91,9 @@ func (c *KepegawaianController) GetByNIP(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"data": result})
 }
 
-// GetAll retrieves all Kepegawaian with pagination
+// GetAll retrieves all Kepegawaian with pagination and filters
 func (c *KepegawaianController) GetAll(ctx *gin.Context) {
-	var req struct {
-		Pagination struct {
-			Limit int `json:"limit"`
-			Page  int `json:"page"`
-		} `json:"pagination"`
-	}
+	var req dtos.KepegawaianGetAllRequest
 
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		errors := utils.FormatValidationError(err)
@@ -105,35 +101,47 @@ func (c *KepegawaianController) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	// Validate pagination
-	limit := req.Pagination.Limit
-	if limit == 0 {
-		limit = 10
+	// Default values
+	limit := 10
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
 	}
-
-	page := req.Pagination.Page
-	if page == 0 {
-		page = 1
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
 	}
 	offset := (page - 1) * limit
 
-	result, err := c.service.GetAll(limit, offset)
+	// Call service with filters
+	data, err := c.service.GetAllWithFilter(repositories.GetKepegawaianParams{
+		Filter: repositories.GetKepegawaianFilter{
+			Nama:     req.Search.Nama,
+			Username: req.Search.Username,
+			NIP:      req.Search.NIP,
+			NKKI:     req.Search.NKKI,
+			Kategori: req.Search.Kategori,
+			Jabatan:  req.Search.Jabatan,
+			RoleID:   req.Search.RoleID,
+			Status:   req.Search.Status,
+		},
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Build pagination info
-	totalPages := (int(result.Total) + limit - 1) / limit
-	paginationInfo := dtos.PaginationInfo{
-		Limit:      limit,
-		Offset:     offset,
-		Page:       page,
-		Total:      result.Total,
-		TotalPages: totalPages,
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"data": result.Data, "pagination": paginationInfo})
+	ctx.JSON(http.StatusOK, gin.H{
+		"data": data.Data,
+		"pagination": gin.H{
+			"limit":       data.Pagination.Limit,
+			"offset":      data.Pagination.Offset,
+			"page":        data.Pagination.Page,
+			"total":       data.Pagination.Total,
+			"total_pages": data.Pagination.TotalPages,
+		},
+	})
 }
 
 // Update updates a Kepegawaian
