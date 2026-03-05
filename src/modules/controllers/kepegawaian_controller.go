@@ -228,20 +228,62 @@ func (c *KepegawaianController) Update(ctx *gin.Context) {
 	userID, _ := ctx.Get("userID")
 	userIDUint := userID.(uint)
 
+	// Get files to delete (optional, as JSON string array)
+	var filesToDelete []string
+	if filesToDeleteJSON := ctx.PostForm("files_to_delete"); filesToDeleteJSON != "" {
+		var tempSlice []interface{}
+		if err := json.Unmarshal([]byte(filesToDeleteJSON), &tempSlice); err == nil {
+			for _, item := range tempSlice {
+				if str, ok := item.(string); ok {
+					filesToDelete = append(filesToDelete, str)
+				}
+			}
+		}
+	}
+
+	// Get sertifikat_lainnya to delete (optional, as JSON string array)
+	var sertifikatLainnyaToDelete []string
+	if sertifikatLainnyaJSON := ctx.PostForm("sertifikat_lainnya_to_delete"); sertifikatLainnyaJSON != "" {
+		var tempSlice []interface{}
+		if err := json.Unmarshal([]byte(sertifikatLainnyaJSON), &tempSlice); err == nil {
+			for _, item := range tempSlice {
+				if str, ok := item.(string); ok {
+					sertifikatLainnyaToDelete = append(sertifikatLainnyaToDelete, str)
+				}
+			}
+		}
+	}
+
+	// Get dokumen_lainnya to delete (optional, as JSON string array)
+	var dokumenLainnyaToDelete []string
+	if dokumenLainnyaJSON := ctx.PostForm("dokumen_lainnya_to_delete"); dokumenLainnyaJSON != "" {
+		var tempSlice []interface{}
+		if err := json.Unmarshal([]byte(dokumenLainnyaJSON), &tempSlice); err == nil {
+			for _, item := range tempSlice {
+				if str, ok := item.(string); ok {
+					dokumenLainnyaToDelete = append(dokumenLainnyaToDelete, str)
+				}
+			}
+		}
+	}
+
 	// Create request DTO
 	req := &dtos.KepegawaianUpdateRequest{
-		ID:                    uint(id),
-		Nama:                  nama,
-		Username:              username,
-		Password:              password,
-		NIP:                   nip,
-		NKKI:                  nkki,
-		Kategori:              kategori,
-		Jabatan:               jabatan,
-		BidangStudiID:         bidangStudiID,
-		RombelGuruKelasID:     rombelGuruKelasID,
-		RombelBidangStudi:     rombelBidangStudi,
-		Status:                status,
+		ID:                        uint(id),
+		Nama:                      nama,
+		Username:                  username,
+		Password:                  password,
+		NIP:                       nip,
+		NKKI:                      nkki,
+		Kategori:                  kategori,
+		Jabatan:                   jabatan,
+		BidangStudiID:             bidangStudiID,
+		RombelGuruKelasID:         rombelGuruKelasID,
+		RombelBidangStudi:         rombelBidangStudi,
+		Status:                    status,
+		FilesToDelete:             filesToDelete,
+		SertifikatLainnyaToDelete: sertifikatLainnyaToDelete,
+		DokumenLainnyaToDelete:    dokumenLainnyaToDelete,
 	}
 
 	// Call service

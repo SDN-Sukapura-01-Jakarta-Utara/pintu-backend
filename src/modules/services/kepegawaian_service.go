@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"strings"
 	"sync"
 
 	"pintu-backend/src/dtos"
@@ -504,19 +505,41 @@ func (s *KepegawaianServiceImpl) deleteDocumentsFromJSONB(jsonbField *datatypes.
 	var fileKeys []string
 	json.Unmarshal(*jsonbField, &fileKeys)
 
+	// Create deleteMap for matching - support both exact match and filename-only match
 	deleteMap := make(map[string]bool)
-	for _, fileKey := range filesToDelete {
-		deleteMap[fileKey] = true
+	deleteByFileName := make(map[string]bool)
+	
+	for _, fileToDelete := range filesToDelete {
+		deleteMap[fileToDelete] = true
+		// Also support matching by just the filename part (after the timestamp prefix)
+		// Format: "timestamp-filename.ext"
+		if idx := strings.LastIndex(fileToDelete, "-"); idx != -1 && idx < len(fileToDelete)-1 {
+			deleteByFileName[fileToDelete[idx+1:]] = true
+		}
 	}
 
 	var remainingFiles []string
 	for _, file := range fileKeys {
-		if !deleteMap[file] {
-			remainingFiles = append(remainingFiles, file)
-			continue
+		shouldDelete := false
+		
+		// Check exact match
+		if deleteMap[file] {
+			shouldDelete = true
+		} else if idx := strings.LastIndex(file, "-"); idx != -1 && idx < len(file)-1 {
+			// Check filename-only match (after timestamp prefix)
+			fileName := file[idx+1:]
+			if deleteByFileName[fileName] {
+				shouldDelete = true
+			}
 		}
-		// Delete from R2
-		_ = s.r2Storage.DeleteFile(file)
+
+		if shouldDelete {
+			// Delete from R2
+			_ = s.r2Storage.DeleteFile(file)
+		} else {
+			// Keep this file
+			remainingFiles = append(remainingFiles, file)
+		}
 	}
 
 	updatedJSON, _ := json.Marshal(remainingFiles)
