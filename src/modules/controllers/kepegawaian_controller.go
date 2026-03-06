@@ -206,6 +206,19 @@ func (c *KepegawaianController) Update(ctx *gin.Context) {
 		}
 	}
 
+	// Get role_ids (optional, as JSON string)
+	var roleIDs []uint
+	if roleIDsJSON := ctx.PostForm("role_ids"); roleIDsJSON != "" {
+		var tempSlice []interface{}
+		if err := json.Unmarshal([]byte(roleIDsJSON), &tempSlice); err == nil {
+			for _, item := range tempSlice {
+				if num, ok := item.(float64); ok {
+					roleIDs = append(roleIDs, uint(num))
+				}
+			}
+		}
+	}
+
 	// Get foto (optional)
 	foto, _ := ctx.FormFile("foto")
 
@@ -280,6 +293,7 @@ func (c *KepegawaianController) Update(ctx *gin.Context) {
 		BidangStudiID:             bidangStudiID,
 		RombelGuruKelasID:         rombelGuruKelasID,
 		RombelBidangStudi:         rombelBidangStudi,
+		RoleIDs:                   roleIDs,
 		Status:                    status,
 		FilesToDelete:             filesToDelete,
 		SertifikatLainnyaToDelete: sertifikatLainnyaToDelete,
