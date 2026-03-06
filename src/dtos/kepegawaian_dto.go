@@ -9,7 +9,7 @@ type KepegawaianCreateRequest struct {
 	Nama              string `json:"nama" binding:"required"`
 	Username          string `json:"username" binding:"required"`
 	Password          string `json:"password" binding:"required,min=6"`
-	NIP               string `json:"nip" binding:"required"`
+	NIP               string `json:"nip" binding:"omitempty"`
 	NKKI              string `json:"nkki" binding:"omitempty"`
 	Kategori          string `json:"kategori" binding:"omitempty"`
 	Jabatan           string `json:"jabatan" binding:"omitempty"`
