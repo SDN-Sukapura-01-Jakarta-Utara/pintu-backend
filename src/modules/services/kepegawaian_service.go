@@ -596,7 +596,9 @@ func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.K
 		Kategori:              data.Kategori,
 		Jabatan:               data.Jabatan,
 		BidangStudiID:         data.BidangStudiID,
+		BidangStudi:           s.mapBidangStudi(data.BidangStudi),
 		RombelGuruKelasID:     data.RombelGuruKelasID,
+		RombelGuruKelas:       s.mapRombel(data.RombelGuruKelas),
 		RombelBidangStudi:     rombelBidangStudi,
 		KK:                    s.stringOrNil(s.r2Storage.GetPublicURL(data.KK)),
 		AktaLahir:             s.stringOrNil(s.r2Storage.GetPublicURL(data.AktaLahir)),
@@ -617,6 +619,32 @@ func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.K
 		UpdatedAt:             data.UpdatedAt,
 		CreatedByID:           data.CreatedByID,
 		UpdatedByID:           data.UpdatedByID,
+	}
+}
+
+// Helper function to map BidangStudi model to DTO
+func (s *KepegawaianServiceImpl) mapBidangStudi(bidangStudi *models.BidangStudi) *dtos.BidangStudiSimpleResponse {
+	if bidangStudi == nil {
+		return nil
+	}
+	return &dtos.BidangStudiSimpleResponse{
+		ID:        bidangStudi.ID,
+		Name:      bidangStudi.Name,
+		Status:    bidangStudi.Status,
+		CreatedAt: bidangStudi.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt: bidangStudi.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+	}
+}
+
+// Helper function to map Rombel model to DTO
+func (s *KepegawaianServiceImpl) mapRombel(rombel *models.Rombel) *dtos.RombelSimpleResponse {
+	if rombel == nil {
+		return nil
+	}
+	return &dtos.RombelSimpleResponse{
+		ID:     rombel.ID,
+		Name:   rombel.Name,
+		Status: rombel.Status,
 	}
 }
 

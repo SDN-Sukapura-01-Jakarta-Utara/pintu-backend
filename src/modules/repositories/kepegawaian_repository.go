@@ -64,10 +64,10 @@ func (r *KepegawaianRepositoryImpl) GetByID(id uint) (*models.Kepegawaian, error
 	return &data, nil
 }
 
-// GetByIDWithRoles retrieves Kepegawaian by ID with roles and system preloaded
+// GetByIDWithRoles retrieves Kepegawaian by ID with roles, bidang_studi, and rombel preloaded
 func (r *KepegawaianRepositoryImpl) GetByIDWithRoles(id uint) (*models.Kepegawaian, error) {
 	var data models.Kepegawaian
-	if err := r.db.Distinct().Preload("Roles.System").First(&data, id).Error; err != nil {
+	if err := r.db.Preload("Roles.System").Preload("BidangStudi").Preload("RombelGuruKelas").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil

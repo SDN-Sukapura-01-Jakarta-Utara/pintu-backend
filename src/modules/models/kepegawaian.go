@@ -40,6 +40,9 @@ type Kepegawaian struct {
 	CreatedByID           *uint          `gorm:"column:created_by_id" json:"created_by_id"`
 	UpdatedByID           *uint          `gorm:"column:updated_by_id" json:"updated_by_id"`
 	DeletedAt             gorm.DeletedAt `gorm:"column:deleted_at;index" json:"deleted_at,omitempty"`
+	// Foreign key relationships
+	BidangStudi           *BidangStudi   `gorm:"foreignKey:BidangStudiID" json:"bidang_studi,omitempty"`
+	RombelGuruKelas       *Rombel        `gorm:"foreignKey:RombelGuruKelasID" json:"rombel_guru_kelas,omitempty"`
 	// Many-to-many relationship
 	Roles                 []Role         `gorm:"many2many:kepegawaian_roles" json:"roles,omitempty"`
 }

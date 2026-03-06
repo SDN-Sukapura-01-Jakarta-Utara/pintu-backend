@@ -40,19 +40,37 @@ type KepegawaianUpdateRequest struct {
 	DokumenLainnyaToDelete    []string `json:"dokumen_lainnya_to_delete" binding:"omitempty"`
 }
 
+// BidangStudiSimpleResponse represents simple bidang studi response
+type BidangStudiSimpleResponse struct {
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// RombelSimpleResponse represents simple rombel response
+type RombelSimpleResponse struct {
+	ID     uint   `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
 // KepegawaianResponse represents the response payload for Kepegawaian
 type KepegawaianResponse struct {
-	ID                    uint           `json:"id"`
-	Nama                  string         `json:"nama"`
-	Username              string         `json:"username"`
-	NIP                   string         `json:"nip"`
-	NKKI                  string         `json:"nkki"`
-	Foto                  *string        `json:"foto"`
-	Kategori              string         `json:"kategori"`
-	Jabatan               string         `json:"jabatan"`
-	BidangStudiID         *uint          `json:"bidang_studi_id"`
-	RombelGuruKelasID     *uint          `json:"rombel_guru_kelas_id"`
-	RombelBidangStudi     []uint         `json:"rombel_bidang_studi"`
+	ID                  uint                       `json:"id"`
+	Nama                string                     `json:"nama"`
+	Username            string                     `json:"username"`
+	NIP                 string                     `json:"nip"`
+	NKKI                string                     `json:"nkki"`
+	Foto                *string                    `json:"foto"`
+	Kategori            string                     `json:"kategori"`
+	Jabatan             string                     `json:"jabatan"`
+	BidangStudiID       *uint                      `json:"bidang_studi_id"`
+	BidangStudi         *BidangStudiSimpleResponse `json:"bidang_studi"`
+	RombelGuruKelasID   *uint                      `json:"rombel_guru_kelas_id"`
+	RombelGuruKelas     *RombelSimpleResponse      `json:"rombel_guru_kelas"`
+	RombelBidangStudi   []uint                     `json:"rombel_bidang_studi"`
 	KK                    *string        `json:"kk"`
 	AktaLahir             *string        `json:"akta_lahir"`
 	KTP                   *string        `json:"ktp"`
