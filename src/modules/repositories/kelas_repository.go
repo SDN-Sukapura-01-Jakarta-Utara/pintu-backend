@@ -63,8 +63,8 @@ func (r *KelasRepositoryImpl) GetAll(limit int, offset int) ([]models.Kelas, int
 		return nil, 0, err
 	}
 
-	// Get paginated data ordered by created_at DESC
-	if err := r.db.Order("created_at DESC").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by name ASC
+	if err := r.db.Order("name").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -110,8 +110,8 @@ func (r *KelasRepositoryImpl) GetAllWithFilter(params GetKelasParams) ([]models.
 		return nil, 0, err
 	}
 
-	// Get paginated data ordered by created_at DESC
-	if err := query.Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by name ASC
+	if err := query.Order("name").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 

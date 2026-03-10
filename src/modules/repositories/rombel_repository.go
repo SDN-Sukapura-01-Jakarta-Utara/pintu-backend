@@ -65,8 +65,8 @@ func (r *RombelRepositoryImpl) GetAll(limit int, offset int) ([]models.Rombel, i
 		return nil, 0, err
 	}
 
-	// Get paginated data ordered by created_at DESC with Kelas relationship
-	if err := r.db.Preload("Kelas").Order("created_at DESC").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by name ASC with Kelas relationship
+	if err := r.db.Preload("Kelas").Order("name").Limit(limit).Offset(offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -124,8 +124,8 @@ func (r *RombelRepositoryImpl) GetAllWithFilter(params GetRombelParams) ([]model
 		return nil, 0, err
 	}
 
-	// Get paginated data ordered by created_at DESC with Kelas relationship
-	if err := query.Preload("Kelas").Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+	// Get paginated data ordered by name ASC with Kelas relationship
+	if err := query.Preload("Kelas").Order("name").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
