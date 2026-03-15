@@ -125,7 +125,7 @@ func (r *PesertaDidikRepositoryImpl) GetByUsernameAndTahunPelajaran(username str
 	return &data, nil
 }
 
-// GetAll retrieves all PesertaDidik records with pagination
+// GetAll retrieves all PesertaDidik records with pagination and preload relations
 func (r *PesertaDidikRepositoryImpl) GetAll(limit int, offset int) ([]models.PesertaDidik, int64, error) {
 	var data []models.PesertaDidik
 	var total int64
@@ -135,8 +135,9 @@ func (r *PesertaDidikRepositoryImpl) GetAll(limit int, offset int) ([]models.Pes
 		return nil, 0, err
 	}
 
-	// Get paginated data, ordered by rombel_id and nama
-	if err := r.db.Limit(limit).Offset(offset).Order("rombel_id ASC, nama ASC").Find(&data).Error; err != nil {
+	// Get paginated data with preloaded relations, ordered by rombel_id and nama
+	if err := r.db.Preload("Roles.System").Preload("Rombel.Kelas").Preload("TahunPelajaran").
+		Limit(limit).Offset(offset).Order("rombel_id ASC, nama ASC").Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -189,8 +190,9 @@ func (r *PesertaDidikRepositoryImpl) GetAllWithFilter(params GetPesertaDidikPara
 		return nil, 0, err
 	}
 
-	// Get paginated data ordered by rombel_id ASC, nama ASC
-	if err := query.Order("rombel_id ASC, nama ASC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+	// Get paginated data with preloaded relations, ordered by rombel_id ASC, nama ASC
+	if err := query.Preload("Roles.System").Preload("Rombel.Kelas").Preload("TahunPelajaran").
+		Order("rombel_id ASC, nama ASC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
