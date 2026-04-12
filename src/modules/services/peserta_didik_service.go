@@ -376,6 +376,9 @@ func (s *PesertaDidikServiceImpl) ImportExcel(file multipart.File, userID uint) 
 		tpMap[strings.ToLower(tp.TahunPelajaran)] = tp.ID
 	}
 
+	// Track username+tahun_pelajaran within the Excel file to detect duplicates
+	excelUsernameTP := make(map[string]int) // key: "username|tahun_pelajaran" -> first row number
+
 	successCount := 0
 	failedCount := 0
 	var importErrors []dtos.ImportExcelRowError
@@ -466,6 +469,26 @@ func (s *PesertaDidikServiceImpl) ImportExcel(file multipart.File, userID uint) 
 				continue
 			}
 			tahunPelajaranID = &id
+		}
+
+		// Check duplicate username in same tahun_pelajaran
+		if username != "" && tahunPelajaranID != nil {
+			// Check within the Excel file
+			dupKey := strings.ToLower(username) + "|" + fmt.Sprint(*tahunPelajaranID)
+			if firstRow, exists := excelUsernameTP[dupKey]; exists {
+				failedCount++
+				importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("username '%s' duplikat dengan baris %d di tahun pelajaran yang sama", username, firstRow)})
+				continue
+			}
+			excelUsernameTP[dupKey] = rowNum
+
+			// Check against existing data in DB
+			existing, _ := s.repository.GetByUsernameAndTahunPelajaran(username, tahunPelajaranID)
+			if existing != nil {
+				failedCount++
+				importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("username '%s' sudah ada di tahun pelajaran ini", username)})
+				continue
+			}
 		}
 
 		// Parse role_id string "[1,2,3]" into []uint
@@ -607,21 +630,23 @@ func (s *PesertaDidikServiceImpl) DownloadTemplate() (*excelize.File, error) {
 		rombelExample = rombelNames[0]
 	}
 
-	// Fetch tahun pelajaran data from DB for dropdown
-	tahunPelajaranList, _ := s.repository.GetAllTahunPelajaran()
+	// Fetch all tahun pelajaran (including inactive) for dropdown
+	allTahunPelajaran, _ := s.repository.GetAllTahunPelajaranAll()
 	var tahunPelajaranNames []string
 	tahunPelajaranExample := "2024/2025"
-	for _, tp := range tahunPelajaranList {
+	for _, tp := range allTahunPelajaran {
 		tahunPelajaranNames = append(tahunPelajaranNames, tp.TahunPelajaran)
 	}
-	if len(tahunPelajaranNames) > 0 {
-		tahunPelajaranExample = tahunPelajaranNames[0]
+	// Default example to the active one
+	activeTahunPelajaran, _ := s.repository.GetAllTahunPelajaran()
+	if len(activeTahunPelajaran) > 0 {
+		tahunPelajaranExample = activeTahunPelajaran[0].TahunPelajaran
 	}
 
 	// Set example values in row 2
 	examples := []string{
 		"siswa01", "password123", "Ahmad Fauzi", "001234", "1234567890",
-		"Laki-laki", "Jakarta", "2015-07-15", "3171234567890001", "Islam",
+		"L", "Jakarta", "2015-07-15", "3171234567890001", "Islam",
 		"Jl. Merdeka No. 1", "001", "002", "Sukapura", "Cilincing", "14140",
 		"Budi Santoso", "Siti Aminah", rombelExample, tahunPelajaranExample, "[1,2]", "active",
 		"Untuk role_id, buka menu Master Data > tab Role untuk melihat ID role",
@@ -654,7 +679,7 @@ func (s *PesertaDidikServiceImpl) DownloadTemplate() (*excelize.File, error) {
 		ShowErrorMessage: true,
 	}
 	jkValidation.Sqref = "F2:F1000"
-	jkValidation.SetDropList([]string{"Laki-laki", "Perempuan"})
+	jkValidation.SetDropList([]string{"L", "P"})
 	f.AddDataValidation(sheetName, jkValidation)
 
 	// Add dropdown for status (column V = col 22, rows 2-1000)

@@ -47,6 +47,7 @@ type PesertaDidikRepository interface {
 	GetTahunPelajaranByName(name string) (*models.TahunPelajaran, error)
 	GetAllRombels() ([]models.Rombel, error)
 	GetAllTahunPelajaran() ([]models.TahunPelajaran, error)
+	GetAllTahunPelajaranAll() ([]models.TahunPelajaran, error)
 }
 
 type PesertaDidikRepositoryImpl struct {
@@ -282,6 +283,15 @@ func (r *PesertaDidikRepositoryImpl) GetAllRombels() ([]models.Rombel, error) {
 func (r *PesertaDidikRepositoryImpl) GetAllTahunPelajaran() ([]models.TahunPelajaran, error) {
 	var data []models.TahunPelajaran
 	if err := r.db.Where("status = ?", "active").Order("tahun_pelajaran ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetAllTahunPelajaranAll retrieves all TahunPelajaran records regardless of status
+func (r *PesertaDidikRepositoryImpl) GetAllTahunPelajaranAll() ([]models.TahunPelajaran, error) {
+	var data []models.TahunPelajaran
+	if err := r.db.Order("tahun_pelajaran ASC").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
