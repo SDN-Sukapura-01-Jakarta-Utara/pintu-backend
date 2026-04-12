@@ -149,3 +149,16 @@ type PesertaDidikGetAllRequest struct {
 		Page  int `json:"page" binding:"omitempty"`
 	} `json:"pagination" binding:"omitempty"`
 }
+
+// ImportExcelResponse represents the response for import Excel operation
+type ImportExcelResponse struct {
+	SuccessCount int                   `json:"success_count"`
+	FailedCount  int                   `json:"failed_count"`
+	Errors       []ImportExcelRowError `json:"errors"`
+}
+
+// ImportExcelRowError represents an error for a specific row during import
+type ImportExcelRowError struct {
+	Row     int    `json:"row"`
+	Message string `json:"message"`
+}

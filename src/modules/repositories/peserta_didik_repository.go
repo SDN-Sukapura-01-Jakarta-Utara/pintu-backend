@@ -43,6 +43,10 @@ type PesertaDidikRepository interface {
 	Delete(id uint) error
 	AssignRoles(pesertaDidikID uint, roleIDs []uint) error
 	RemoveRoles(pesertaDidikID uint) error
+	GetRombelByName(name string) (*models.Rombel, error)
+	GetTahunPelajaranByName(name string) (*models.TahunPelajaran, error)
+	GetAllRombels() ([]models.Rombel, error)
+	GetAllTahunPelajaran() ([]models.TahunPelajaran, error)
 }
 
 type PesertaDidikRepositoryImpl struct {
@@ -245,4 +249,40 @@ func (r *PesertaDidikRepositoryImpl) AssignRoles(pesertaDidikID uint, roleIDs []
 // RemoveRoles removes all roles from a peserta didik
 func (r *PesertaDidikRepositoryImpl) RemoveRoles(pesertaDidikID uint) error {
 	return r.db.Table("peserta_didik_roles").Where("peserta_didik_id = ?", pesertaDidikID).Delete(nil).Error
+}
+
+// GetRombelByName retrieves Rombel by name
+func (r *PesertaDidikRepositoryImpl) GetRombelByName(name string) (*models.Rombel, error) {
+	var data models.Rombel
+	if err := r.db.Where("LOWER(name) = ?", strings.ToLower(name)).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetTahunPelajaranByName retrieves TahunPelajaran by tahun_pelajaran value
+func (r *PesertaDidikRepositoryImpl) GetTahunPelajaranByName(name string) (*models.TahunPelajaran, error) {
+	var data models.TahunPelajaran
+	if err := r.db.Where("LOWER(tahun_pelajaran) = ?", strings.ToLower(name)).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetAllRombels retrieves all active Rombel records ordered by name
+func (r *PesertaDidikRepositoryImpl) GetAllRombels() ([]models.Rombel, error) {
+	var data []models.Rombel
+	if err := r.db.Where("status = ?", "active").Order("name ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetAllTahunPelajaran retrieves all active TahunPelajaran records
+func (r *PesertaDidikRepositoryImpl) GetAllTahunPelajaran() ([]models.TahunPelajaran, error) {
+	var data []models.TahunPelajaran
+	if err := r.db.Where("status = ?", "active").Order("tahun_pelajaran ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

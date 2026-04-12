@@ -2,11 +2,16 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"mime/multipart"
+	"strconv"
+	"strings"
 	"time"
 
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
 	"pintu-backend/src/modules/repositories"
+	"github.com/xuri/excelize/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,6 +23,8 @@ type PesertaDidikService interface {
 	GetAllWithFilter(params repositories.GetPesertaDidikParams) (*dtos.PesertaDidikListWithPaginationResponse, error)
 	Update(id uint, req *dtos.PesertaDidikUpdateRequest, userID uint) (*dtos.PesertaDidikResponse, error)
 	Delete(id uint) error
+	ImportExcel(file multipart.File, userID uint) (*dtos.ImportExcelResponse, error)
+	DownloadTemplate() (*excelize.File, error)
 }
 
 type PesertaDidikServiceImpl struct {
@@ -341,6 +348,366 @@ func (s *PesertaDidikServiceImpl) Delete(id uint) error {
 	}
 
 	return s.repository.Delete(id)
+}
+
+// ImportExcel imports PesertaDidik data from an Excel file
+func (s *PesertaDidikServiceImpl) ImportExcel(file multipart.File, userID uint) (*dtos.ImportExcelResponse, error) {
+	f, err := excelize.OpenReader(file)
+	if err != nil {
+		return nil, errors.New("gagal membuka file excel")
+	}
+	defer f.Close()
+
+	rows, err := f.GetRows("Sheet1")
+	if err != nil {
+		return nil, errors.New("gagal membaca Sheet1")
+	}
+
+	// Pre-load rombel and tahun_pelajaran data into maps for fast lookup
+	rombelMap := make(map[string]uint)
+	rombels, _ := s.repository.GetAllRombels()
+	for _, r := range rombels {
+		rombelMap[strings.ToLower(r.Name)] = r.ID
+	}
+
+	tpMap := make(map[string]uint)
+	tpList, _ := s.repository.GetAllTahunPelajaran()
+	for _, tp := range tpList {
+		tpMap[strings.ToLower(tp.TahunPelajaran)] = tp.ID
+	}
+
+	successCount := 0
+	failedCount := 0
+	var importErrors []dtos.ImportExcelRowError
+
+	for i, row := range rows {
+		// Skip header row
+		if i == 0 {
+			continue
+		}
+
+		rowNum := i + 1
+
+		// Skip empty rows
+		if len(row) == 0 {
+			continue
+		}
+
+		// Helper to safely get column value
+		getCol := func(idx int) string {
+			if idx < len(row) {
+				return strings.TrimSpace(row[idx])
+			}
+			return ""
+		}
+
+		username := getCol(0)
+		password := getCol(1)
+		namaLengkap := getCol(2)
+		nis := getCol(3)
+		nisn := getCol(4)
+		jenisKelamin := getCol(5)
+		tempatLahir := getCol(6)
+		tanggalLahirStr := getCol(7)
+		nik := getCol(8)
+		agama := getCol(9)
+		alamat := getCol(10)
+		rt := getCol(11)
+		rw := getCol(12)
+		kelurahan := getCol(13)
+		kecamatan := getCol(14)
+		kodePos := getCol(15)
+		namaAyah := getCol(16)
+		namaIbu := getCol(17)
+		rombelName := getCol(18)
+		tahunPelajaranName := getCol(19)
+		roleIDStr := getCol(20)
+		status := getCol(21)
+
+		// Hash password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			failedCount++
+			importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: "gagal hash password"})
+			continue
+		}
+
+		// Parse tanggal_lahir
+		var tanggalLahir *time.Time
+		if tanggalLahirStr != "" {
+			t, err := time.Parse("2006-01-02", tanggalLahirStr)
+			if err != nil {
+				failedCount++
+				importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: "format tanggal_lahir tidak valid, gunakan YYYY-MM-DD"})
+				continue
+			}
+			tanggalLahir = &t
+		}
+
+		// Look up rombel by name from cached map
+		var rombelID *uint
+		if rombelName != "" {
+			id, ok := rombelMap[strings.ToLower(rombelName)]
+			if !ok {
+				failedCount++
+				importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("rombel '%s' tidak ditemukan", rombelName)})
+				continue
+			}
+			rombelID = &id
+		}
+
+		// Look up tahun_pelajaran by name from cached map
+		var tahunPelajaranID *uint
+		if tahunPelajaranName != "" {
+			id, ok := tpMap[strings.ToLower(tahunPelajaranName)]
+			if !ok {
+				failedCount++
+				importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("tahun pelajaran '%s' tidak ditemukan", tahunPelajaranName)})
+				continue
+			}
+			tahunPelajaranID = &id
+		}
+
+		// Parse role_id string "[1,2,3]" into []uint
+		var roleIDs []uint
+		if roleIDStr != "" {
+			trimmed := strings.Trim(roleIDStr, "[]")
+			if trimmed != "" {
+				parts := strings.Split(trimmed, ",")
+				for _, part := range parts {
+					part = strings.TrimSpace(part)
+					id, err := strconv.ParseUint(part, 10, 32)
+					if err != nil {
+						failedCount++
+						importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("role_id '%s' tidak valid", roleIDStr)})
+						continue
+					}
+					roleIDs = append(roleIDs, uint(id))
+				}
+			}
+		}
+
+		// Set default status
+		if status == "" {
+			status = "active"
+		}
+
+		// Create the PesertaDidik record
+		data := &models.PesertaDidik{
+			Nama:             namaLengkap,
+			NIS:              nis,
+			NISN:             nisn,
+			JenisKelamin:     jenisKelamin,
+			TempatLahir:      tempatLahir,
+			TanggalLahir:     tanggalLahir,
+			NIK:              nik,
+			Agama:            agama,
+			Alamat:           alamat,
+			RT:               rt,
+			RW:               rw,
+			Kelurahan:        kelurahan,
+			Kecamatan:        kecamatan,
+			KodePos:          kodePos,
+			NamaAyah:         namaAyah,
+			NamaIbu:          namaIbu,
+			RombelID:         rombelID,
+			TahunPelajaranID: tahunPelajaranID,
+			Status:           status,
+			Username:         username,
+			Password:         string(hashedPassword),
+			CreatedByID:      &userID,
+		}
+
+		if err := s.repository.Create(data); err != nil {
+			failedCount++
+			importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("gagal menyimpan data: %s", err.Error())})
+			continue
+		}
+
+		// Assign roles
+		if len(roleIDs) > 0 {
+			if err := s.repository.AssignRoles(data.ID, roleIDs); err != nil {
+				failedCount++
+				importErrors = append(importErrors, dtos.ImportExcelRowError{Row: rowNum, Message: fmt.Sprintf("gagal assign roles: %s", err.Error())})
+				continue
+			}
+		}
+
+		successCount++
+	}
+
+	return &dtos.ImportExcelResponse{
+		SuccessCount: successCount,
+		FailedCount:  failedCount,
+		Errors:       importErrors,
+	}, nil
+}
+
+// DownloadTemplate generates an Excel template for PesertaDidik import
+func (s *PesertaDidikServiceImpl) DownloadTemplate() (*excelize.File, error) {
+	f := excelize.NewFile()
+
+	sheetName := "Sheet1"
+
+	headers := []string{
+		"username", "password", "nama_lengkap", "nis", "nisn",
+		"jenis_kelamin", "tempat_lahir", "tanggal_lahir", "nik", "agama",
+		"alamat", "rt", "rw", "kelurahan", "kecamatan", "kode_pos",
+		"nama_ayah", "nama_ibu", "rombel", "tahun_pelajaran", "role_id", "status",
+		"catatan",
+	}
+
+	// Create header style with bold font and blue background
+	headerStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold:  true,
+			Color: "#FFFFFF",
+		},
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#4472C4"},
+			Pattern: 1,
+		},
+	})
+	if err != nil {
+		return nil, errors.New("gagal membuat style header")
+	}
+
+	// Create note style with yellow background
+	noteStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Italic: true,
+			Color:  "#666666",
+		},
+		Fill: excelize.Fill{
+			Type:    "pattern",
+			Color:   []string{"#FFF2CC"},
+			Pattern: 1,
+		},
+	})
+	if err != nil {
+		return nil, errors.New("gagal membuat style note")
+	}
+
+	// Set headers
+	for i, header := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		f.SetCellValue(sheetName, cell, header)
+		f.SetCellStyle(sheetName, cell, cell, headerStyle)
+	}
+
+	// Fetch rombel data from DB for dropdown
+	rombels, _ := s.repository.GetAllRombels()
+	var rombelNames []string
+	rombelExample := "1A"
+	for _, r := range rombels {
+		rombelNames = append(rombelNames, r.Name)
+	}
+	if len(rombelNames) > 0 {
+		rombelExample = rombelNames[0]
+	}
+
+	// Fetch tahun pelajaran data from DB for dropdown
+	tahunPelajaranList, _ := s.repository.GetAllTahunPelajaran()
+	var tahunPelajaranNames []string
+	tahunPelajaranExample := "2024/2025"
+	for _, tp := range tahunPelajaranList {
+		tahunPelajaranNames = append(tahunPelajaranNames, tp.TahunPelajaran)
+	}
+	if len(tahunPelajaranNames) > 0 {
+		tahunPelajaranExample = tahunPelajaranNames[0]
+	}
+
+	// Set example values in row 2
+	examples := []string{
+		"siswa01", "password123", "Ahmad Fauzi", "001234", "1234567890",
+		"Laki-laki", "Jakarta", "2015-07-15", "3171234567890001", "Islam",
+		"Jl. Merdeka No. 1", "001", "002", "Sukapura", "Cilincing", "14140",
+		"Budi Santoso", "Siti Aminah", rombelExample, tahunPelajaranExample, "[1,2]", "active",
+		"Untuk role_id, buka menu Master Data > tab Role untuk melihat ID role",
+	}
+
+	for i, val := range examples {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 2)
+		f.SetCellValue(sheetName, cell, val)
+	}
+
+	// Set note style on catatan column row 2
+	f.SetCellStyle(sheetName, "W2", "W2", noteStyle)
+
+	// Add dropdown for agama (column J = col 10, rows 2-1000)
+	agamaValidation := &excelize.DataValidation{
+		Type:             "list",
+		AllowBlank:       true,
+		ShowInputMessage: true,
+		ShowErrorMessage: true,
+	}
+	agamaValidation.Sqref = "J2:J1000"
+	agamaValidation.SetDropList([]string{"Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu"})
+	f.AddDataValidation(sheetName, agamaValidation)
+
+	// Add dropdown for jenis_kelamin (column F = col 6, rows 2-1000)
+	jkValidation := &excelize.DataValidation{
+		Type:             "list",
+		AllowBlank:       true,
+		ShowInputMessage: true,
+		ShowErrorMessage: true,
+	}
+	jkValidation.Sqref = "F2:F1000"
+	jkValidation.SetDropList([]string{"Laki-laki", "Perempuan"})
+	f.AddDataValidation(sheetName, jkValidation)
+
+	// Add dropdown for status (column V = col 22, rows 2-1000)
+	statusValidation := &excelize.DataValidation{
+		Type:             "list",
+		AllowBlank:       true,
+		ShowInputMessage: true,
+		ShowErrorMessage: true,
+	}
+	statusValidation.Sqref = "V2:V1000"
+	statusValidation.SetDropList([]string{"active", "inactive"})
+	f.AddDataValidation(sheetName, statusValidation)
+
+	// Add dropdown for rombel (column S = col 19, rows 2-1000) if data exists
+	if len(rombelNames) > 0 {
+		rombelValidation := &excelize.DataValidation{
+			Type:             "list",
+			AllowBlank:       true,
+			ShowInputMessage: true,
+			ShowErrorMessage: true,
+		}
+		rombelValidation.Sqref = "S2:S1000"
+		rombelValidation.SetDropList(rombelNames)
+		f.AddDataValidation(sheetName, rombelValidation)
+	}
+
+	// Add dropdown for tahun_pelajaran (column T = col 20, rows 2-1000) if data exists
+	if len(tahunPelajaranNames) > 0 {
+		tpValidation := &excelize.DataValidation{
+			Type:             "list",
+			AllowBlank:       true,
+			ShowInputMessage: true,
+			ShowErrorMessage: true,
+		}
+		tpValidation.Sqref = "T2:T1000"
+		tpValidation.SetDropList(tahunPelajaranNames)
+		f.AddDataValidation(sheetName, tpValidation)
+	}
+
+	// Set column widths
+	colWidths := map[string]float64{
+		"A": 15, "B": 15, "C": 20, "D": 12, "E": 15,
+		"F": 15, "G": 15, "H": 15, "I": 20, "J": 12,
+		"K": 25, "L": 8, "M": 8, "N": 15, "O": 15, "P": 10,
+		"Q": 20, "R": 20, "S": 12, "T": 20, "U": 12, "V": 10,
+		"W": 55,
+	}
+
+	for col, width := range colWidths {
+		f.SetColWidth(sheetName, col, col, width)
+	}
+
+	return f, nil
 }
 
 // mapToResponse maps model to DTO response

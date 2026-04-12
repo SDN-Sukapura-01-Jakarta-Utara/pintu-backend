@@ -34,5 +34,11 @@ func RegisterPesertaDidikRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Delete
 		api.POST("/delete-peserta-didik", controller.Delete)
+
+		// Import Excel
+		api.POST("/import-excel", controller.ImportExcel)
+
+		// Download Template
+		api.POST("/download-template", controller.DownloadTemplate)
 	}
 }

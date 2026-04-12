@@ -188,3 +188,43 @@ func (c *PesertaDidikController) Delete(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "peserta didik berhasil dihapus"})
 }
+
+// ImportExcel imports peserta didik data from Excel file
+func (c *PesertaDidikController) ImportExcel(ctx *gin.Context) {
+	file, _, err := ctx.Request.FormFile("file")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "file excel wajib diunggah"})
+		return
+	}
+	defer file.Close()
+
+	// Get user ID from context (set by middleware)
+	userID, _ := ctx.Get("userID")
+	userIDUint := userID.(uint)
+
+	result, err := c.service.ImportExcel(file, userIDUint)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// DownloadTemplate downloads the Excel template for peserta didik import
+func (c *PesertaDidikController) DownloadTemplate(ctx *gin.Context) {
+	f, err := c.service.DownloadTemplate()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "gagal membuat template"})
+		return
+	}
+	defer f.Close()
+
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", "attachment; filename=template_peserta_didik.xlsx")
+
+	if err := f.Write(ctx.Writer); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "gagal mengirim file"})
+		return
+	}
+}
