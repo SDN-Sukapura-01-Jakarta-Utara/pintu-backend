@@ -14,6 +14,7 @@ type JumbotronService interface {
 	Create(file *multipart.FileHeader, req *dtos.JumbotronCreateRequest, userID uint) (*dtos.JumbotronResponse, error)
 	GetByID(id uint) (*dtos.JumbotronResponse, error)
 	GetAll(limit int, offset int) (*dtos.JumbotronListResponse, error)
+	GetActiveLatest(limit int) ([]dtos.JumbotronPublicResponse, error)
 	Update(id uint, req *dtos.JumbotronUpdateRequest, userID uint) (*dtos.JumbotronResponse, error)
 	UpdateWithFile(id uint, file *multipart.FileHeader, status string, userID uint) (*dtos.JumbotronResponse, error)
 	Delete(id uint) error
@@ -223,6 +224,30 @@ func (s *JumbotronServiceImpl) UpdateWithFile(id uint, file *multipart.FileHeade
 	}
 
 	return s.mapToResponse(existing), nil
+}
+
+// GetActiveLatest retrieves latest active Jumbotron records for public access
+func (s *JumbotronServiceImpl) GetActiveLatest(limit int) ([]dtos.JumbotronPublicResponse, error) {
+	// Set default limit
+	if limit == 0 {
+		limit = 5
+	}
+
+	data, err := s.repository.GetActiveLatest(limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.JumbotronPublicResponse, len(data))
+	for i, item := range data {
+		responses[i] = dtos.JumbotronPublicResponse{
+			File:   s.r2Storage.GetPublicURL(item.File),
+			Status: item.Status,
+		}
+	}
+
+	return responses, nil
 }
 
 // mapToResponse maps model to DTO response

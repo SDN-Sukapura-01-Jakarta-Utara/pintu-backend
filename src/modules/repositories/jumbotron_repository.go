@@ -11,6 +11,7 @@ type JumbotronRepository interface {
 	Create(data *models.Jumbotron) error
 	GetByID(id uint) (*models.Jumbotron, error)
 	GetAll(limit int, offset int) ([]models.Jumbotron, int64, error)
+	GetActiveLatest(limit int) ([]models.Jumbotron, error)
 	Update(data *models.Jumbotron) error
 	Delete(id uint) error
 	DeleteByFile(file string) error
@@ -70,4 +71,13 @@ func (r *JumbotronRepositoryImpl) Delete(id uint) error {
 // DeleteByFile deletes Jumbotron record by file key
 func (r *JumbotronRepositoryImpl) DeleteByFile(file string) error {
 	return r.db.Where("file = ?", file).Delete(&models.Jumbotron{}).Error
+}
+
+// GetActiveLatest retrieves latest active Jumbotron records
+func (r *JumbotronRepositoryImpl) GetActiveLatest(limit int) ([]models.Jumbotron, error) {
+	var data []models.Jumbotron
+	if err := r.db.Where("status = ?", "active").Order("created_at DESC").Limit(limit).Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

@@ -31,3 +31,9 @@ type JumbotronListResponse struct {
 	Offset int                 `json:"offset"`
 	Total  int64               `json:"total"`
 }
+
+// JumbotronPublicResponse represents the public response payload for Jumbotron
+type JumbotronPublicResponse struct {
+	File   string `json:"file"`
+	Status string `json:"status"`
+}

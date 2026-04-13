@@ -233,3 +233,22 @@ func (c *JumbotronController) Delete(ctx *gin.Context) {
 		"message": "Jumbotron deleted successfully",
 	})
 }
+
+// GetPublicJumbotron retrieves latest active jumbotron for public access
+// @Summary Get public Jumbotron
+// @Description Retrieve 5 latest active Jumbotron records for public display
+// @Tags jumbotron
+// @Accept json
+// @Produce json
+// @Success 200 {object} gin.H{data=[]dtos.JumbotronPublicResponse}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/jumbotron [post]
+func (c *JumbotronController) GetPublicJumbotron(ctx *gin.Context) {
+	data, err := c.service.GetActiveLatest(5)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}
