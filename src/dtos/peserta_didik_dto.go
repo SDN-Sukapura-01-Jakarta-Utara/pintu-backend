@@ -162,3 +162,8 @@ type ImportExcelRowError struct {
 	Row     int    `json:"row"`
 	Message string `json:"message"`
 }
+
+// TotalSiswaResponse represents the response for total siswa count
+type TotalSiswaResponse struct {
+	TotalSiswa int64 `json:"total_siswa"`
+}

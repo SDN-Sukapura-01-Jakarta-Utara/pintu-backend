@@ -48,6 +48,7 @@ type PesertaDidikRepository interface {
 	GetAllRombels() ([]models.Rombel, error)
 	GetAllTahunPelajaran() ([]models.TahunPelajaran, error)
 	GetAllTahunPelajaranAll() ([]models.TahunPelajaran, error)
+	GetTotalSiswaByActiveTahunPelajaran() (int64, error)
 }
 
 type PesertaDidikRepositoryImpl struct {
@@ -295,4 +296,24 @@ func (r *PesertaDidikRepositoryImpl) GetAllTahunPelajaranAll() ([]models.TahunPe
 		return nil, err
 	}
 	return data, nil
+}
+
+// GetTotalSiswaByActiveTahunPelajaran retrieves total count of peserta didik with active tahun pelajaran and active status
+func (r *PesertaDidikRepositoryImpl) GetTotalSiswaByActiveTahunPelajaran() (int64, error) {
+	var total int64
+	
+	// Join with tahun_pelajaran table and count peserta_didik where:
+	// - tahun_pelajaran.status = 'active'
+	// - peserta_didik.status = 'active'
+	err := r.db.Model(&models.PesertaDidik{}).
+		Joins("JOIN tahun_pelajaran ON peserta_didik.tahun_pelajaran_id = tahun_pelajaran.id").
+		Where("tahun_pelajaran.status = ?", "active").
+		Where("peserta_didik.status = ?", "active").
+		Count(&total).Error
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return total, nil
 }

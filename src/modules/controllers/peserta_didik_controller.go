@@ -228,3 +228,14 @@ func (c *PesertaDidikController) DownloadTemplate(ctx *gin.Context) {
 		return
 	}
 }
+
+// GetTotalSiswa retrieves total count of peserta didik with active tahun pelajaran (public endpoint)
+func (c *PesertaDidikController) GetTotalSiswa(ctx *gin.Context) {
+	result, err := c.service.GetTotalSiswa()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

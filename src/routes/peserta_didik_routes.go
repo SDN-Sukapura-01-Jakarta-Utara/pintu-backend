@@ -17,6 +17,13 @@ func RegisterPesertaDidikRoutes(router *gin.Engine, db *gorm.DB) {
 	service := services.NewPesertaDidikService(repository)
 	controller := controllers.NewPesertaDidikController(service)
 
+	// Public routes (no authentication required)
+	public := router.Group("/api/v1/public")
+	{
+		// Get total siswa with active tahun pelajaran and active status
+		public.POST("/get-total-siswa", controller.GetTotalSiswa)
+	}
+
 	// Protected routes (require authentication)
 	api := router.Group("/api/v1/peserta-didik")
 	api.Use(middleware.AuthMiddleware())

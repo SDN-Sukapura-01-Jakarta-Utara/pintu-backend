@@ -25,7 +25,7 @@ func RegisterJumbotronRoutes(router *gin.Engine, db *gorm.DB) {
 	public := router.Group("/api/v1/public")
 	{
 		// Get latest active jumbotron for public display
-		public.POST("/jumbotron", jumbotronController.GetPublicJumbotron)
+		public.POST("/get-jumbotron", jumbotronController.GetPublicJumbotron)
 	}
 
 	// Protected routes (auth required)

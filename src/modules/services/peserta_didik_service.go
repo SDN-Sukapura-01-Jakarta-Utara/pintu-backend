@@ -25,6 +25,7 @@ type PesertaDidikService interface {
 	Delete(id uint) error
 	ImportExcel(file multipart.File, userID uint) (*dtos.ImportExcelResponse, error)
 	DownloadTemplate() (*excelize.File, error)
+	GetTotalSiswa() (*dtos.TotalSiswaResponse, error)
 }
 
 type PesertaDidikServiceImpl struct {
@@ -836,4 +837,16 @@ func (s *PesertaDidikServiceImpl) mapToResponse(data *models.PesertaDidik) *dtos
 		CreatedByID:      data.CreatedByID,
 		UpdatedByID:      data.UpdatedByID,
 	}
+}
+
+// GetTotalSiswa retrieves total count of peserta didik with active tahun pelajaran
+func (s *PesertaDidikServiceImpl) GetTotalSiswa() (*dtos.TotalSiswaResponse, error) {
+	total, err := s.repository.GetTotalSiswaByActiveTahunPelajaran()
+	if err != nil {
+		return nil, err
+	}
+
+	return &dtos.TotalSiswaResponse{
+		TotalSiswa: total,
+	}, nil
 }
