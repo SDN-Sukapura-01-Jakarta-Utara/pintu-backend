@@ -21,6 +21,13 @@ func RegisterKepegawaianRoutes(router *gin.Engine, db *gorm.DB) {
 	service := services.NewKepegawaianService(repository, r2Storage)
 	controller := controllers.NewKepegawaianController(service)
 
+	// Public routes (no authentication required)
+	public := router.Group("/api/v1/public")
+	{
+		// Get total pendidik with kategori "Pendidik" and status "active"
+		public.POST("/get-total-pendidik", controller.GetTotalPendidik)
+	}
+
 	// Protected routes (require authentication)
 	api := router.Group("/api/v1/kepegawaian")
 	api.Use(middleware.AuthMiddleware())

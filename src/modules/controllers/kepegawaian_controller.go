@@ -329,3 +329,14 @@ func (c *KepegawaianController) Delete(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "kepegawaian deleted successfully"})
 }
+
+// GetTotalPendidik retrieves total count of kepegawaian with kategori "Pendidik" and status "active" (public endpoint)
+func (c *KepegawaianController) GetTotalPendidik(ctx *gin.Context) {
+	result, err := c.service.GetTotalPendidik()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

@@ -39,6 +39,7 @@ type KepegawaianRepository interface {
 	Delete(id uint) error
 	AssignRoles(kepegawaianID uint, roleIDs []uint) error
 	RemoveRoles(kepegawaianID uint) error
+	GetTotalPendidik() (int64, error)
 }
 
 type KepegawaianRepositoryImpl struct {
@@ -202,4 +203,20 @@ func (r *KepegawaianRepositoryImpl) AssignRoles(kepegawaianID uint, roleIDs []ui
 // RemoveRoles removes all roles from a kepegawaian
 func (r *KepegawaianRepositoryImpl) RemoveRoles(kepegawaianID uint) error {
 	return r.db.Table("kepegawaian_roles").Where("kepegawaian_id = ?", kepegawaianID).Delete(nil).Error
+}
+
+// GetTotalPendidik retrieves total count of kepegawaian with kategori "Pendidik" and status "active"
+func (r *KepegawaianRepositoryImpl) GetTotalPendidik() (int64, error) {
+	var total int64
+	
+	err := r.db.Model(&models.Kepegawaian{}).
+		Where("LOWER(kategori) = ?", "pendidik").
+		Where("status = ?", "active").
+		Count(&total).Error
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return total, nil
 }

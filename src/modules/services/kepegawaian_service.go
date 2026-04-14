@@ -24,6 +24,7 @@ type KepegawaianService interface {
 	GetAllWithFilter(params repositories.GetKepegawaianParams) (*dtos.KepegawaianListWithPaginationResponse, error)
 	Update(id uint, foto *multipart.FileHeader, docs map[string][]*multipart.FileHeader, req *dtos.KepegawaianUpdateRequest, userID uint) (*dtos.KepegawaianResponse, error)
 	Delete(id uint) error
+	GetTotalPendidik() (*dtos.TotalPendidikResponse, error)
 }
 
 type KepegawaianServiceImpl struct {
@@ -783,4 +784,16 @@ func (s *KepegawaianServiceImpl) uploadDocumentsParallel(docs map[string][]*mult
 	
 	wg.Wait()
 	return results
+}
+
+// GetTotalPendidik retrieves total count of kepegawaian with kategori "Pendidik" and status "active"
+func (s *KepegawaianServiceImpl) GetTotalPendidik() (*dtos.TotalPendidikResponse, error) {
+	total, err := s.repository.GetTotalPendidik()
+	if err != nil {
+		return nil, err
+	}
+
+	return &dtos.TotalPendidikResponse{
+		TotalPendidik: total,
+	}, nil
 }

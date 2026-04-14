@@ -123,3 +123,8 @@ type KepegawaianListWithPaginationResponse struct {
 	Data       []KepegawaianResponse `json:"data"`
 	Pagination PaginationInfo        `json:"pagination"`
 }
+
+// TotalPendidikResponse represents the response for total pendidik count
+type TotalPendidikResponse struct {
+	TotalPendidik int64 `json:"total_pendidik"`
+}
