@@ -40,6 +40,7 @@ type KepegawaianRepository interface {
 	AssignRoles(kepegawaianID uint, roleIDs []uint) error
 	RemoveRoles(kepegawaianID uint) error
 	GetTotalPendidik() (int64, error)
+	GetTotalTendik() (int64, error)
 }
 
 type KepegawaianRepositoryImpl struct {
@@ -211,6 +212,22 @@ func (r *KepegawaianRepositoryImpl) GetTotalPendidik() (int64, error) {
 	
 	err := r.db.Model(&models.Kepegawaian{}).
 		Where("LOWER(kategori) = ?", "pendidik").
+		Where("status = ?", "active").
+		Count(&total).Error
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return total, nil
+}
+
+// GetTotalTendik retrieves total count of kepegawaian with kategori "Tenaga Kependidikan" and status "active"
+func (r *KepegawaianRepositoryImpl) GetTotalTendik() (int64, error) {
+	var total int64
+	
+	err := r.db.Model(&models.Kepegawaian{}).
+		Where("LOWER(kategori) = ?", "tenaga kependidikan").
 		Where("status = ?", "active").
 		Count(&total).Error
 	

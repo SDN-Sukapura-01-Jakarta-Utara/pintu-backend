@@ -128,3 +128,8 @@ type KepegawaianListWithPaginationResponse struct {
 type TotalPendidikResponse struct {
 	TotalPendidik int64 `json:"total_pendidik"`
 }
+
+// TotalTendikResponse represents the response for total tenaga kependidikan count
+type TotalTendikResponse struct {
+	TotalTendik int64 `json:"total_tendik"`
+}
