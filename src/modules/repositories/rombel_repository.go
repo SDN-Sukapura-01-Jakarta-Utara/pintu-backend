@@ -30,6 +30,7 @@ type RombelRepository interface {
 	GetByKelasID(kelasID uint) ([]models.Rombel, error)
 	Update(data *models.Rombel) error
 	Delete(id uint) error
+	GetTotalRombel() (int64, error)
 }
 
 type RombelRepositoryImpl struct {
@@ -130,4 +131,19 @@ func (r *RombelRepositoryImpl) GetAllWithFilter(params GetRombelParams) ([]model
 	}
 
 	return data, total, nil
+}
+
+// GetTotalRombel retrieves total count of rombel with status "active"
+func (r *RombelRepositoryImpl) GetTotalRombel() (int64, error) {
+	var total int64
+	
+	err := r.db.Model(&models.Rombel{}).
+		Where("status = ?", "active").
+		Count(&total).Error
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return total, nil
 }

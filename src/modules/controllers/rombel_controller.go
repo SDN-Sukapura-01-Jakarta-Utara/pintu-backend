@@ -200,3 +200,14 @@ func (c *RombelController) Delete(ctx *gin.Context) {
 		"message": "Rombel deleted successfully",
 	})
 }
+
+// GetTotalRombel retrieves total count of rombel with status "active" (public endpoint)
+func (c *RombelController) GetTotalRombel(ctx *gin.Context) {
+	result, err := c.service.GetTotalRombel()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

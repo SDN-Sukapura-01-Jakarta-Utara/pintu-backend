@@ -60,3 +60,8 @@ type RombelListWithPaginationResponse struct {
 	Data       []RombelResponse `json:"data"`
 	Pagination PaginationInfo   `json:"pagination"`
 }
+
+// TotalRombelResponse represents the response for total rombel count
+type TotalRombelResponse struct {
+	TotalRombel int64 `json:"total_rombel"`
+}

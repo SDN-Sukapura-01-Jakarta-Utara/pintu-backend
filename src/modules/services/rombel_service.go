@@ -15,6 +15,7 @@ type RombelService interface {
 	GetAllWithFilter(params repositories.GetRombelParams) (*dtos.RombelListWithPaginationResponse, error)
 	Update(req *dtos.RombelUpdateRequest, userID uint) (*dtos.RombelResponse, error)
 	Delete(id uint) error
+	GetTotalRombel() (*dtos.TotalRombelResponse, error)
 }
 
 type RombelServiceImpl struct {
@@ -203,4 +204,16 @@ func (s *RombelServiceImpl) mapToResponse(data *models.Rombel) *dtos.RombelRespo
 		CreatedByID: data.CreatedByID,
 		UpdatedByID: data.UpdatedByID,
 	}
+}
+
+// GetTotalRombel retrieves total count of rombel with status "active"
+func (s *RombelServiceImpl) GetTotalRombel() (*dtos.TotalRombelResponse, error) {
+	total, err := s.repository.GetTotalRombel()
+	if err != nil {
+		return nil, err
+	}
+
+	return &dtos.TotalRombelResponse{
+		TotalRombel: total,
+	}, nil
 }

@@ -18,6 +18,13 @@ func RegisterRombelRoutes(router *gin.Engine, db *gorm.DB) {
 	rombelService := services.NewRombelService(rombelRepo, kelasRepo)
 	rombelController := controllers.NewRombelController(rombelService)
 
+	// Public routes (no authentication required)
+	public := router.Group("/api/v1/public")
+	{
+		// Get total rombel with status "active"
+		public.POST("/get-total-rombel", rombelController.GetTotalRombel)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/rombel")
 	protected.Use(middleware.AuthMiddleware())
