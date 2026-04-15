@@ -64,3 +64,8 @@ type EkstrakurikulerListWithPaginationResponse struct {
 	Data       []EkstrakurikulerResponse `json:"data"`
 	Pagination PaginationInfo            `json:"pagination"`
 }
+
+// TotalEkskulResponse represents the response for total ekstrakurikuler count
+type TotalEkskulResponse struct {
+	TotalEkskul int64 `json:"total_ekskul"`
+}

@@ -32,6 +32,7 @@ type EkstrakurikulerRepository interface {
 	GetByKategori(kategori string) ([]models.Ekstrakurikuler, error)
 	Update(data *models.Ekstrakurikuler) error
 	Delete(id uint) error
+	GetTotalEkskul() (int64, error)
 }
 
 type EkstrakurikulerRepositoryImpl struct {
@@ -136,4 +137,19 @@ func (r *EkstrakurikulerRepositoryImpl) GetAllWithFilter(params GetEkstrakurikul
 	}
 
 	return data, total, nil
+}
+
+// GetTotalEkskul retrieves total count of ekstrakurikuler with status "active"
+func (r *EkstrakurikulerRepositoryImpl) GetTotalEkskul() (int64, error) {
+	var total int64
+	
+	err := r.db.Model(&models.Ekstrakurikuler{}).
+		Where("status = ?", "active").
+		Count(&total).Error
+	
+	if err != nil {
+		return 0, err
+	}
+	
+	return total, nil
 }

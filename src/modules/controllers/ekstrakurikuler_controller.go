@@ -201,3 +201,14 @@ func (c *EkstrakurikulerController) Delete(ctx *gin.Context) {
 		"message": "Ekstrakurikuler deleted successfully",
 	})
 }
+
+// GetTotalEkskul retrieves total count of ekstrakurikuler with status "active" (public endpoint)
+func (c *EkstrakurikulerController) GetTotalEkskul(ctx *gin.Context) {
+	result, err := c.service.GetTotalEkskul()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

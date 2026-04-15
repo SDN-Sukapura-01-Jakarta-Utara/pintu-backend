@@ -15,6 +15,7 @@ type EkstrakurikulerService interface {
 	GetAllWithFilter(params repositories.GetEkstrakurikulerParams) (*dtos.EkstrakurikulerListWithPaginationResponse, error)
 	Update(req *dtos.EkstrakurikulerUpdateRequest, userID uint) (*dtos.EkstrakurikulerResponse, error)
 	Delete(id uint) error
+	GetTotalEkskul() (*dtos.TotalEkskulResponse, error)
 }
 
 type EkstrakurikulerServiceImpl struct {
@@ -219,4 +220,16 @@ func (s *EkstrakurikulerServiceImpl) mapToResponse(data *models.Ekstrakurikuler)
 		CreatedByID: data.CreatedByID,
 		UpdatedByID: data.UpdatedByID,
 	}
+}
+
+// GetTotalEkskul retrieves total count of ekstrakurikuler with status "active"
+func (s *EkstrakurikulerServiceImpl) GetTotalEkskul() (*dtos.TotalEkskulResponse, error) {
+	total, err := s.repository.GetTotalEkskul()
+	if err != nil {
+		return nil, err
+	}
+
+	return &dtos.TotalEkskulResponse{
+		TotalEkskul: total,
+	}, nil
 }

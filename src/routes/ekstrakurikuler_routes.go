@@ -18,6 +18,13 @@ func RegisterEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB) {
 	ekstrakurikulerService := services.NewEkstrakurikulerService(ekstrakurikulerRepo, kelasRepo)
 	ekstrakurikulerController := controllers.NewEkstrakurikulerController(ekstrakurikulerService)
 
+	// Public routes (no authentication required)
+	public := router.Group("/api/v1/public")
+	{
+		// Get total ekstrakurikuler with status "active"
+		public.POST("/get-total-ekskul", ekstrakurikulerController.GetTotalEkskul)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/ekstrakurikuler")
 	protected.Use(middleware.AuthMiddleware())
