@@ -1,0 +1,217 @@
+package repositories
+
+import (
+	"pintu-backend/src/modules/models"
+	"strings"
+	"time"
+
+	"gorm.io/gorm"
+)
+
+// GetPrestasiFilter represents filter parameters for GetAllWithFilter
+type GetPrestasiFilter struct {
+	PesertaDidikID    *uint
+	Jenis             string
+	NamaGrup          string
+	NamaPrestasi      string
+	TingkatPrestasi   string
+	Penyelenggara     string
+	StartDate         time.Time
+	EndDate           time.Time
+	Juara             string
+	EkstrakurikulerID *uint
+	TahunPelajaranID  *uint
+}
+
+// GetPrestasiParams represents parameters for GetAllWithFilter with filters
+type GetPrestasiParams struct {
+	Filter GetPrestasiFilter
+	Limit  int
+	Offset int
+}
+
+// PrestasiRepository handles data operations for Prestasi
+type PrestasiRepository interface {
+	Create(data *models.Prestasi) error
+	GetByID(id uint) (*models.Prestasi, error)
+	GetAll(limit int, offset int) ([]models.Prestasi, int64, error)
+	GetAllWithFilter(params GetPrestasiParams) ([]models.Prestasi, int64, error)
+	Update(data *models.Prestasi) error
+	Delete(id uint) error
+	// Anggota Tim methods
+	CreateAnggotaTim(data *models.AnggotaTimPrestasi) error
+	GetAnggotaTimByPrestasiID(prestasiID uint) ([]models.AnggotaTimPrestasi, error)
+	UpdateAnggotaTim(data *models.AnggotaTimPrestasi) error
+	DeleteAnggotaTim(id uint) error
+	DeleteAnggotaTimByPrestasiID(prestasiID uint) error
+}
+
+type PrestasiRepositoryImpl struct {
+	db *gorm.DB
+}
+
+// NewPrestasiRepository creates a new Prestasi repository
+func NewPrestasiRepository(db *gorm.DB) PrestasiRepository {
+	return &PrestasiRepositoryImpl{db: db}
+}
+
+// Create creates a new Prestasi record
+func (r *PrestasiRepositoryImpl) Create(data *models.Prestasi) error {
+	return r.db.Create(data).Error
+}
+
+// GetByID retrieves Prestasi by ID with all relationships
+func (r *PrestasiRepositoryImpl) GetByID(id uint) (*models.Prestasi, error) {
+	var data models.Prestasi
+	if err := r.db.Preload("PesertaDidik").
+		Preload("PesertaDidik.Rombel").
+		Preload("PesertaDidik.Rombel.Kelas").
+		Preload("PesertaDidik.TahunPelajaran").
+		Preload("Ekstrakurikuler").
+		Preload("TahunPelajaran").
+		Preload("AnggotaTimPrestasi").
+		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel.Kelas").
+		Preload("AnggotaTimPrestasi.PesertaDidik.TahunPelajaran").
+		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		First(&data, id).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetAll retrieves all Prestasi records with pagination
+func (r *PrestasiRepositoryImpl) GetAll(limit int, offset int) ([]models.Prestasi, int64, error) {
+	var data []models.Prestasi
+	var total int64
+
+	// Get total count
+	if err := r.db.Model(&models.Prestasi{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data with relationships
+	if err := r.db.Preload("PesertaDidik").
+		Preload("PesertaDidik.Rombel").
+		Preload("PesertaDidik.Rombel.Kelas").
+		Preload("PesertaDidik.TahunPelajaran").
+		Preload("Ekstrakurikuler").
+		Preload("TahunPelajaran").
+		Preload("AnggotaTimPrestasi").
+		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Limit(limit).Offset(offset).Order("created_at DESC").Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// GetAllWithFilter retrieves Prestasi records with filters and pagination
+func (r *PrestasiRepositoryImpl) GetAllWithFilter(params GetPrestasiParams) ([]models.Prestasi, int64, error) {
+	var data []models.Prestasi
+	var total int64
+
+	query := r.db
+
+	// Apply filters
+	if params.Filter.PesertaDidikID != nil {
+		query = query.Where("peserta_didik_id = ?", *params.Filter.PesertaDidikID)
+	}
+	if params.Filter.Jenis != "" {
+		query = query.Where("LOWER(jenis) LIKE ?", "%"+strings.ToLower(params.Filter.Jenis)+"%")
+	}
+	if params.Filter.NamaGrup != "" {
+		query = query.Where("LOWER(nama_grup) LIKE ?", "%"+strings.ToLower(params.Filter.NamaGrup)+"%")
+	}
+	if params.Filter.NamaPrestasi != "" {
+		query = query.Where("LOWER(nama_prestasi) LIKE ?", "%"+strings.ToLower(params.Filter.NamaPrestasi)+"%")
+	}
+	if params.Filter.TingkatPrestasi != "" {
+		query = query.Where("LOWER(tingkat_prestasi) LIKE ?", "%"+strings.ToLower(params.Filter.TingkatPrestasi)+"%")
+	}
+	if params.Filter.Penyelenggara != "" {
+		query = query.Where("LOWER(penyelenggara) LIKE ?", "%"+strings.ToLower(params.Filter.Penyelenggara)+"%")
+	}
+	if !params.Filter.StartDate.IsZero() && !params.Filter.EndDate.IsZero() {
+		query = query.Where("tanggal_lomba >= ? AND tanggal_lomba <= ?", params.Filter.StartDate, params.Filter.EndDate)
+	} else if !params.Filter.StartDate.IsZero() {
+		query = query.Where("tanggal_lomba >= ?", params.Filter.StartDate)
+	} else if !params.Filter.EndDate.IsZero() {
+		query = query.Where("tanggal_lomba <= ?", params.Filter.EndDate)
+	}
+	if params.Filter.Juara != "" {
+		query = query.Where("LOWER(juara) LIKE ?", "%"+strings.ToLower(params.Filter.Juara)+"%")
+	}
+	if params.Filter.EkstrakurikulerID != nil {
+		query = query.Where("ekstrakurikuler_id = ?", *params.Filter.EkstrakurikulerID)
+	}
+	if params.Filter.TahunPelajaranID != nil {
+		query = query.Where("tahun_pelajaran_id = ?", *params.Filter.TahunPelajaranID)
+	}
+
+	// Get total count
+	if err := query.Model(&models.Prestasi{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data with relationships
+	if err := query.Preload("PesertaDidik").
+		Preload("PesertaDidik.Rombel").
+		Preload("PesertaDidik.Rombel.Kelas").
+		Preload("PesertaDidik.TahunPelajaran").
+		Preload("Ekstrakurikuler").
+		Preload("TahunPelajaran").
+		Preload("AnggotaTimPrestasi").
+		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// Update updates Prestasi record
+func (r *PrestasiRepositoryImpl) Update(data *models.Prestasi) error {
+	return r.db.Save(data).Error
+}
+
+// Delete deletes Prestasi record by ID
+func (r *PrestasiRepositoryImpl) Delete(id uint) error {
+	return r.db.Delete(&models.Prestasi{}, id).Error
+}
+
+// CreateAnggotaTim creates a new AnggotaTimPrestasi record
+func (r *PrestasiRepositoryImpl) CreateAnggotaTim(data *models.AnggotaTimPrestasi) error {
+	return r.db.Create(data).Error
+}
+
+// GetAnggotaTimByPrestasiID retrieves all anggota tim by prestasi ID
+func (r *PrestasiRepositoryImpl) GetAnggotaTimByPrestasiID(prestasiID uint) ([]models.AnggotaTimPrestasi, error) {
+	var data []models.AnggotaTimPrestasi
+	if err := r.db.Preload("PesertaDidik").
+		Preload("PesertaDidik.Rombel").
+		Preload("PesertaDidik.Rombel.Kelas").
+		Preload("PesertaDidik.TahunPelajaran").
+		Preload("TahunPelajaran").
+		Where("prestasi_id = ?", prestasiID).Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// UpdateAnggotaTim updates AnggotaTimPrestasi record
+func (r *PrestasiRepositoryImpl) UpdateAnggotaTim(data *models.AnggotaTimPrestasi) error {
+	return r.db.Save(data).Error
+}
+
+// DeleteAnggotaTim deletes AnggotaTimPrestasi record by ID
+func (r *PrestasiRepositoryImpl) DeleteAnggotaTim(id uint) error {
+	return r.db.Delete(&models.AnggotaTimPrestasi{}, id).Error
+}
+
+// DeleteAnggotaTimByPrestasiID deletes all AnggotaTimPrestasi records by prestasi ID
+func (r *PrestasiRepositoryImpl) DeleteAnggotaTimByPrestasiID(prestasiID uint) error {
+	return r.db.Where("prestasi_id = ?", prestasiID).Delete(&models.AnggotaTimPrestasi{}).Error
+}

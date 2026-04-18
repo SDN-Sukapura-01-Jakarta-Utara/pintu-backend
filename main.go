@@ -88,6 +88,7 @@ func main() {
 	routes.RegisterKepegawaianRoutes(router, db)
 	routes.RegisterStrukturOrganisasiRoutes(router, db)
 	routes.RegisterPesertaDidikRoutes(router, db)
+	routes.RegisterPrestasiRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
