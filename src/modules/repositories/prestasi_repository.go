@@ -100,6 +100,10 @@ func (r *PrestasiRepositoryImpl) GetAll(limit int, offset int) ([]models.Prestas
 		Preload("TahunPelajaran").
 		Preload("AnggotaTimPrestasi").
 		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel.Kelas").
+		Preload("AnggotaTimPrestasi.PesertaDidik.TahunPelajaran").
+		Preload("AnggotaTimPrestasi.TahunPelajaran").
 		Limit(limit).Offset(offset).Order("created_at DESC").Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
@@ -164,6 +168,9 @@ func (r *PrestasiRepositoryImpl) GetAllWithFilter(params GetPrestasiParams) ([]m
 		Preload("TahunPelajaran").
 		Preload("AnggotaTimPrestasi").
 		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel.Kelas").
+		Preload("AnggotaTimPrestasi.PesertaDidik.TahunPelajaran").
 		Preload("AnggotaTimPrestasi.TahunPelajaran").
 		Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
