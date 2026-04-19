@@ -126,15 +126,18 @@ func (s *PrestasiServiceImpl) Create(foto []*multipart.FileHeader, fotoThumbnail
 	// Create anggota tim if provided
 	if len(req.AnggotaTim) > 0 {
 		for _, anggota := range req.AnggotaTim {
+			tahunPelajaranID := anggota.TahunPelajaranID
+			if tahunPelajaranID == 0 {
+				tahunPelajaranID = data.TahunPelajaranID
+			}
 			anggotaData := &models.AnggotaTimPrestasi{
 				PrestasiID:       data.ID,
 				PesertaDidikID:   anggota.PesertaDidikID,
-				TahunPelajaranID: anggota.TahunPelajaranID,
+				TahunPelajaranID: tahunPelajaranID,
 				CreatedByID:      &userID,
 			}
 			if err := s.repository.CreateAnggotaTim(anggotaData); err != nil {
-				// Log error but don't fail the main creation
-				continue
+				return nil, fmt.Errorf("failed to create anggota tim: %w", err)
 			}
 		}
 	}
@@ -234,6 +237,12 @@ func (s *PrestasiServiceImpl) Update(id uint, foto []*multipart.FileHeader, foto
 	if err != nil {
 		return nil, errors.New("prestasi not found")
 	}
+
+	// Clear preloaded associations to prevent GORM from overriding FK values on Save
+	existing.PesertaDidik = nil
+	existing.Ekstrakurikuler = nil
+	existing.TahunPelajaran = nil
+	existing.AnggotaTimPrestasi = nil
 
 	// Update basic fields if provided
 	if req.PesertaDidikID != nil {
@@ -370,13 +379,19 @@ func (s *PrestasiServiceImpl) Update(id uint, foto []*multipart.FileHeader, foto
 
 		// Create new anggota tim
 		for _, anggota := range req.AnggotaTim {
+			tahunPelajaranID := anggota.TahunPelajaranID
+			if tahunPelajaranID == 0 {
+				tahunPelajaranID = existing.TahunPelajaranID
+			}
 			anggotaData := &models.AnggotaTimPrestasi{
 				PrestasiID:       id,
 				PesertaDidikID:   anggota.PesertaDidikID,
-				TahunPelajaranID: anggota.TahunPelajaranID,
+				TahunPelajaranID: tahunPelajaranID,
 				CreatedByID:      &userID,
 			}
-			_ = s.repository.CreateAnggotaTim(anggotaData)
+			if err := s.repository.CreateAnggotaTim(anggotaData); err != nil {
+				return nil, fmt.Errorf("failed to create anggota tim: %w", err)
+			}
 		}
 	}
 
@@ -421,7 +436,7 @@ func (s *PrestasiServiceImpl) Delete(id uint) error {
 // mapToResponse maps model to DTO response
 func (s *PrestasiServiceImpl) mapToResponse(data *models.Prestasi) *dtos.PrestasiResponse {
 	// Map foto from JSON
-	var fotoItems []dtos.FotoItemDTO
+	fotoItems := make([]dtos.FotoItemDTO, 0)
 	var fotoModels []models.FotoItem
 	if err := json.Unmarshal(data.Foto, &fotoModels); err == nil {
 		for _, fotoItem := range fotoModels {
@@ -467,7 +482,7 @@ func (s *PrestasiServiceImpl) mapToResponse(data *models.Prestasi) *dtos.Prestas
 	}
 
 	// Map anggota tim prestasi
-	var anggotaTimPrestasi []dtos.AnggotaTimPrestasiDTO
+	anggotaTimPrestasi := make([]dtos.AnggotaTimPrestasiDTO, 0)
 	for _, anggota := range data.AnggotaTimPrestasi {
 		var anggotaPesertaDidik *dtos.PesertaDidikResponse
 		if anggota.PesertaDidik != nil {
