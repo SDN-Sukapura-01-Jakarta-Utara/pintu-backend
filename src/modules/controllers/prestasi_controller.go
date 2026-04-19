@@ -218,6 +218,7 @@ func (c *PrestasiController) GetAll(ctx *gin.Context) {
 	data, err := c.service.GetAllWithFilter(repositories.GetPrestasiParams{
 		Filter: repositories.GetPrestasiFilter{
 			PesertaDidikID:    req.Search.PesertaDidikID,
+			NamaPesertaDidik:  req.Search.NamaPesertaDidik,
 			Jenis:             req.Search.Jenis,
 			NamaGrup:          req.Search.NamaGrup,
 			NamaPrestasi:      req.Search.NamaPrestasi,

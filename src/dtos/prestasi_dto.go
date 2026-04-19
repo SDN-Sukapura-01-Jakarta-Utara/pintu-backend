@@ -119,6 +119,7 @@ type PrestasiListResponse struct {
 type PrestasiGetAllRequest struct {
 	Search struct {
 		PesertaDidikID    *uint  `json:"peserta_didik_id"`
+		NamaPesertaDidik  string `json:"nama_peserta_didik"`
 		Jenis             string `json:"jenis"`
 		NamaGrup          string `json:"nama_grup"`
 		NamaPrestasi      string `json:"nama_prestasi"`

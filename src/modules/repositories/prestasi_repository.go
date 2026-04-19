@@ -11,6 +11,7 @@ import (
 // GetPrestasiFilter represents filter parameters for GetAllWithFilter
 type GetPrestasiFilter struct {
 	PesertaDidikID    *uint
+	NamaPesertaDidik  string
 	Jenis             string
 	NamaGrup          string
 	NamaPrestasi      string
@@ -120,7 +121,11 @@ func (r *PrestasiRepositoryImpl) GetAllWithFilter(params GetPrestasiParams) ([]m
 
 	// Apply filters
 	if params.Filter.PesertaDidikID != nil {
-		query = query.Where("peserta_didik_id = ?", *params.Filter.PesertaDidikID)
+		query = query.Where("(peserta_didik_id = ? OR id IN (SELECT prestasi_id FROM anggota_tim_prestasi WHERE peserta_didik_id = ? AND deleted_at IS NULL))", *params.Filter.PesertaDidikID, *params.Filter.PesertaDidikID)
+	}
+	if params.Filter.NamaPesertaDidik != "" {
+		nameLike := "%" + strings.ToLower(params.Filter.NamaPesertaDidik) + "%"
+		query = query.Where("(peserta_didik_id IN (SELECT id FROM peserta_didik WHERE LOWER(nama) LIKE ? AND deleted_at IS NULL) OR id IN (SELECT prestasi_id FROM anggota_tim_prestasi WHERE peserta_didik_id IN (SELECT id FROM peserta_didik WHERE LOWER(nama) LIKE ? AND deleted_at IS NULL) AND deleted_at IS NULL))", nameLike, nameLike)
 	}
 	if params.Filter.Jenis != "" {
 		query = query.Where("LOWER(jenis) LIKE ?", "%"+strings.ToLower(params.Filter.Jenis)+"%")
