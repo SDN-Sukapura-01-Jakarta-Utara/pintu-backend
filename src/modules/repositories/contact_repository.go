@@ -11,6 +11,7 @@ type ContactRepository interface {
 	Create(data *models.Contact) error
 	GetByID(id uint) (*models.Contact, error)
 	GetAll() ([]models.Contact, error)
+	GetPublic() (*models.Contact, error)
 	Update(data *models.Contact) error
 	Delete(id uint) error
 }
@@ -55,4 +56,14 @@ func (r *ContactRepositoryImpl) Update(data *models.Contact) error {
 // Delete deletes Contact record by ID
 func (r *ContactRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.Contact{}, id).Error
+}
+
+
+// GetPublic retrieves the first contact record for public display
+func (r *ContactRepositoryImpl) GetPublic() (*models.Contact, error) {
+	var data models.Contact
+	if err := r.db.First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
 }

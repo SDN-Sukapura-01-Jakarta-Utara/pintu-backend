@@ -165,3 +165,24 @@ func (c *ContactController) Delete(ctx *gin.Context) {
 		"message": "Contact deleted successfully",
 	})
 }
+
+
+// GetPublic retrieves contact for public display (no auth required)
+// @Summary Get Contact for public
+// @Description Retrieve contact information for public display (no authentication required)
+// @Tags contacts
+// @Accept json
+// @Produce json
+// @Success 200 {object} dtos.ContactPublicResponse
+// @Failure 404 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-kontak [post]
+func (c *ContactController) GetPublic(ctx *gin.Context) {
+	data, err := c.service.GetPublic()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Contact not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

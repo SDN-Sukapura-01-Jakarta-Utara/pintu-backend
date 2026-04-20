@@ -36,4 +36,10 @@ func RegisterContactRoutes(router *gin.Engine, db *gorm.DB) {
 		// Delete contact
 		protected.POST("/delete-contact", contactController.Delete)
 	}
+
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-kontak", contactController.GetPublic)
+	}
 }

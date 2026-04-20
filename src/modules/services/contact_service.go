@@ -13,6 +13,7 @@ type ContactService interface {
 	Create(req *dtos.ContactCreateRequest, userID uint) (*dtos.ContactResponse, error)
 	GetByID(id uint) (*dtos.ContactResponse, error)
 	GetAll() ([]*dtos.ContactResponse, error)
+	GetPublic() (*dtos.ContactPublicResponse, error)
 	Update(id uint, req *dtos.ContactUpdateRequest, userID uint) (*dtos.ContactResponse, error)
 	Delete(id uint) error
 }
@@ -172,4 +173,33 @@ func (s *ContactServiceImpl) mapToResponse(data *models.Contact) *dtos.ContactRe
 		CreatedByID: data.CreatedByID,
 		UpdatedByID: data.UpdatedByID,
 	}
+}
+
+// GetPublic retrieves contact for public display (without timestamps and audit fields)
+func (s *ContactServiceImpl) GetPublic() (*dtos.ContactPublicResponse, error) {
+	data, err := s.repository.GetPublic()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map jam_buka from JSON
+	var jamBukaItems []dtos.JamBukaItem
+	if err := json.Unmarshal(data.JamBuka, &jamBukaItems); err != nil {
+		jamBukaItems = []dtos.JamBukaItem{}
+	}
+
+	return &dtos.ContactPublicResponse{
+		ID:        data.ID,
+		Alamat:    data.Alamat,
+		Telepon:   data.Telepon,
+		Email:     data.Email,
+		JamBuka:   jamBukaItems,
+		Gmaps:     data.Gmaps,
+		Website:   data.Website,
+		Youtube:   data.Youtube,
+		Instagram: data.Instagram,
+		Tiktok:    data.Tiktok,
+		Facebook:  data.Facebook,
+		Twitter:   data.Twitter,
+	}, nil
 }

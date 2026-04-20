@@ -61,3 +61,19 @@ type ContactResponse struct {
 	CreatedByID *uint       `json:"created_by_id"`
 	UpdatedByID *uint       `json:"updated_by_id"`
 }
+
+// ContactPublicResponse represents the public response for contact (without timestamps and audit fields)
+type ContactPublicResponse struct {
+	ID        uint          `json:"id"`
+	Alamat    string        `json:"alamat"`
+	Telepon   string        `json:"telepon"`
+	Email     string        `json:"email"`
+	JamBuka   []JamBukaItem `json:"jam_buka"`
+	Gmaps     string        `json:"gmaps"`
+	Website   string        `json:"website"`
+	Youtube   string        `json:"youtube"`
+	Instagram string        `json:"instagram"`
+	Tiktok    string        `json:"tiktok"`
+	Facebook  string        `json:"facebook"`
+	Twitter   string        `json:"twitter"`
+}
