@@ -14,11 +14,12 @@ import (
 )
 
 type ActivityGalleryService interface {
-	Create(fotos []*multipart.FileHeader, req *dtos.ActivityGalleryCreateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
+	Create(fotos []*multipart.FileHeader, fotoThumbnails []string, req *dtos.ActivityGalleryCreateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
 	GetByID(id uint) (*dtos.ActivityGalleryResponse, error)
 	GetAll(limit int, offset int) (*dtos.ActivityGalleryListResponse, error)
 	GetAllWithFilter(params repositories.GetActivityGalleryParams) (*dtos.ActivityGalleryListWithPaginationResponse, error)
-	Update(id uint, fotos []*multipart.FileHeader, req *dtos.ActivityGalleryUpdateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
+	GetPublicLatest() (*dtos.ActivityGalleryPublicListResponse, error)
+	Update(id uint, fotos []*multipart.FileHeader, fotoThumbnails []string, req *dtos.ActivityGalleryUpdateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
 	Delete(id uint) error
 }
 
@@ -36,7 +37,7 @@ func NewActivityGalleryService(repository repositories.ActivityGalleryRepository
 }
 
 // Create creates a new ActivityGallery with foto uploads to R2
-func (s *ActivityGalleryServiceImpl) Create(fotos []*multipart.FileHeader, req *dtos.ActivityGalleryCreateRequest, userID uint) (*dtos.ActivityGalleryResponse, error) {
+func (s *ActivityGalleryServiceImpl) Create(fotos []*multipart.FileHeader, fotoThumbnails []string, req *dtos.ActivityGalleryCreateRequest, userID uint) (*dtos.ActivityGalleryResponse, error) {
 	// Parse tanggal
 	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
 	if err != nil {
@@ -46,7 +47,7 @@ func (s *ActivityGalleryServiceImpl) Create(fotos []*multipart.FileHeader, req *
 	// Upload fotos if provided
 	var fotoItems []models.FileItem
 	if len(fotos) > 0 {
-		for _, foto := range fotos {
+		for i, foto := range fotos {
 			if foto == nil {
 				continue
 			}
@@ -77,11 +78,21 @@ func (s *ActivityGalleryServiceImpl) Create(fotos []*multipart.FileHeader, req *
 			// Generate unique file ID: file_timestamp_randomstring
 			fileID := fmt.Sprintf("file_%d_%s", time.Now().UnixNano(), fileKey[len(fileKey)-8:])
 
+			// Set thumbnail status based on fotoThumbnails array
+			thumbnail := "inactive"
+			if len(fotoThumbnails) > i && fotoThumbnails[i] == "active" {
+				thumbnail = "active"
+			} else if i == 0 && len(fotoThumbnails) == 0 {
+				// Default: first image is active if no thumbnails specified
+				thumbnail = "active"
+			}
+
 			fotoItems = append(fotoItems, models.FileItem{
-				ID:       fileID,
-				Filename: foto.Filename,
-				URL:      fileKey,
-				Size:     foto.Size,
+				ID:        fileID,
+				Filename:  foto.Filename,
+				URL:       fileKey,
+				Size:      foto.Size,
+				Thumbnail: thumbnail,
 			})
 		}
 	}
@@ -201,7 +212,7 @@ func (s *ActivityGalleryServiceImpl) GetAllWithFilter(params repositories.GetAct
 }
 
 // Update updates ActivityGallery
-func (s *ActivityGalleryServiceImpl) Update(id uint, fotos []*multipart.FileHeader, req *dtos.ActivityGalleryUpdateRequest, userID uint) (*dtos.ActivityGalleryResponse, error) {
+func (s *ActivityGalleryServiceImpl) Update(id uint, fotos []*multipart.FileHeader, fotoThumbnails []string, req *dtos.ActivityGalleryUpdateRequest, userID uint) (*dtos.ActivityGalleryResponse, error) {
 	// Get existing data
 	existing, err := s.repository.GetByID(id)
 	if err != nil {
@@ -262,7 +273,7 @@ func (s *ActivityGalleryServiceImpl) Update(id uint, fotos []*multipart.FileHead
 		}
 
 		// Upload and add new fotos
-		for _, foto := range fotos {
+		for i, foto := range fotos {
 			if foto == nil {
 				continue
 			}
@@ -293,17 +304,43 @@ func (s *ActivityGalleryServiceImpl) Update(id uint, fotos []*multipart.FileHead
 			// Generate unique file ID
 			fileID := fmt.Sprintf("file_%d_%s", time.Now().UnixNano(), fileKey[len(fileKey)-8:])
 
+			// Set thumbnail status based on fotoThumbnails array
+			thumbnail := "inactive"
+			if len(fotoThumbnails) > i && fotoThumbnails[i] == "active" {
+				thumbnail = "active"
+			} else if len(existingFotoItems) == 0 && i == 0 && len(fotoThumbnails) == 0 {
+				// Default: first foto becomes active if no existing foto and no thumbnails specified
+				thumbnail = "active"
+			}
+
 			existingFotoItems = append(existingFotoItems, models.FileItem{
-				ID:       fileID,
-				Filename: foto.Filename,
-				URL:      fileKey,
-				Size:     foto.Size,
+				ID:        fileID,
+				Filename:  foto.Filename,
+				URL:       fileKey,
+				Size:      foto.Size,
+				Thumbnail: thumbnail,
 			})
 		}
 
 		// Convert updated fotos to JSON
 		fotosJSON, _ := json.Marshal(existingFotoItems)
 		existing.Foto = fotosJSON
+	}
+
+	// Update thumbnail status for existing fotos if specified (do this AFTER all add/delete operations)
+	if len(req.FotoThumbnailUpdates) > 0 {
+		var existingFotoItems []models.FileItem
+		if err := json.Unmarshal(existing.Foto, &existingFotoItems); err == nil {
+			// Update thumbnail status based on the map
+			for i := range existingFotoItems {
+				if newStatus, exists := req.FotoThumbnailUpdates[existingFotoItems[i].ID]; exists {
+					existingFotoItems[i].Thumbnail = newStatus
+				}
+			}
+			// Save updated fotos
+			fotosJSON, _ := json.Marshal(existingFotoItems)
+			existing.Foto = fotosJSON
+		}
 	}
 
 	existing.UpdatedByID = &userID
@@ -349,10 +386,11 @@ func (s *ActivityGalleryServiceImpl) mapToResponse(data *models.ActivityGallery)
 	if err := json.Unmarshal(data.Foto, &fotoModels); err == nil {
 		for _, foto := range fotoModels {
 			fotoItems = append(fotoItems, dtos.FileItemDTO{
-				ID:       foto.ID,
-				Filename: foto.Filename,
-				URL:      s.r2Storage.GetPublicURL(foto.URL),
-				Size:     foto.Size,
+				ID:        foto.ID,
+				Filename:  foto.Filename,
+				URL:       s.r2Storage.GetPublicURL(foto.URL),
+				Size:      foto.Size,
+				Thumbnail: foto.Thumbnail,
 			})
 		}
 	}
@@ -369,4 +407,41 @@ func (s *ActivityGalleryServiceImpl) mapToResponse(data *models.ActivityGallery)
 		CreatedByID:     data.CreatedByID,
 		UpdatedByID:     data.UpdatedByID,
 	}
+}
+
+
+// GetPublicLatest retrieves 10 latest published and active activity galleries for public display
+func (s *ActivityGalleryServiceImpl) GetPublicLatest() (*dtos.ActivityGalleryPublicListResponse, error) {
+	data, err := s.repository.GetPublicLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.ActivityGalleryPublicResponse, 0)
+	for _, item := range data {
+		// Get active thumbnail
+		var fotoThumbnail string
+		var fotoModels []models.FileItem
+		if err := json.Unmarshal(item.Foto, &fotoModels); err == nil {
+			for _, fotoItem := range fotoModels {
+				if fotoItem.Thumbnail == "active" {
+					fotoThumbnail = s.r2Storage.GetPublicURL(fotoItem.URL)
+					break
+				}
+			}
+		}
+
+		publicResponse := dtos.ActivityGalleryPublicResponse{
+			ID:            item.ID,
+			Judul:         item.Judul,
+			Tanggal:       item.Tanggal,
+			FotoThumbnail: fotoThumbnail,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.ActivityGalleryPublicListResponse{
+		Data: responses,
+	}, nil
 }

@@ -30,6 +30,7 @@ type ActivityGalleryRepository interface {
 	GetByID(id uint) (*models.ActivityGallery, error)
 	GetAll(limit int, offset int) ([]models.ActivityGallery, int64, error)
 	GetAllWithFilter(params GetActivityGalleryParams) ([]models.ActivityGallery, int64, error)
+	GetPublicLatest() ([]models.ActivityGallery, error)
 	Update(data *models.ActivityGallery) error
 	Delete(id uint) error
 }
@@ -121,4 +122,17 @@ func (r *ActivityGalleryRepositoryImpl) Update(data *models.ActivityGallery) err
 // Delete deletes ActivityGallery record by ID
 func (r *ActivityGalleryRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.ActivityGallery{}, id).Error
+}
+
+
+// GetPublicLatest retrieves 10 latest published and active activity galleries ordered by tanggal DESC
+func (r *ActivityGalleryRepositoryImpl) GetPublicLatest() ([]models.ActivityGallery, error) {
+	var data []models.ActivityGallery
+	if err := r.db.Where("status = ? AND status_publikasi = ?", "active", "published").
+		Order("tanggal DESC").
+		Limit(10).
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

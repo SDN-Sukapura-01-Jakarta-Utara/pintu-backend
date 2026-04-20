@@ -14,12 +14,13 @@ type ActivityGalleryCreateRequest struct {
 
 // ActivityGalleryUpdateRequest represents the request payload for updating ActivityGallery
 type ActivityGalleryUpdateRequest struct {
-	ID              uint     `json:"id" binding:"required"`
-	Judul           string   `json:"judul" binding:"omitempty"`
-	Tanggal         string   `json:"tanggal" binding:"omitempty"`
-	StatusPublikasi string   `json:"status_publikasi" binding:"omitempty,oneof=draft published archived"`
-	Status          string   `json:"status" binding:"omitempty,oneof=active inactive"`
-	FotoToDelete    []string `json:"foto_to_delete" binding:"omitempty"`
+	ID                   uint              `json:"id" binding:"required"`
+	Judul                string            `json:"judul" binding:"omitempty"`
+	Tanggal              string            `json:"tanggal" binding:"omitempty"`
+	StatusPublikasi      string            `json:"status_publikasi" binding:"omitempty,oneof=draft published archived"`
+	Status               string            `json:"status" binding:"omitempty,oneof=active inactive"`
+	FotoToDelete         []string          `json:"foto_to_delete" binding:"omitempty"`
+	FotoThumbnailUpdates map[string]string `json:"foto_thumbnail_updates" binding:"omitempty"` // Map of foto_id -> "active"/"inactive"
 }
 
 // ActivityGalleryResponse represents the response payload for ActivityGallery
@@ -63,4 +64,17 @@ type ActivityGalleryGetAllRequest struct {
 type ActivityGalleryListWithPaginationResponse struct {
 	Data       []ActivityGalleryResponse `json:"data"`
 	Pagination PaginationInfo            `json:"pagination"`
+}
+
+// ActivityGalleryPublicResponse represents the public response for activity gallery
+type ActivityGalleryPublicResponse struct {
+	ID             uint      `json:"id"`
+	Judul          string    `json:"judul"`
+	Tanggal        time.Time `json:"tanggal"`
+	FotoThumbnail  string    `json:"foto_thumbnail"` // Active thumbnail only
+}
+
+// ActivityGalleryPublicListResponse represents the public list response
+type ActivityGalleryPublicListResponse struct {
+	Data []ActivityGalleryPublicResponse `json:"data"`
 }

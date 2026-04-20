@@ -40,4 +40,10 @@ func RegisterActivityGalleryRoutes(router *gin.Engine, db *gorm.DB) {
 		// Delete activity gallery
 		protected.POST("/delete-gallery", galleryController.Delete)
 	}
+
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-galeri-kegiatan", galleryController.GetPublicLatest)
+	}
 }

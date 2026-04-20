@@ -78,6 +78,15 @@ func (c *ActivityGalleryController) Create(ctx *gin.Context) {
 		return
 	}
 
+	// Get foto thumbnail info (optional)
+	var fotoThumbnails []string
+	if fotoThumbnailStr := ctx.PostForm("foto_thumbnails"); fotoThumbnailStr != "" {
+		if err := json.Unmarshal([]byte(fotoThumbnailStr), &fotoThumbnails); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid foto_thumbnails JSON format"})
+			return
+		}
+	}
+
 	// Create request DTO
 	req := &dtos.ActivityGalleryCreateRequest{
 		Judul:           judul,
@@ -94,7 +103,7 @@ func (c *ActivityGalleryController) Create(ctx *gin.Context) {
 	}
 
 	// Call service
-	data, err := c.service.Create(fotos, req, userID.(uint))
+	data, err := c.service.Create(fotos, fotoThumbnails, req, userID.(uint))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -254,6 +263,54 @@ func (c *ActivityGalleryController) Update(ctx *gin.Context) {
 		}
 	}
 
+	// Get existing foto IDs and their thumbnail updates
+	var existingFotoIds []string
+	if existingFotoIdsStr := ctx.PostForm("existing_foto_ids"); existingFotoIdsStr != "" {
+		if err := json.Unmarshal([]byte(existingFotoIdsStr), &existingFotoIds); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid existing_foto_ids JSON format"})
+			return
+		}
+	}
+
+	// Get existing foto thumbnails (for existing fotos)
+	var existingFotoThumbnails []string
+	if existingFotoThumbnailsStr := ctx.PostForm("existing_foto_thumbnails"); existingFotoThumbnailsStr != "" {
+		if err := json.Unmarshal([]byte(existingFotoThumbnailsStr), &existingFotoThumbnails); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid existing_foto_thumbnails JSON format"})
+			return
+		}
+	}
+
+	// Get new foto thumbnails (for new uploaded fotos)
+	var newFotoThumbnails []string
+	if newFotoThumbnailsStr := ctx.PostForm("new_foto_thumbnails"); newFotoThumbnailsStr != "" {
+		if err := json.Unmarshal([]byte(newFotoThumbnailsStr), &newFotoThumbnails); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid new_foto_thumbnails JSON format"})
+			return
+		}
+	}
+
+	// Build foto_thumbnail_updates map from existing_foto_ids and existing_foto_thumbnails
+	fotoThumbnailUpdates := make(map[string]string)
+	if len(existingFotoIds) > 0 && len(existingFotoThumbnails) > 0 {
+		for i, fotoID := range existingFotoIds {
+			if i < len(existingFotoThumbnails) {
+				fotoThumbnailUpdates[fotoID] = existingFotoThumbnails[i]
+			}
+		}
+	}
+
+	// Also support direct foto_thumbnail_updates map format (backward compatibility)
+	if fotoThumbnailUpdatesStr := ctx.PostForm("foto_thumbnail_updates"); fotoThumbnailUpdatesStr != "" {
+		var directUpdates map[string]string
+		if err := json.Unmarshal([]byte(fotoThumbnailUpdatesStr), &directUpdates); err == nil {
+			// Merge with existing updates
+			for k, v := range directUpdates {
+				fotoThumbnailUpdates[k] = v
+			}
+		}
+	}
+
 	// Parse foto_to_delete if provided
 	var fotoToDelete []string
 	if fotoDeleteStr := ctx.PostForm("foto_to_delete"); fotoDeleteStr != "" {
@@ -262,12 +319,13 @@ func (c *ActivityGalleryController) Update(ctx *gin.Context) {
 
 	// Create request DTO
 	req := &dtos.ActivityGalleryUpdateRequest{
-		ID:              uint(id),
-		Judul:           judul,
-		Tanggal:         tanggal,
-		StatusPublikasi: statusPublikasi,
-		Status:          status,
-		FotoToDelete:    fotoToDelete,
+		ID:                   uint(id),
+		Judul:                judul,
+		Tanggal:              tanggal,
+		StatusPublikasi:      statusPublikasi,
+		Status:               status,
+		FotoToDelete:         fotoToDelete,
+		FotoThumbnailUpdates: fotoThumbnailUpdates,
 	}
 
 	// Get user ID from context
@@ -277,7 +335,7 @@ func (c *ActivityGalleryController) Update(ctx *gin.Context) {
 		return
 	}
 
-	data, err := c.service.Update(uint(id), fotos, req, userID.(uint))
+	data, err := c.service.Update(uint(id), fotos, newFotoThumbnails, req, userID.(uint))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -313,4 +371,24 @@ func (c *ActivityGalleryController) Delete(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Activity Gallery deleted successfully",
 	})
+}
+
+
+// GetPublicLatest retrieves 10 latest published and active activity galleries for public display (no auth required)
+// @Summary Get latest Activity Galleries for public
+// @Description Retrieve 10 latest published and active activity galleries ordered by tanggal DESC (no authentication required)
+// @Tags activity-gallery
+// @Accept json
+// @Produce json
+// @Success 200 {object} dtos.ActivityGalleryPublicListResponse
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-galeri-kegiatan [post]
+func (c *ActivityGalleryController) GetPublicLatest(ctx *gin.Context) {
+	data, err := c.service.GetPublicLatest()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
 }
