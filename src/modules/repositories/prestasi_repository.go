@@ -235,6 +235,7 @@ func (r *PrestasiRepositoryImpl) GetPublicLatest() ([]models.Prestasi, error) {
 	if err := r.db.Preload("PesertaDidik").
 		Preload("AnggotaTimPrestasi").
 		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
 		Order("tanggal_lomba DESC").
 		Limit(10).
 		Find(&data).Error; err != nil {

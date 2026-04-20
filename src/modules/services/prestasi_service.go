@@ -658,14 +658,22 @@ func (s *PrestasiServiceImpl) GetPublicLatest() (*dtos.PrestasiPublicListRespons
 			}
 		} else if jenisLower == "grup" || jenisLower == "tim" {
 			publicResponse.NamaGrup = item.NamaGrup
-			// Get anggota tim names
-			anggotaNames := make([]string, 0)
+			// Get anggota tim details
+			anggotaDetails := make([]dtos.AnggotaTimPublicDetail, 0)
 			for _, anggota := range item.AnggotaTimPrestasi {
 				if anggota.PesertaDidik != nil {
-					anggotaNames = append(anggotaNames, anggota.PesertaDidik.Nama)
+					detail := dtos.AnggotaTimPublicDetail{
+						Nama: anggota.PesertaDidik.Nama,
+						NIS:  anggota.PesertaDidik.NIS,
+					}
+					// Get rombel name
+					if anggota.PesertaDidik.Rombel != nil {
+						detail.Rombel = anggota.PesertaDidik.Rombel.Name
+					}
+					anggotaDetails = append(anggotaDetails, detail)
 				}
 			}
-			publicResponse.AnggotaTim = anggotaNames
+			publicResponse.AnggotaTim = anggotaDetails
 		}
 
 		responses = append(responses, publicResponse)
