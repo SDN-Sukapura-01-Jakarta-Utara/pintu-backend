@@ -451,3 +451,22 @@ func (c *PrestasiController) Delete(ctx *gin.Context) {
 		"message": "Prestasi deleted successfully",
 	})
 }
+
+// GetPublicLatest retrieves 10 latest prestasi for public display (no auth required)
+// @Summary Get latest Prestasi for public
+// @Description Retrieve 10 latest prestasi ordered by tanggal_lomba DESC (no authentication required)
+// @Tags prestasi
+// @Accept json
+// @Produce json
+// @Success 200 {object} gin.H{data=dtos.PrestasiPublicListResponse}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-prestasi [post]
+func (c *PrestasiController) GetPublicLatest(ctx *gin.Context) {
+	data, err := c.service.GetPublicLatest()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

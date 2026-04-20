@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"mime/multipart"
+	"strings"
 	"time"
 
 	"pintu-backend/src/dtos"
@@ -18,6 +19,7 @@ type PrestasiService interface {
 	GetByID(id uint) (*dtos.PrestasiResponse, error)
 	GetAll(limit int, offset int) (*dtos.PrestasiListResponse, error)
 	GetAllWithFilter(params repositories.GetPrestasiParams) (*dtos.PrestasiListWithPaginationResponse, error)
+	GetPublicLatest() (*dtos.PrestasiPublicListResponse, error)
 	Update(id uint, foto []*multipart.FileHeader, fotoThumbnails []string, req *dtos.PrestasiUpdateRequest, userID uint) (*dtos.PrestasiResponse, error)
 	Delete(id uint) error
 }
@@ -614,4 +616,62 @@ func (s *PrestasiServiceImpl) mapPesertaDidikToResponse(data *models.PesertaDidi
 		CreatedByID:      data.CreatedByID,
 		UpdatedByID:      data.UpdatedByID,
 	}
+}
+
+// GetPublicLatest retrieves 10 latest prestasi for public display
+func (s *PrestasiServiceImpl) GetPublicLatest() (*dtos.PrestasiPublicListResponse, error) {
+	data, err := s.repository.GetPublicLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.PrestasiPublicResponse, 0)
+	for _, item := range data {
+		// Get active thumbnail
+		var fotoThumbnail string
+		var fotoModels []models.FotoItem
+		if err := json.Unmarshal(item.Foto, &fotoModels); err == nil {
+			for _, fotoItem := range fotoModels {
+				if fotoItem.Thumbnail == "active" {
+					fotoThumbnail = s.r2Storage.GetPublicURL(fotoItem.URL)
+					break
+				}
+			}
+		}
+
+		publicResponse := dtos.PrestasiPublicResponse{
+			ID:              item.ID,
+			Jenis:           item.Jenis,
+			NamaPrestasi:    item.NamaPrestasi,
+			TingkatPrestasi: item.TingkatPrestasi,
+			Juara:           item.Juara,
+			TanggalLomba:    item.TanggalLomba,
+			FotoThumbnail:   fotoThumbnail,
+		}
+
+		// Set nama based on jenis
+		jenisLower := strings.ToLower(item.Jenis)
+		if jenisLower == "individu" {
+			if item.PesertaDidik != nil {
+				publicResponse.NamaPesertaDidik = item.PesertaDidik.Nama
+			}
+		} else if jenisLower == "grup" || jenisLower == "tim" {
+			publicResponse.NamaGrup = item.NamaGrup
+			// Get anggota tim names
+			anggotaNames := make([]string, 0)
+			for _, anggota := range item.AnggotaTimPrestasi {
+				if anggota.PesertaDidik != nil {
+					anggotaNames = append(anggotaNames, anggota.PesertaDidik.Nama)
+				}
+			}
+			publicResponse.AnggotaTim = anggotaNames
+		}
+
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.PrestasiPublicListResponse{
+		Data: responses,
+	}, nil
 }

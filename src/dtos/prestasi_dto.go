@@ -142,3 +142,22 @@ type PrestasiListWithPaginationResponse struct {
 	Data       []PrestasiResponse `json:"data"`
 	Pagination PaginationInfo     `json:"pagination"`
 }
+
+// PrestasiPublicResponse represents the public response for prestasi
+type PrestasiPublicResponse struct {
+	ID               uint      `json:"id"`
+	Jenis            string    `json:"jenis"`
+	NamaPesertaDidik string    `json:"nama_peserta_didik,omitempty"` // For individu
+	NamaGrup         string    `json:"nama_grup,omitempty"`          // For grup
+	AnggotaTim       []string  `json:"anggota_tim,omitempty"`        // For grup
+	NamaPrestasi     string    `json:"nama_prestasi"`
+	TingkatPrestasi  string    `json:"tingkat_prestasi"`
+	Juara            string    `json:"juara"`
+	TanggalLomba     time.Time `json:"tanggal_lomba"`
+	FotoThumbnail    string    `json:"foto_thumbnail"` // Active thumbnail only
+}
+
+// PrestasiPublicListResponse represents the public list response
+type PrestasiPublicListResponse struct {
+	Data []PrestasiPublicResponse `json:"data"`
+}

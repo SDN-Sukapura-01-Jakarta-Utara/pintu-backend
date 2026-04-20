@@ -26,6 +26,12 @@ func RegisterPrestasiRoutes(router *gin.Engine, db *gorm.DB) {
 	{
 		PrestasiRoutes(api, controller)
 	}
+
+	// Public routes (no authentication required)
+	publicAPI := router.Group("/api/v1/public")
+	{
+		PrestasiPublicRoutes(publicAPI, controller)
+	}
 }
 
 // PrestasiRoutes sets up routes for prestasi endpoints
@@ -39,4 +45,9 @@ func PrestasiRoutes(router *gin.RouterGroup, controller *controllers.PrestasiCon
 		prestasiGroup.POST("/update-prestasi", controller.Update)
 		prestasiGroup.POST("/delete-prestasi", controller.Delete)
 	}
+}
+
+// PrestasiPublicRoutes sets up public routes for prestasi endpoints (no auth required)
+func PrestasiPublicRoutes(router *gin.RouterGroup, controller *controllers.PrestasiController) {
+	router.POST("/get-data-prestasi", controller.GetPublicLatest)
 }

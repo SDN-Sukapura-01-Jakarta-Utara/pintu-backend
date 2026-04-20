@@ -37,6 +37,7 @@ type PrestasiRepository interface {
 	GetByID(id uint) (*models.Prestasi, error)
 	GetAll(limit int, offset int) ([]models.Prestasi, int64, error)
 	GetAllWithFilter(params GetPrestasiParams) ([]models.Prestasi, int64, error)
+	GetPublicLatest() ([]models.Prestasi, error)
 	Update(data *models.Prestasi) error
 	Delete(id uint) error
 	// Anggota Tim methods
@@ -226,4 +227,18 @@ func (r *PrestasiRepositoryImpl) DeleteAnggotaTim(id uint) error {
 // DeleteAnggotaTimByPrestasiID deletes all AnggotaTimPrestasi records by prestasi ID
 func (r *PrestasiRepositoryImpl) DeleteAnggotaTimByPrestasiID(prestasiID uint) error {
 	return r.db.Where("prestasi_id = ?", prestasiID).Delete(&models.AnggotaTimPrestasi{}).Error
+}
+
+// GetPublicLatest retrieves 10 latest prestasi ordered by tanggal_lomba DESC
+func (r *PrestasiRepositoryImpl) GetPublicLatest() ([]models.Prestasi, error) {
+	var data []models.Prestasi
+	if err := r.db.Preload("PesertaDidik").
+		Preload("AnggotaTimPrestasi").
+		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Order("tanggal_lomba DESC").
+		Limit(10).
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }
