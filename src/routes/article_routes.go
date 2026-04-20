@@ -40,4 +40,10 @@ func RegisterArticleRoutes(router *gin.Engine, db *gorm.DB) {
 		// Delete article
 		protected.POST("/delete-article", articleController.Delete)
 	}
+
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-artikel", articleController.GetPublicLatest)
+	}
 }

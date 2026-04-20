@@ -84,3 +84,19 @@ type ArticleListWithPaginationResponse struct {
 	Data       []ArticleResponse `json:"data"`
 	Pagination PaginationInfo    `json:"pagination"`
 }
+
+// ArticlePublicResponse represents the public response for article
+type ArticlePublicResponse struct {
+	ID          uint      `json:"id"`
+	Judul       string    `json:"judul"`
+	Tanggal     time.Time `json:"tanggal"`
+	Kategori    string    `json:"kategori"`
+	Deskripsi   string    `json:"deskripsi"`
+	Gambar      string    `json:"gambar"`
+	Penulis     string    `json:"penulis"`
+}
+
+// ArticlePublicListResponse represents the public list response
+type ArticlePublicListResponse struct {
+	Data []ArticlePublicResponse `json:"data"`
+}

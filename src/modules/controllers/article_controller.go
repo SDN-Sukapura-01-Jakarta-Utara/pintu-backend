@@ -349,3 +349,22 @@ func (c *ArticleController) Delete(ctx *gin.Context) {
 		"message": "Article deleted successfully",
 	})
 }
+
+// GetPublicLatest retrieves 10 latest published and active articles for public display (no auth required)
+// @Summary Get latest Articles for public
+// @Description Retrieve 10 latest published and active articles ordered by tanggal DESC (no authentication required)
+// @Tags articles
+// @Accept json
+// @Produce json
+// @Success 200 {object} dtos.ArticlePublicListResponse
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-artikel [post]
+func (c *ArticleController) GetPublicLatest(ctx *gin.Context) {
+	data, err := c.service.GetPublicLatest()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

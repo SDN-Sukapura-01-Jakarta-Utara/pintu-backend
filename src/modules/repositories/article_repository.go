@@ -32,6 +32,7 @@ type ArticleRepository interface {
 	GetByID(id uint) (*models.Article, error)
 	GetAll(limit int, offset int) ([]models.Article, int64, error)
 	GetAllWithFilter(params GetArticleParams) ([]models.Article, int64, error)
+	GetPublicLatest() ([]models.Article, error)
 	Update(data *models.Article) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -135,4 +136,16 @@ func (r *ArticleRepositoryImpl) Delete(id uint) error {
 // DeleteByGambar deletes Article record by gambar key
 func (r *ArticleRepositoryImpl) DeleteByGambar(gambar string) error {
 	return r.db.Where("gambar = ?", gambar).Delete(&models.Article{}).Error
+}
+
+// GetPublicLatest retrieves 10 latest published and active articles ordered by tanggal DESC
+func (r *ArticleRepositoryImpl) GetPublicLatest() ([]models.Article, error) {
+	var data []models.Article
+	if err := r.db.Where("status = ? AND status_publikasi = ?", "active", "published").
+		Order("tanggal DESC").
+		Limit(10).
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }
