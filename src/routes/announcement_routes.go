@@ -40,4 +40,11 @@ func RegisterAnnouncementRoutes(router *gin.Engine, db *gorm.DB) {
 		// Delete announcement
 		protected.POST("/delete-announcement", announcementController.Delete)
 	}
+
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-pengumuman-latest", announcementController.GetPublicLatest)
+		public.POST("/get-data-pengumuman", announcementController.GetPublicNext3)
+	}
 }

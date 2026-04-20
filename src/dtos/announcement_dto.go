@@ -72,3 +72,18 @@ type AnnouncementListWithPaginationResponse struct {
 	Data       []AnnouncementResponse `json:"data"`
 	Pagination PaginationInfo         `json:"pagination"`
 }
+
+// AnnouncementPublicResponse represents the public response for announcement
+type AnnouncementPublicResponse struct {
+	ID        uint      `json:"id"`
+	Judul     string    `json:"judul"`
+	Tanggal   time.Time `json:"tanggal"`
+	Deskripsi string    `json:"deskripsi"`
+	Gambar    string    `json:"gambar"`
+	Penulis   string    `json:"penulis"`
+}
+
+// AnnouncementPublicListResponse represents the public list response
+type AnnouncementPublicListResponse struct {
+	Data []AnnouncementPublicResponse `json:"data"`
+}

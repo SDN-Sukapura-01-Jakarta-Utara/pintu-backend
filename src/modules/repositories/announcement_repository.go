@@ -31,6 +31,8 @@ type AnnouncementRepository interface {
 	GetByID(id uint) (*models.Announcement, error)
 	GetAll(limit int, offset int) ([]models.Announcement, int64, error)
 	GetAllWithFilter(params GetAnnouncementParams) ([]models.Announcement, int64, error)
+	GetPublicLatest() (*models.Announcement, error)
+	GetPublicNext3() ([]models.Announcement, error)
 	Update(data *models.Announcement) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -131,4 +133,28 @@ func (r *AnnouncementRepositoryImpl) Delete(id uint) error {
 // DeleteByGambar deletes Announcement record by gambar key
 func (r *AnnouncementRepositoryImpl) DeleteByGambar(gambar string) error {
 	return r.db.Where("gambar = ?", gambar).Delete(&models.Announcement{}).Error
+}
+
+// GetPublicLatest retrieves the latest published and active announcement ordered by tanggal DESC
+func (r *AnnouncementRepositoryImpl) GetPublicLatest() (*models.Announcement, error) {
+	var data models.Announcement
+	if err := r.db.Where("status = ? AND status_publikasi = ?", "active", "published").
+		Order("tanggal DESC").
+		First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetPublicNext3 retrieves 3 announcements (2nd to 4th latest) published and active ordered by tanggal DESC
+func (r *AnnouncementRepositoryImpl) GetPublicNext3() ([]models.Announcement, error) {
+	var data []models.Announcement
+	if err := r.db.Where("status = ? AND status_publikasi = ?", "active", "published").
+		Order("tanggal DESC").
+		Offset(1). // Skip the first (latest) one
+		Limit(3).  // Get next 3
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

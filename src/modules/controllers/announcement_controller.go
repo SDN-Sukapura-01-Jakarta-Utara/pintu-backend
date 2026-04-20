@@ -336,3 +336,42 @@ func (c *AnnouncementController) Delete(ctx *gin.Context) {
 		"message": "Announcement deleted successfully",
 	})
 }
+
+// GetPublicLatest retrieves the latest published and active announcement for public display (no auth required)
+// @Summary Get latest Announcement for public
+// @Description Retrieve the latest published and active announcement ordered by tanggal DESC (no authentication required)
+// @Tags announcements
+// @Accept json
+// @Produce json
+// @Success 200 {object} dtos.AnnouncementPublicResponse
+// @Failure 404 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-pengumuman-latest [post]
+func (c *AnnouncementController) GetPublicLatest(ctx *gin.Context) {
+	data, err := c.service.GetPublicLatest()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "No announcement found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+
+// GetPublicNext3 retrieves 3 announcements (2nd to 4th latest) for public display (no auth required)
+// @Summary Get next 3 Announcements for public
+// @Description Retrieve 3 announcements (2nd to 4th latest) published and active ordered by tanggal DESC (no authentication required)
+// @Tags announcements
+// @Accept json
+// @Produce json
+// @Success 200 {object} dtos.AnnouncementPublicListResponse
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-pengumuman [post]
+func (c *AnnouncementController) GetPublicNext3(ctx *gin.Context) {
+	data, err := c.service.GetPublicNext3()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

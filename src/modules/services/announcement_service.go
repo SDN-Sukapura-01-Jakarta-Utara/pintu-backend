@@ -18,6 +18,8 @@ type AnnouncementService interface {
 	GetByID(id uint) (*dtos.AnnouncementResponse, error)
 	GetAll(limit int, offset int) (*dtos.AnnouncementListResponse, error)
 	GetAllWithFilter(params repositories.GetAnnouncementParams) (*dtos.AnnouncementListWithPaginationResponse, error)
+	GetPublicLatest() (*dtos.AnnouncementPublicResponse, error)
+	GetPublicNext3() (*dtos.AnnouncementPublicListResponse, error)
 	Update(id uint, gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.AnnouncementUpdateRequest, userID uint) (*dtos.AnnouncementResponse, error)
 	Delete(id uint) error
 }
@@ -456,4 +458,47 @@ func (s *AnnouncementServiceImpl) mapToResponse(data *models.Announcement) *dtos
 		CreatedByID:     data.CreatedByID,
 		UpdatedByID:     data.UpdatedByID,
 	}
+}
+
+// GetPublicLatest retrieves the latest published and active announcement for public display
+func (s *AnnouncementServiceImpl) GetPublicLatest() (*dtos.AnnouncementPublicResponse, error) {
+	data, err := s.repository.GetPublicLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	return &dtos.AnnouncementPublicResponse{
+		ID:        data.ID,
+		Judul:     data.Judul,
+		Tanggal:   data.Tanggal,
+		Deskripsi: data.Deskripsi,
+		Gambar:    s.r2Storage.GetPublicURL(data.Gambar),
+		Penulis:   data.Penulis,
+	}, nil
+}
+
+// GetPublicNext3 retrieves 3 announcements (2nd to 4th latest) for public display
+func (s *AnnouncementServiceImpl) GetPublicNext3() (*dtos.AnnouncementPublicListResponse, error) {
+	data, err := s.repository.GetPublicNext3()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.AnnouncementPublicResponse, 0)
+	for _, item := range data {
+		publicResponse := dtos.AnnouncementPublicResponse{
+			ID:        item.ID,
+			Judul:     item.Judul,
+			Tanggal:   item.Tanggal,
+			Deskripsi: item.Deskripsi,
+			Gambar:    s.r2Storage.GetPublicURL(item.Gambar),
+			Penulis:   item.Penulis,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.AnnouncementPublicListResponse{
+		Data: responses,
+	}, nil
 }
