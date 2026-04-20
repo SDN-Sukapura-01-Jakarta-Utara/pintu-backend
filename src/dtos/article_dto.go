@@ -6,10 +6,11 @@ import (
 
 // FileItemDTO represents a single file in the files array
 type FileItemDTO struct {
-	ID       string `json:"id"`
-	Filename string `json:"filename"`
-	URL      string `json:"url"`
-	Size     int64  `json:"size"`
+	ID        string `json:"id"`
+	Filename  string `json:"filename"`
+	URL       string `json:"url"`
+	Size      int64  `json:"size"`
+	Thumbnail string `json:"thumbnail,omitempty"` // "active" or "inactive"
 }
 
 // ArticleCreateRequest represents the request payload for creating Article
