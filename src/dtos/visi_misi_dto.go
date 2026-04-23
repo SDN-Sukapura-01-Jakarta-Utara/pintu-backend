@@ -33,3 +33,9 @@ type VisiMisiListResponse struct {
 	Offset int                `json:"offset"`
 	Total  int64              `json:"total"`
 }
+
+// VisiMisiPublicResponse represents the public response payload for VisiMisi
+type VisiMisiPublicResponse struct {
+	Visi string `json:"visi"`
+	Misi string `json:"misi"`
+}

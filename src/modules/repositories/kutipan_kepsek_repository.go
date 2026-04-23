@@ -13,6 +13,7 @@ type KutipanKepsekRepository interface {
 	GetAll(limit int, offset int) ([]models.KutipanKepsek, int64, error)
 	Update(data *models.KutipanKepsek) error
 	Delete(id uint) error
+	GetPublic() (*models.KutipanKepsek, error)
 }
 
 type KutipanKepsekRepositoryImpl struct {
@@ -64,4 +65,13 @@ func (r *KutipanKepsekRepositoryImpl) Update(data *models.KutipanKepsek) error {
 // Delete deletes KutipanKepsek record by ID
 func (r *KutipanKepsekRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.KutipanKepsek{}, id).Error
+}
+
+// GetPublic retrieves the first KutipanKepsek record for public display
+func (r *KutipanKepsekRepositoryImpl) GetPublic() (*models.KutipanKepsek, error) {
+	var data models.KutipanKepsek
+	if err := r.db.First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
 }

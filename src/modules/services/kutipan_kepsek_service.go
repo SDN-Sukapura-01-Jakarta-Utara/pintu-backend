@@ -16,6 +16,7 @@ type KutipanKepsekService interface {
 	GetAll(limit int, offset int) (*dtos.KutipanKepsekListResponse, error)
 	UpdateWithFile(id uint, file *multipart.FileHeader, req *dtos.KutipanKepsekUpdateRequest, userID uint) (*dtos.KutipanKepsekResponse, error)
 	Delete(id uint) error
+	GetPublic() (*dtos.KutipanKepsekPublicResponse, error)
 }
 
 type KutipanKepsekServiceImpl struct {
@@ -198,6 +199,23 @@ func (s *KutipanKepsekServiceImpl) Delete(id uint) error {
 
 	// Delete from database
 	return s.repository.Delete(id)
+}
+
+// GetPublic retrieves KutipanKepsek for public display
+func (s *KutipanKepsekServiceImpl) GetPublic() (*dtos.KutipanKepsekPublicResponse, error) {
+	data, err := s.repository.GetPublic()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get public URL for the file
+	publicURL := s.r2Storage.GetPublicURL(data.FotoKepsek)
+
+	return &dtos.KutipanKepsekPublicResponse{
+		NamaKepsek:    data.NamaKepsek,
+		FotoKepsek:    publicURL,
+		KutipanKepsek: data.KutipanKepsek,
+	}, nil
 }
 
 // mapToResponse maps model to DTO response

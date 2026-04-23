@@ -17,6 +17,12 @@ func RegisterVisiMisiRoutes(router *gin.Engine, db *gorm.DB) {
 	visiMisiService := services.NewVisiMisiService(visiMisiRepo)
 	visiMisiController := controllers.NewVisiMisiController(visiMisiService)
 
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-visi-misi", visiMisiController.GetPublic)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/visi-misi")
 	protected.Use(middleware.AuthMiddleware())

@@ -13,6 +13,7 @@ type VisiMisiRepository interface {
 	GetAll(limit int, offset int) ([]models.VisiMisi, int64, error)
 	Update(data *models.VisiMisi) error
 	Delete(id uint) error
+	GetPublic() (*models.VisiMisi, error)
 }
 
 type VisiMisiRepositoryImpl struct {
@@ -64,4 +65,13 @@ func (r *VisiMisiRepositoryImpl) Update(data *models.VisiMisi) error {
 // Delete deletes VisiMisi record by ID
 func (r *VisiMisiRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.VisiMisi{}, id).Error
+}
+
+// GetPublic retrieves the first VisiMisi record for public display
+func (r *VisiMisiRepositoryImpl) GetPublic() (*models.VisiMisi, error) {
+	var data models.VisiMisi
+	if err := r.db.First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
 }

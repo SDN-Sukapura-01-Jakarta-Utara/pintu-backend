@@ -190,3 +190,14 @@ func (c *KutipanKepsekController) Delete(ctx *gin.Context) {
 		"message": "Kutipan kepsek deleted successfully",
 	})
 }
+
+// GetPublic retrieves KutipanKepsek for public display (no auth required)
+func (c *KutipanKepsekController) GetPublic(ctx *gin.Context) {
+	data, err := c.service.GetPublic()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Kutipan kepsek not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}

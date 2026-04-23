@@ -13,6 +13,7 @@ type VisiMisiService interface {
 	GetAll(limit int, offset int) (*dtos.VisiMisiListResponse, error)
 	Update(req *dtos.VisiMisiUpdateRequest, userID uint) (*dtos.VisiMisiResponse, error)
 	Delete(id uint) error
+	GetPublic() (*dtos.VisiMisiPublicResponse, error)
 }
 
 type VisiMisiServiceImpl struct {
@@ -108,6 +109,19 @@ func (s *VisiMisiServiceImpl) Update(req *dtos.VisiMisiUpdateRequest, userID uin
 // Delete deletes VisiMisi by ID
 func (s *VisiMisiServiceImpl) Delete(id uint) error {
 	return s.repository.Delete(id)
+}
+
+// GetPublic retrieves VisiMisi for public display
+func (s *VisiMisiServiceImpl) GetPublic() (*dtos.VisiMisiPublicResponse, error) {
+	data, err := s.repository.GetPublic()
+	if err != nil {
+		return nil, err
+	}
+
+	return &dtos.VisiMisiPublicResponse{
+		Visi: data.Visi,
+		Misi: data.Misi,
+	}, nil
 }
 
 // mapToResponse maps model to DTO response

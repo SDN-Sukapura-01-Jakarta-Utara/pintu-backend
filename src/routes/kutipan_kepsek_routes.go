@@ -21,6 +21,12 @@ func RegisterKutipanKepsekRoutes(router *gin.Engine, db *gorm.DB) {
 	kutipanKepsekService := services.NewKutipanKepsekService(kutipanKepsekRepo, r2Storage)
 	kutipanKepsekController := controllers.NewKutipanKepsekController(kutipanKepsekService)
 
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-kutipan-kepsek", kutipanKepsekController.GetPublic)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/kutipan-kepsek")
 	protected.Use(middleware.AuthMiddleware())

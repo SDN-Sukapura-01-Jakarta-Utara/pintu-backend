@@ -134,3 +134,14 @@ func (c *VisiMisiController) Delete(ctx *gin.Context) {
 		"message": "Visi misi deleted successfully",
 	})
 }
+
+// GetPublic retrieves VisiMisi for public display (no auth required)
+func (c *VisiMisiController) GetPublic(ctx *gin.Context) {
+	data, err := c.service.GetPublic()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Visi misi not found"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}

@@ -34,3 +34,10 @@ type KutipanKepsekListResponse struct {
 	Offset int                     `json:"offset"`
 	Total  int64                   `json:"total"`
 }
+
+// KutipanKepsekPublicResponse represents the public response payload for KutipanKepsek
+type KutipanKepsekPublicResponse struct {
+	NamaKepsek    string `json:"nama_kepsek"`
+	FotoKepsek    string `json:"foto_kepsek"`
+	KutipanKepsek string `json:"kutipan_kepsek"`
+}
