@@ -17,6 +17,7 @@ type SaranaPrasaranaService interface {
 	GetAllWithFilter(params repositories.GetSaranaPrasaranaParams) (*dtos.SaranaPrasaranaListWithPaginationResponse, error)
 	UpdateWithFile(id uint, file *multipart.FileHeader, req *dtos.SaranaPrasaranaUpdateRequest, userID uint) (*dtos.SaranaPrasaranaResponse, error)
 	Delete(id uint) error
+	GetPublic() ([]dtos.SaranaPrasaranaPublicResponse, error)
 }
 
 type SaranaPrasaranaServiceImpl struct {
@@ -243,6 +244,26 @@ func (s *SaranaPrasaranaServiceImpl) Delete(id uint) error {
 
 	// Delete from database
 	return s.repository.Delete(id)
+}
+
+// GetPublic retrieves all active SaranaPrasarana for public display
+func (s *SaranaPrasaranaServiceImpl) GetPublic() ([]dtos.SaranaPrasaranaPublicResponse, error) {
+	data, err := s.repository.GetAllPublic()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.SaranaPrasaranaPublicResponse, len(data))
+	for i, item := range data {
+		publicURL := s.r2Storage.GetPublicURL(item.Foto)
+		responses[i] = dtos.SaranaPrasaranaPublicResponse{
+			Name: item.Name,
+			Foto: publicURL,
+		}
+	}
+
+	return responses, nil
 }
 
 // mapToResponse maps model to DTO response

@@ -52,3 +52,9 @@ type SaranaPrasaranaListWithPaginationResponse struct {
 	Data       []SaranaPrasaranaResponse `json:"data"`
 	Pagination PaginationInfo            `json:"pagination"`
 }
+
+// SaranaPrasaranaPublicResponse represents the public response payload for SaranaPrasarana
+type SaranaPrasaranaPublicResponse struct {
+	Name string `json:"name"`
+	Foto string `json:"foto"`
+}

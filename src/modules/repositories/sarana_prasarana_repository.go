@@ -28,6 +28,7 @@ type SaranaPrasaranaRepository interface {
 	GetAllWithFilter(params GetSaranaPrasaranaParams) ([]models.SaranaPrasarana, int64, error)
 	Update(data *models.SaranaPrasarana) error
 	Delete(id uint) error
+	GetAllPublic() ([]models.SaranaPrasarana, error)
 }
 
 type SaranaPrasaranaRepositoryImpl struct {
@@ -107,4 +108,13 @@ func (r *SaranaPrasaranaRepositoryImpl) Update(data *models.SaranaPrasarana) err
 // Delete deletes SaranaPrasarana record by ID
 func (r *SaranaPrasaranaRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.SaranaPrasarana{}, id).Error
+}
+
+// GetAllPublic retrieves all active SaranaPrasarana records for public display
+func (r *SaranaPrasaranaRepositoryImpl) GetAllPublic() ([]models.SaranaPrasarana, error) {
+	var data []models.SaranaPrasarana
+	if err := r.db.Where("status = ?", "active").Order("created_at DESC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

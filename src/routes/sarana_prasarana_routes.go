@@ -21,6 +21,12 @@ func RegisterSaranaPrasaranaRoutes(router *gin.Engine, db *gorm.DB) {
 	saranaPrasaranaService := services.NewSaranaPrasaranaService(saranaPrasaranaRepo, r2Storage)
 	saranaPrasaranaController := controllers.NewSaranaPrasaranaController(saranaPrasaranaService)
 
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-sarpras", saranaPrasaranaController.GetPublic)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/sarana-prasarana")
 	protected.Use(middleware.AuthMiddleware())
