@@ -144,6 +144,17 @@ func (c *KepegawaianController) GetAll(ctx *gin.Context) {
 	})
 }
 
+// GetAllWithoutPagination retrieves all active Kepegawaian without pagination
+func (c *KepegawaianController) GetAllWithoutPagination(ctx *gin.Context) {
+	data, err := c.service.GetAllWithoutPagination()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}
+
 // Update updates a Kepegawaian
 func (c *KepegawaianController) Update(ctx *gin.Context) {
 	// Parse multipart form (max 100MB)
@@ -169,11 +180,25 @@ func (c *KepegawaianController) Update(ctx *gin.Context) {
 	nama := ctx.PostForm("nama")
 	username := ctx.PostForm("username")
 	password := ctx.PostForm("password")
-	nip := ctx.PostForm("nip")
-	nkki := ctx.PostForm("nkki")
+	nipStr := ctx.PostForm("nip")
+	nkkiStr := ctx.PostForm("nkki")
 	kategori := ctx.PostForm("kategori")
 	jabatan := ctx.PostForm("jabatan")
 	status := ctx.PostForm("status")
+
+	// Convert NIP and NKKI to pointers (to differentiate between not sent vs empty)
+	var nip *string
+	var nkki *string
+	
+	// Check if nip field exists in form
+	if _, exists := ctx.Request.PostForm["nip"]; exists {
+		nip = &nipStr
+	}
+	
+	// Check if nkki field exists in form
+	if _, exists := ctx.Request.PostForm["nkki"]; exists {
+		nkki = &nkkiStr
+	}
 
 	// Get bidang_studi_id (optional)
 	var bidangStudiID *uint

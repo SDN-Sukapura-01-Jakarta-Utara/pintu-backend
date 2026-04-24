@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
@@ -15,6 +16,7 @@ type StrukturOrganisasiService interface {
 	GetAllWithFilter(params repositories.GetStrukturOrganisasiParams) (*dtos.StrukturOrganisasiListWithPaginationResponse, error)
 	Update(req *dtos.StrukturOrganisasiUpdateRequest, userID uint) (*dtos.StrukturOrganisasiResponse, error)
 	Delete(id uint) error
+	GetPublic() ([]dtos.StrukturOrganisasiGroupedResponse, error)
 }
 
 type StrukturOrganisasiServiceImpl struct {
@@ -207,6 +209,267 @@ func (s *StrukturOrganisasiServiceImpl) Delete(id uint) error {
 		return errors.New("struktur organisasi not found")
 	}
 	return s.repository.Delete(id)
+}
+
+// GetPublic retrieves all active StrukturOrganisasi for public display, grouped by urutan
+func (s *StrukturOrganisasiServiceImpl) GetPublic() ([]dtos.StrukturOrganisasiGroupedResponse, error) {
+	data, err := s.repository.GetAllPublic()
+	if err != nil {
+		return nil, err
+	}
+
+	// Group by urutan for urutan 1 and 2
+	groupedMap := make(map[int][]dtos.StrukturOrganisasiPublicResponse)
+	// Special grouping for urutan 3 (guru kelas) by kelas
+	guruKelasMap := make(map[string][]dtos.PegawaiPublicDetailResponse)
+	guruKelasRelasiMap := make(map[string]string) // Store relasi for each kelas
+	// Special grouping for urutan 4 (guru mapel) by bidang studi
+	guruMapelMap := make(map[string][]dtos.PegawaiPublicDetailResponse)
+	guruMapelRelasiMap := make(map[string]string) // Store relasi for each bidang studi
+	// Grouping for urutan 5+ by jabatan
+	byJabatanMap := make(map[int]map[string][]dtos.StrukturOrganisasiPublicResponse)
+
+	for _, item := range data {
+		response := dtos.StrukturOrganisasiPublicResponse{
+			NamaNonPegawai:    item.NamaNonPegawai,
+			JabatanNonPegawai: item.JabatanNonPegawai,
+			Urutan:            item.Urutan,
+			Relasi:            item.Relasi,
+		}
+
+		// Add detailed Pegawai data if available
+		if item.Pegawai != nil {
+			pegawaiDetail := dtos.PegawaiPublicDetailResponse{
+				NamaLengkap: item.Pegawai.Nama,
+				NIP:         item.Pegawai.NIP,
+				NKKI:        item.Pegawai.NKKI,
+				Jabatan:     item.Pegawai.Jabatan,
+				Kategori:    item.Pegawai.Kategori,
+			}
+
+			// Urutan 3: Guru Kelas (group by kelas)
+			if item.Urutan == 3 && item.Pegawai.Kategori == "Pendidik" {
+				kelasMengajar := make([]dtos.RombelWithKelasResponse, 0)
+				
+				// Add rombel_guru_kelas_id (guru kelas)
+				if item.Pegawai.RombelGuruKelas != nil {
+					namaKelas := ""
+					if item.Pegawai.RombelGuruKelas.Kelas != nil {
+						namaKelas = item.Pegawai.RombelGuruKelas.Kelas.Name
+					}
+					kelasMengajar = append(kelasMengajar, dtos.RombelWithKelasResponse{
+						ID:        item.Pegawai.RombelGuruKelas.ID,
+						Rombel:    item.Pegawai.RombelGuruKelas.Name,
+						NamaKelas: namaKelas,
+						Status:    item.Pegawai.RombelGuruKelas.Status,
+					})
+					
+					// Group by nama kelas
+					pegawaiDetail.KelasMengajar = kelasMengajar
+					guruKelasMap[namaKelas] = append(guruKelasMap[namaKelas], pegawaiDetail)
+					// Store relasi (use first item's relasi if not set)
+					if guruKelasRelasiMap[namaKelas] == "" {
+						guruKelasRelasiMap[namaKelas] = item.Relasi
+					}
+				}
+			} else if item.Urutan == 4 && item.Pegawai.Kategori == "Pendidik" {
+				// Urutan 4: Guru Bidang Studi (group by bidang studi)
+				if item.Pegawai.BidangStudi != nil {
+					pegawaiDetail.BidangStudi = item.Pegawai.BidangStudi.Name
+					// Group by bidang studi
+					guruMapelMap[item.Pegawai.BidangStudi.Name] = append(guruMapelMap[item.Pegawai.BidangStudi.Name], pegawaiDetail)
+					// Store relasi (use first item's relasi if not set)
+					if guruMapelRelasiMap[item.Pegawai.BidangStudi.Name] == "" {
+						guruMapelRelasiMap[item.Pegawai.BidangStudi.Name] = item.Relasi
+					}
+				}
+			} else if item.Urutan >= 5 {
+				// Urutan 5+: Group by jabatan
+				if item.Pegawai.BidangStudi != nil {
+					pegawaiDetail.BidangStudi = item.Pegawai.BidangStudi.Name
+				}
+
+				if item.Pegawai.Kategori == "Pendidik" {
+					kelasMengajar := make([]dtos.RombelWithKelasResponse, 0)
+					
+					// Add rombel_guru_kelas_id (guru kelas)
+					if item.Pegawai.RombelGuruKelas != nil {
+						namaKelas := ""
+						if item.Pegawai.RombelGuruKelas.Kelas != nil {
+							namaKelas = item.Pegawai.RombelGuruKelas.Kelas.Name
+						}
+						kelasMengajar = append(kelasMengajar, dtos.RombelWithKelasResponse{
+							ID:        item.Pegawai.RombelGuruKelas.ID,
+							Rombel:    item.Pegawai.RombelGuruKelas.Name,
+							NamaKelas: namaKelas,
+							Status:    item.Pegawai.RombelGuruKelas.Status,
+						})
+					}
+					
+					// Add rombel_bidang_studi (guru bidang studi) - parse JSON array
+					var rombelBidangStudiIDs []uint
+					if err := json.Unmarshal(item.Pegawai.RombelBidangStudi, &rombelBidangStudiIDs); err == nil {
+						// Fetch rombel details for each ID
+						for _, rombelID := range rombelBidangStudiIDs {
+							rombel, err := s.pegawaiRepo.GetRombelByID(rombelID)
+							if err == nil && rombel != nil {
+								namaKelas := ""
+								if rombel.Kelas != nil {
+									namaKelas = rombel.Kelas.Name
+								}
+								kelasMengajar = append(kelasMengajar, dtos.RombelWithKelasResponse{
+									ID:        rombel.ID,
+									Rombel:    rombel.Name,
+									NamaKelas: namaKelas,
+									Status:    rombel.Status,
+								})
+							}
+						}
+					}
+					
+					pegawaiDetail.KelasMengajar = kelasMengajar
+				}
+
+				response.Pegawai = &pegawaiDetail
+				
+				// Group by jabatan for urutan 5+
+				if byJabatanMap[item.Urutan] == nil {
+					byJabatanMap[item.Urutan] = make(map[string][]dtos.StrukturOrganisasiPublicResponse)
+				}
+				byJabatanMap[item.Urutan][item.Pegawai.Jabatan] = append(byJabatanMap[item.Urutan][item.Pegawai.Jabatan], response)
+			} else {
+				// Urutan 1 and 2: tampilkan semua (bidang studi dan kelas mengajar jika ada)
+				if item.Pegawai.BidangStudi != nil {
+					pegawaiDetail.BidangStudi = item.Pegawai.BidangStudi.Name
+				}
+
+				if item.Pegawai.Kategori == "Pendidik" {
+					kelasMengajar := make([]dtos.RombelWithKelasResponse, 0)
+					
+					// Add rombel_guru_kelas_id (guru kelas)
+					if item.Pegawai.RombelGuruKelas != nil {
+						namaKelas := ""
+						if item.Pegawai.RombelGuruKelas.Kelas != nil {
+							namaKelas = item.Pegawai.RombelGuruKelas.Kelas.Name
+						}
+						kelasMengajar = append(kelasMengajar, dtos.RombelWithKelasResponse{
+							ID:        item.Pegawai.RombelGuruKelas.ID,
+							Rombel:    item.Pegawai.RombelGuruKelas.Name,
+							NamaKelas: namaKelas,
+							Status:    item.Pegawai.RombelGuruKelas.Status,
+						})
+					}
+					
+					// Add rombel_bidang_studi (guru bidang studi) - parse JSON array
+					var rombelBidangStudiIDs []uint
+					if err := json.Unmarshal(item.Pegawai.RombelBidangStudi, &rombelBidangStudiIDs); err == nil {
+						// Fetch rombel details for each ID
+						for _, rombelID := range rombelBidangStudiIDs {
+							rombel, err := s.pegawaiRepo.GetRombelByID(rombelID)
+							if err == nil && rombel != nil {
+								namaKelas := ""
+								if rombel.Kelas != nil {
+									namaKelas = rombel.Kelas.Name
+								}
+								kelasMengajar = append(kelasMengajar, dtos.RombelWithKelasResponse{
+									ID:        rombel.ID,
+									Rombel:    rombel.Name,
+									NamaKelas: namaKelas,
+									Status:    rombel.Status,
+								})
+							}
+						}
+					}
+					
+					pegawaiDetail.KelasMengajar = kelasMengajar
+				}
+
+				response.Pegawai = &pegawaiDetail
+				// Add to grouped map for urutan 1 and 2
+				groupedMap[item.Urutan] = append(groupedMap[item.Urutan], response)
+			}
+		} else {
+			// Non-pegawai data
+			if item.Urutan >= 5 {
+				// Group by jabatan_non_pegawai for urutan 5+
+				if byJabatanMap[item.Urutan] == nil {
+					byJabatanMap[item.Urutan] = make(map[string][]dtos.StrukturOrganisasiPublicResponse)
+				}
+				byJabatanMap[item.Urutan][item.JabatanNonPegawai] = append(byJabatanMap[item.Urutan][item.JabatanNonPegawai], response)
+			} else {
+				groupedMap[item.Urutan] = append(groupedMap[item.Urutan], response)
+			}
+		}
+	}
+
+	// Convert map to sorted array
+	var groupedResponses []dtos.StrukturOrganisasiGroupedResponse
+	
+	// Add urutan 1 and 2
+	for urutan, items := range groupedMap {
+		groupedResponses = append(groupedResponses, dtos.StrukturOrganisasiGroupedResponse{
+			Urutan: urutan,
+			Data:   items,
+		})
+	}
+
+	// Add urutan 3 with guru kelas grouping
+	if len(guruKelasMap) > 0 {
+		var guruKelasGroups []dtos.GuruKelasGroupResponse
+		for namaKelas, guruList := range guruKelasMap {
+			guruKelasGroups = append(guruKelasGroups, dtos.GuruKelasGroupResponse{
+				NamaKelas: namaKelas,
+				Relasi:    guruKelasRelasiMap[namaKelas],
+				Guru:      guruList,
+			})
+		}
+		groupedResponses = append(groupedResponses, dtos.StrukturOrganisasiGroupedResponse{
+			Urutan:    3,
+			GuruKelas: guruKelasGroups,
+		})
+	}
+
+	// Add urutan 4 with guru mapel grouping
+	if len(guruMapelMap) > 0 {
+		var guruMapelGroups []dtos.GuruMapelGroupResponse
+		for bidangStudi, guruList := range guruMapelMap {
+			guruMapelGroups = append(guruMapelGroups, dtos.GuruMapelGroupResponse{
+				BidangStudi: bidangStudi,
+				Relasi:      guruMapelRelasiMap[bidangStudi],
+				Guru:        guruList,
+			})
+		}
+		groupedResponses = append(groupedResponses, dtos.StrukturOrganisasiGroupedResponse{
+			Urutan:    4,
+			GuruMapel: guruMapelGroups,
+		})
+	}
+
+	// Add urutan 5+ with jabatan grouping
+	for urutan, jabatanMap := range byJabatanMap {
+		var jabatanGroups []dtos.JabatanGroupResponse
+		for jabatan, items := range jabatanMap {
+			jabatanGroups = append(jabatanGroups, dtos.JabatanGroupResponse{
+				Jabatan: jabatan,
+				Data:    items,
+			})
+		}
+		groupedResponses = append(groupedResponses, dtos.StrukturOrganisasiGroupedResponse{
+			Urutan:    urutan,
+			ByJabatan: jabatanGroups,
+		})
+	}
+
+	// Sort by urutan
+	for i := 0; i < len(groupedResponses); i++ {
+		for j := i + 1; j < len(groupedResponses); j++ {
+			if groupedResponses[i].Urutan > groupedResponses[j].Urutan {
+				groupedResponses[i], groupedResponses[j] = groupedResponses[j], groupedResponses[i]
+			}
+		}
+	}
+
+	return groupedResponses, nil
 }
 
 // mapToResponse maps model to DTO response

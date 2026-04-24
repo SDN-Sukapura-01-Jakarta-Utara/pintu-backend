@@ -18,6 +18,12 @@ func RegisterStrukturOrganisasiRoutes(router *gin.Engine, db *gorm.DB) {
 	strukturOrganisasiService := services.NewStrukturOrganisasiService(strukturOrganisasiRepo, kepegawaianRepo)
 	strukturOrganisasiController := controllers.NewStrukturOrganisasiController(strukturOrganisasiService)
 
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		public.POST("/get-data-struktur-organisasi", strukturOrganisasiController.GetPublic)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/struktur-organisasi")
 	protected.Use(middleware.AuthMiddleware())

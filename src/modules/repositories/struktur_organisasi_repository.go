@@ -31,6 +31,7 @@ type StrukturOrganisasiRepository interface {
 	GetAllWithFilter(params GetStrukturOrganisasiParams) ([]models.StrukturOrganisasi, int64, error)
 	Update(data *models.StrukturOrganisasi) error
 	Delete(id uint) error
+	GetAllPublic() ([]models.StrukturOrganisasi, error)
 }
 
 type StrukturOrganisasiRepositoryImpl struct {
@@ -130,4 +131,19 @@ func (r *StrukturOrganisasiRepositoryImpl) Update(data *models.StrukturOrganisas
 // Delete deletes StrukturOrganisasi record by ID
 func (r *StrukturOrganisasiRepositoryImpl) Delete(id uint) error {
 	return r.db.Delete(&models.StrukturOrganisasi{}, id).Error
+}
+
+// GetAllPublic retrieves all active StrukturOrganisasi records for public display
+func (r *StrukturOrganisasiRepositoryImpl) GetAllPublic() ([]models.StrukturOrganisasi, error) {
+	var data []models.StrukturOrganisasi
+	if err := r.db.
+		Preload("Pegawai.Roles").
+		Preload("Pegawai.RombelGuruKelas.Kelas").
+		Preload("Pegawai.BidangStudi").
+		Where("status = ?", "active").
+		Order("urutan ASC").
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

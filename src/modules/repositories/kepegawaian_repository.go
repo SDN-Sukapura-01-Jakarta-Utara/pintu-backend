@@ -32,15 +32,18 @@ type KepegawaianRepository interface {
 	GetByID(id uint) (*models.Kepegawaian, error)
 	GetByIDWithRoles(id uint) (*models.Kepegawaian, error)
 	GetByNIP(nip string) (*models.Kepegawaian, error)
+	GetByNKKI(nkki string) (*models.Kepegawaian, error)
 	GetByUsername(username string) (*models.Kepegawaian, error)
 	GetAll(limit int, offset int) ([]models.Kepegawaian, int64, error)
 	GetAllWithFilter(params GetKepegawaianParams) ([]models.Kepegawaian, int64, error)
+	GetAllWithoutPagination() ([]models.Kepegawaian, error)
 	Update(data *models.Kepegawaian) error
 	Delete(id uint) error
 	AssignRoles(kepegawaianID uint, roleIDs []uint) error
 	RemoveRoles(kepegawaianID uint) error
 	GetTotalPendidik() (int64, error)
 	GetTotalTendik() (int64, error)
+	GetRombelByID(id uint) (*models.Rombel, error)
 }
 
 type KepegawaianRepositoryImpl struct {
@@ -79,6 +82,15 @@ func (r *KepegawaianRepositoryImpl) GetByIDWithRoles(id uint) (*models.Kepegawai
 func (r *KepegawaianRepositoryImpl) GetByNIP(nip string) (*models.Kepegawaian, error) {
 	var data models.Kepegawaian
 	if err := r.db.Where("nip = ?", nip).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetByNKKI retrieves Kepegawaian by NKKI
+func (r *KepegawaianRepositoryImpl) GetByNKKI(nkki string) (*models.Kepegawaian, error) {
+	var data models.Kepegawaian
+	if err := r.db.Where("nkki = ?", nkki).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -156,6 +168,18 @@ func (r *KepegawaianRepositoryImpl) GetAllWithFilter(params GetKepegawaianParams
 	}
 
 	return data, total, nil
+}
+
+// GetAllWithoutPagination retrieves all active Kepegawaian records without pagination
+func (r *KepegawaianRepositoryImpl) GetAllWithoutPagination() ([]models.Kepegawaian, error) {
+	var data []models.Kepegawaian
+	
+	// Get all active records ordered by created_at DESC
+	if err := r.db.Where("status = ?", "active").Order("created_at DESC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // Update updates Kepegawaian record
@@ -236,4 +260,13 @@ func (r *KepegawaianRepositoryImpl) GetTotalTendik() (int64, error) {
 	}
 	
 	return total, nil
+}
+
+// GetRombelByID retrieves Rombel by ID with Kelas preloaded
+func (r *KepegawaianRepositoryImpl) GetRombelByID(id uint) (*models.Rombel, error) {
+	var rombel models.Rombel
+	if err := r.db.Preload("Kelas").First(&rombel, id).Error; err != nil {
+		return nil, err
+	}
+	return &rombel, nil
 }

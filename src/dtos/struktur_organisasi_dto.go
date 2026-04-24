@@ -32,6 +32,45 @@ type PegawaiSimpleResponse struct {
 	Status   string `json:"status"`
 }
 
+// PegawaiPublicDetailResponse represents detailed pegawai response for public API
+type PegawaiPublicDetailResponse struct {
+	NamaLengkap   string                        `json:"nama_lengkap"`
+	NIP           string                        `json:"nip"`
+	NKKI          string                        `json:"nkki"`
+	Jabatan       string                        `json:"jabatan"`
+	Kategori      string                        `json:"kategori"`
+	BidangStudi   string                        `json:"bidang_studi,omitempty"`
+	KelasMengajar []RombelWithKelasResponse     `json:"kelas_mengajar,omitempty"`
+}
+
+// RombelWithKelasResponse represents rombel with kelas name for public API
+type RombelWithKelasResponse struct {
+	ID        uint   `json:"id"`
+	Rombel    string `json:"rombel"`
+	NamaKelas string `json:"nama_kelas"`
+	Status    string `json:"status"`
+}
+
+// GuruKelasGroupResponse represents grouped guru kelas by kelas
+type GuruKelasGroupResponse struct {
+	NamaKelas string                               `json:"nama_kelas"`
+	Relasi    string                               `json:"relasi"`
+	Guru      []PegawaiPublicDetailResponse        `json:"guru"`
+}
+
+// GuruMapelGroupResponse represents grouped guru mapel by bidang studi
+type GuruMapelGroupResponse struct {
+	BidangStudi string                               `json:"bidang_studi"`
+	Relasi      string                               `json:"relasi"`
+	Guru        []PegawaiPublicDetailResponse        `json:"guru"`
+}
+
+// JabatanGroupResponse represents grouped by jabatan for urutan 5+
+type JabatanGroupResponse struct {
+	Jabatan string                               `json:"jabatan"`
+	Data    []StrukturOrganisasiPublicResponse  `json:"data"`
+}
+
 // StrukturOrganisasiResponse represents the response payload for StrukturOrganisasi
 type StrukturOrganisasiResponse struct {
 	ID                uint                     `json:"id"`
@@ -75,4 +114,22 @@ type StrukturOrganisasiGetAllRequest struct {
 type StrukturOrganisasiListWithPaginationResponse struct {
 	Data       []StrukturOrganisasiResponse `json:"data"`
 	Pagination PaginationInfo               `json:"pagination"`
+}
+
+// StrukturOrganisasiPublicResponse represents the public response payload for StrukturOrganisasi
+type StrukturOrganisasiPublicResponse struct {
+	Pegawai           *PegawaiPublicDetailResponse `json:"pegawai,omitempty"`
+	NamaNonPegawai    string                       `json:"nama_non_pegawai,omitempty"`
+	JabatanNonPegawai string                       `json:"jabatan_non_pegawai,omitempty"`
+	Urutan            int                          `json:"urutan"`
+	Relasi            string                       `json:"relasi"`
+}
+
+// StrukturOrganisasiGroupedResponse represents grouped response by urutan
+type StrukturOrganisasiGroupedResponse struct {
+	Urutan         int                                  `json:"urutan"`
+	Data           []StrukturOrganisasiPublicResponse  `json:"data,omitempty"`
+	GuruKelas      []GuruKelasGroupResponse             `json:"guru_kelas,omitempty"`
+	GuruMapel      []GuruMapelGroupResponse             `json:"guru_mapel,omitempty"`
+	ByJabatan      []JabatanGroupResponse               `json:"by_jabatan,omitempty"`
 }

@@ -22,19 +22,19 @@ type KepegawaianCreateRequest struct {
 
 // KepegawaianUpdateRequest represents the request payload for updating Kepegawaian
 type KepegawaianUpdateRequest struct {
-	ID                        uint    `json:"id" binding:"required"`
-	Nama                      string  `json:"nama" binding:"omitempty"`
-	Username                  string  `json:"username" binding:"omitempty"`
-	Password                  string  `json:"password" binding:"omitempty,min=6"`
-	NIP                       string  `json:"nip" binding:"omitempty"`
-	NKKI                      string  `json:"nkki" binding:"omitempty"`
-	Kategori                  string  `json:"kategori" binding:"omitempty"`
-	Jabatan                   string  `json:"jabatan" binding:"omitempty"`
-	BidangStudiID             *uint   `json:"bidang_studi_id" binding:"omitempty"`
-	RombelGuruKelasID         *uint   `json:"rombel_guru_kelas_id" binding:"omitempty"`
-	RombelBidangStudi         []uint  `json:"rombel_bidang_studi" binding:"omitempty"`
-	RoleIDs                   []uint  `json:"role_ids" binding:"omitempty"`
-	Status                    string  `json:"status" binding:"omitempty,oneof=active inactive"`
+	ID                        uint     `json:"id" binding:"required"`
+	Nama                      string   `json:"nama" binding:"omitempty"`
+	Username                  string   `json:"username" binding:"omitempty"`
+	Password                  string   `json:"password" binding:"omitempty,min=6"`
+	NIP                       *string  `json:"nip" binding:"omitempty"`
+	NKKI                      *string  `json:"nkki" binding:"omitempty"`
+	Kategori                  string   `json:"kategori" binding:"omitempty"`
+	Jabatan                   string   `json:"jabatan" binding:"omitempty"`
+	BidangStudiID             *uint    `json:"bidang_studi_id" binding:"omitempty"`
+	RombelGuruKelasID         *uint    `json:"rombel_guru_kelas_id" binding:"omitempty"`
+	RombelBidangStudi         []uint   `json:"rombel_bidang_studi" binding:"omitempty"`
+	RoleIDs                   []uint   `json:"role_ids" binding:"omitempty"`
+	Status                    string   `json:"status" binding:"omitempty,oneof=active inactive"`
 	FilesToDelete             []string `json:"files_to_delete" binding:"omitempty"` // e.g., ["kk", "ktp", "ijazah_s1"]
 	SertifikatLainnyaToDelete []string `json:"sertifikat_lainnya_to_delete" binding:"omitempty"`
 	DokumenLainnyaToDelete    []string `json:"dokumen_lainnya_to_delete" binding:"omitempty"`

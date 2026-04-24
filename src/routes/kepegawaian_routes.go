@@ -40,6 +40,7 @@ func RegisterKepegawaianRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Read
 		api.POST("/get-kepegawaian", controller.GetAll)
+		api.POST("/get-kepegawaian-without-pagination", controller.GetAllWithoutPagination)
 		api.POST("/get-kepegawaian-by-id", controller.GetByID)
 		api.POST("/get-kepegawaian-by-nip", controller.GetByNIP)
 

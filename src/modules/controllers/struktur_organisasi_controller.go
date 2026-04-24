@@ -186,3 +186,14 @@ func (c *StrukturOrganisasiController) Delete(ctx *gin.Context) {
 		"message": "Struktur organisasi deleted successfully",
 	})
 }
+
+// GetPublic retrieves all active StrukturOrganisasi for public display (no auth required)
+func (c *StrukturOrganisasiController) GetPublic(ctx *gin.Context) {
+	data, err := c.service.GetPublic()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}

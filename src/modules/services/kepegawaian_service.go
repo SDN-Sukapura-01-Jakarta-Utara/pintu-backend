@@ -22,6 +22,7 @@ type KepegawaianService interface {
 	GetByNIP(nip string) (*dtos.KepegawaianResponse, error)
 	GetAll(limit int, offset int) (*dtos.KepegawaianListResponse, error)
 	GetAllWithFilter(params repositories.GetKepegawaianParams) (*dtos.KepegawaianListWithPaginationResponse, error)
+	GetAllWithoutPagination() ([]dtos.KepegawaianResponse, error)
 	Update(id uint, foto *multipart.FileHeader, docs map[string][]*multipart.FileHeader, req *dtos.KepegawaianUpdateRequest, userID uint) (*dtos.KepegawaianResponse, error)
 	Delete(id uint) error
 	GetTotalPendidik() (*dtos.TotalPendidikResponse, error)
@@ -43,14 +44,24 @@ func NewKepegawaianService(repository repositories.KepegawaianRepository, r2Stor
 
 // Create creates a new Kepegawaian (without file uploads)
 func (s *KepegawaianServiceImpl) Create(req *dtos.KepegawaianCreateRequest, userID uint) (*dtos.KepegawaianResponse, error) {
-	// Check if NIP already exists
-	existing, _ := s.repository.GetByNIP(req.NIP)
-	if existing != nil {
-		return nil, errors.New("NIP already exists")
+	// Check if NIP already exists (only if NIP is provided)
+	if req.NIP != "" {
+		existing, _ := s.repository.GetByNIP(req.NIP)
+		if existing != nil {
+			return nil, errors.New("NIP already exists")
+		}
+	}
+
+	// Check if NKKI already exists (only if NKKI is provided)
+	if req.NKKI != "" {
+		existing, _ := s.repository.GetByNKKI(req.NKKI)
+		if existing != nil {
+			return nil, errors.New("NKKI already exists")
+		}
 	}
 
 	// Check if username already exists
-	existing, _ = s.repository.GetByUsername(req.Username)
+	existing, _ := s.repository.GetByUsername(req.Username)
 	if existing != nil {
 		return nil, errors.New("username already exists")
 	}
@@ -186,6 +197,22 @@ func (s *KepegawaianServiceImpl) GetAllWithFilter(params repositories.GetKepegaw
 	}, nil
 }
 
+// GetAllWithoutPagination retrieves all active Kepegawaian without pagination
+func (s *KepegawaianServiceImpl) GetAllWithoutPagination() ([]dtos.KepegawaianResponse, error) {
+	data, err := s.repository.GetAllWithoutPagination()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to response
+	responses := make([]dtos.KepegawaianResponse, len(data))
+	for i, item := range data {
+		responses[i] = *s.mapToResponse(&item)
+	}
+
+	return responses, nil
+}
+
 // Update updates Kepegawaian
 func (s *KepegawaianServiceImpl) Update(id uint, foto *multipart.FileHeader, docs map[string][]*multipart.FileHeader, req *dtos.KepegawaianUpdateRequest, userID uint) (*dtos.KepegawaianResponse, error) {
 	// Get existing data
@@ -215,16 +242,31 @@ func (s *KepegawaianServiceImpl) Update(id uint, foto *multipart.FileHeader, doc
 		}
 		existing.Password = string(hashedPassword)
 	}
-	if req.NIP != "" {
-		// Check if NIP already exists for other users
-		existingNIP, _ := s.repository.GetByNIP(req.NIP)
-		if existingNIP != nil && existingNIP.ID != id {
-			return nil, errors.New("NIP already exists")
+	
+	// Handle NIP update (pointer allows us to differentiate between not sent vs empty)
+	if req.NIP != nil {
+		// If NIP is not empty, check for duplicates
+		if *req.NIP != "" {
+			existingNIP, _ := s.repository.GetByNIP(*req.NIP)
+			if existingNIP != nil && existingNIP.ID != id {
+				return nil, errors.New("NIP already exists")
+			}
 		}
-		existing.NIP = req.NIP
+		// Update NIP (can be empty string to clear it)
+		existing.NIP = *req.NIP
 	}
-	if req.NKKI != "" {
-		existing.NKKI = req.NKKI
+	
+	// Handle NKKI update (pointer allows us to differentiate between not sent vs empty)
+	if req.NKKI != nil {
+		// If NKKI is not empty, check for duplicates
+		if *req.NKKI != "" {
+			existingNKKI, _ := s.repository.GetByNKKI(*req.NKKI)
+			if existingNKKI != nil && existingNKKI.ID != id {
+				return nil, errors.New("NKKI already exists")
+			}
+		}
+		// Update NKKI (can be empty string to clear it)
+		existing.NKKI = *req.NKKI
 	}
 	if req.Kategori != "" {
 		existing.Kategori = req.Kategori
