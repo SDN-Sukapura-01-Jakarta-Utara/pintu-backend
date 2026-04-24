@@ -376,3 +376,25 @@ func (c *KepegawaianController) GetTotalTendik(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"data": result})
 }
+
+// GetPublicPendidikData handles GET request for public pendidik data
+func (c *KepegawaianController) GetPublicPendidikData(ctx *gin.Context) {
+	result, err := c.service.GetPublicPendidikData()
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(200, result)
+}
+
+// GetPublicTendikData handles GET request for public tendik data
+func (c *KepegawaianController) GetPublicTendikData(ctx *gin.Context) {
+	result, err := c.service.GetPublicTendikData()
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(200, result)
+}

@@ -133,3 +133,31 @@ type TotalPendidikResponse struct {
 type TotalTendikResponse struct {
 	TotalTendik int64 `json:"total_tendik"`
 }
+
+// PublicPendidikResponse represents the public response for pendidik data
+type PublicPendidikResponse struct {
+	Nama    string `json:"nama"`
+	NIP     string `json:"nip"`
+	NKKI    string `json:"nkki"`
+	Jabatan string `json:"jabatan"`
+	Foto    string `json:"foto"`
+}
+
+// PublicPendidikListResponse represents the list response for public pendidik data
+type PublicPendidikListResponse struct {
+	Data []PublicPendidikResponse `json:"data"`
+}
+
+// PublicTendikResponse represents the public response for tendik data
+type PublicTendikResponse struct {
+	Nama    string `json:"nama"`
+	NIP     string `json:"nip"`
+	NKKI    string `json:"nkki"`
+	Jabatan string `json:"jabatan"`
+	Foto    string `json:"foto"`
+}
+
+// PublicTendikListResponse represents the list response for public tendik data
+type PublicTendikListResponse struct {
+	Data []PublicTendikResponse `json:"data"`
+}

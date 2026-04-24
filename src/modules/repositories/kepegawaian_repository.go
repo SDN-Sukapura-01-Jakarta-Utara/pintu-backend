@@ -44,6 +44,8 @@ type KepegawaianRepository interface {
 	GetTotalPendidik() (int64, error)
 	GetTotalTendik() (int64, error)
 	GetRombelByID(id uint) (*models.Rombel, error)
+	GetPublicPendidikData() ([]models.Kepegawaian, error)
+	GetPublicTendikData() ([]models.Kepegawaian, error)
 }
 
 type KepegawaianRepositoryImpl struct {
@@ -269,4 +271,38 @@ func (r *KepegawaianRepositoryImpl) GetRombelByID(id uint) (*models.Rombel, erro
 		return nil, err
 	}
 	return &rombel, nil
+}
+
+// GetPublicPendidikData retrieves public pendidik data (nama, nip, nkki, jabatan, foto) with kategori "Pendidik" and status "active"
+func (r *KepegawaianRepositoryImpl) GetPublicPendidikData() ([]models.Kepegawaian, error) {
+	var data []models.Kepegawaian
+	
+	err := r.db.Select("nama, nip, nkki, jabatan, foto").
+		Where("LOWER(kategori) = ?", "pendidik").
+		Where("status = ?", "active").
+		Order("created_at DESC").
+		Find(&data).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return data, nil
+}
+
+// GetPublicTendikData retrieves public tendik data (nama, nip, nkki, jabatan, foto) with kategori "Tenaga Kependidikan" and status "active"
+func (r *KepegawaianRepositoryImpl) GetPublicTendikData() ([]models.Kepegawaian, error) {
+	var data []models.Kepegawaian
+	
+	err := r.db.Select("nama, nip, nkki, jabatan, foto").
+		Where("LOWER(kategori) = ?", "tenaga kependidikan").
+		Where("status = ?", "active").
+		Order("created_at DESC").
+		Find(&data).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	return data, nil
 }

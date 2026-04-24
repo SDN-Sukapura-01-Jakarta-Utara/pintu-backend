@@ -29,6 +29,12 @@ func RegisterKepegawaianRoutes(router *gin.Engine, db *gorm.DB) {
 		
 		// Get total tendik with kategori "Tenaga Kependidikan" and status "active"
 		public.POST("/get-total-tendik", controller.GetTotalTendik)
+		
+		// Get public pendidik data (nama, nip, nkki, jabatan, foto) with kategori "Pendidik" and status "active"
+		public.POST("/get-data-pendidik", controller.GetPublicPendidikData)
+		
+		// Get public tendik data (nama, nip, nkki, jabatan, foto) with kategori "Tenaga Kependidikan" and status "active"
+		public.POST("/get-data-tendik", controller.GetPublicTendikData)
 	}
 
 	// Protected routes (require authentication)

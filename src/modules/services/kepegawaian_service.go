@@ -27,6 +27,8 @@ type KepegawaianService interface {
 	Delete(id uint) error
 	GetTotalPendidik() (*dtos.TotalPendidikResponse, error)
 	GetTotalTendik() (*dtos.TotalTendikResponse, error)
+	GetPublicPendidikData() (*dtos.PublicPendidikListResponse, error)
+	GetPublicTendikData() (*dtos.PublicTendikListResponse, error)
 }
 
 type KepegawaianServiceImpl struct {
@@ -850,5 +852,66 @@ func (s *KepegawaianServiceImpl) GetTotalTendik() (*dtos.TotalTendikResponse, er
 
 	return &dtos.TotalTendikResponse{
 		TotalTendik: total,
+	}, nil
+}
+
+// GetPublicPendidikData retrieves public pendidik data (nama, nip, nkki, foto) with kategori "Pendidik" and status "active"
+// GetPublicPendidikData retrieves public pendidik data (nama, nip, nkki, jabatan, foto) with kategori "Pendidik" and status "active"
+func (s *KepegawaianServiceImpl) GetPublicPendidikData() (*dtos.PublicPendidikListResponse, error) {
+	data, err := s.repository.GetPublicPendidikData()
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []dtos.PublicPendidikResponse
+	for _, item := range data {
+		// Convert foto to public URL
+		fotoURL := ""
+		if item.Foto != "" {
+			fotoURL = s.r2Storage.GetPublicURL(item.Foto)
+		}
+
+		response := dtos.PublicPendidikResponse{
+			Nama:    item.Nama,
+			NIP:     item.NIP,
+			NKKI:    item.NKKI,
+			Jabatan: item.Jabatan,
+			Foto:    fotoURL,
+		}
+		responses = append(responses, response)
+	}
+
+	return &dtos.PublicPendidikListResponse{
+		Data: responses,
+	}, nil
+}
+
+// GetPublicTendikData retrieves public tendik data (nama, nip, nkki, jabatan, foto) with kategori "Tenaga Kependidikan" and status "active"
+func (s *KepegawaianServiceImpl) GetPublicTendikData() (*dtos.PublicTendikListResponse, error) {
+	data, err := s.repository.GetPublicTendikData()
+	if err != nil {
+		return nil, err
+	}
+
+	var responses []dtos.PublicTendikResponse
+	for _, item := range data {
+		// Convert foto to public URL
+		fotoURL := ""
+		if item.Foto != "" {
+			fotoURL = s.r2Storage.GetPublicURL(item.Foto)
+		}
+
+		response := dtos.PublicTendikResponse{
+			Nama:    item.Nama,
+			NIP:     item.NIP,
+			NKKI:    item.NKKI,
+			Jabatan: item.Jabatan,
+			Foto:    fotoURL,
+		}
+		responses = append(responses, response)
+	}
+
+	return &dtos.PublicTendikListResponse{
+		Data: responses,
 	}, nil
 }
