@@ -20,6 +20,8 @@ type ArticleService interface {
 	GetAllWithFilter(params repositories.GetArticleParams) (*dtos.ArticleListWithPaginationResponse, error)
 	GetPublicLatest() (*dtos.ArticlePublicListResponse, error)
 	GetPublicList(req *dtos.ArticlePublicListRequest) (*dtos.ArticlePublicDaftarResponse, error)
+	GetPublicDetailByID(id uint) (*dtos.ArticlePublicDetailResponse, error)
+	GetPublicOtherArticles(excludeID uint) (*dtos.ArticlePublicListResponse, error)
 	Update(id uint, gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.ArticleUpdateRequest, userID uint) (*dtos.ArticleResponse, error)
 	Delete(id uint) error
 }
@@ -529,5 +531,65 @@ func (s *ArticleServiceImpl) GetPublicList(req *dtos.ArticlePublicListRequest) (
 		Total:   total,
 		Offset:  offset,
 		HasMore: hasMore,
+	}, nil
+}
+
+// GetPublicDetailByID retrieves article detail by ID for public display (only if active and published)
+func (s *ArticleServiceImpl) GetPublicDetailByID(id uint) (*dtos.ArticlePublicDetailResponse, error) {
+	data, err := s.repository.GetPublicDetailByID(id)
+	if err != nil {
+		return nil, errors.New("article not found or not published")
+	}
+
+	// Map files from JSON
+	var fileItems []dtos.FileItemDTO
+	var fileModels []models.FileItem
+	if err := json.Unmarshal(data.Files, &fileModels); err == nil {
+		for _, file := range fileModels {
+			fileItems = append(fileItems, dtos.FileItemDTO{
+				ID:       file.ID,
+				Filename: file.Filename,
+				URL:      s.r2Storage.GetPublicURL(file.URL),
+				Size:     file.Size,
+			})
+		}
+	}
+
+	return &dtos.ArticlePublicDetailResponse{
+		ID:        data.ID,
+		Judul:     data.Judul,
+		Tanggal:   data.Tanggal,
+		Kategori:  data.Kategori,
+		Deskripsi: data.Deskripsi,
+		Gambar:    s.r2Storage.GetPublicURL(data.Gambar),
+		Penulis:   data.Penulis,
+		Files:     fileItems,
+	}, nil
+}
+
+// GetPublicOtherArticles retrieves 5 latest published and active articles excluding the specified ID
+func (s *ArticleServiceImpl) GetPublicOtherArticles(excludeID uint) (*dtos.ArticlePublicListResponse, error) {
+	data, err := s.repository.GetPublicOtherArticles(excludeID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.ArticlePublicResponse, 0)
+	for _, item := range data {
+		publicResponse := dtos.ArticlePublicResponse{
+			ID:        item.ID,
+			Judul:     item.Judul,
+			Tanggal:   item.Tanggal,
+			Kategori:  item.Kategori,
+			Deskripsi: item.Deskripsi,
+			Gambar:    s.r2Storage.GetPublicURL(item.Gambar),
+			Penulis:   item.Penulis,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.ArticlePublicListResponse{
+		Data: responses,
 	}, nil
 }

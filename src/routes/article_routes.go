@@ -46,5 +46,7 @@ func RegisterArticleRoutes(router *gin.Engine, db *gorm.DB) {
 	{
 		public.POST("/get-data-artikel", articleController.GetPublicLatest)
 		public.POST("/get-data-daftar-artikel", articleController.GetPublicList)
+		public.POST("/get-data-detail-artikel", articleController.GetPublicDetailByID)
+		public.POST("/get-data-artikel-lainnya", articleController.GetPublicOtherArticles)
 	}
 }

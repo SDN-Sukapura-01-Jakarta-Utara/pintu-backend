@@ -34,6 +34,8 @@ type ArticleRepository interface {
 	GetAllWithFilter(params GetArticleParams) ([]models.Article, int64, error)
 	GetPublicLatest() ([]models.Article, error)
 	GetPublicList(kategori string, sort string, offset int) ([]models.Article, int64, error)
+	GetPublicDetailByID(id uint) (*models.Article, error)
+	GetPublicOtherArticles(excludeID uint) ([]models.Article, error)
 	Update(data *models.Article) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -180,4 +182,26 @@ func (r *ArticleRepositoryImpl) GetPublicList(kategori string, sort string, offs
 	}
 
 	return data, total, nil
+}
+
+// GetPublicDetailByID retrieves article detail by ID for public (only if active and published)
+func (r *ArticleRepositoryImpl) GetPublicDetailByID(id uint) (*models.Article, error) {
+	var data models.Article
+	if err := r.db.Where("id = ? AND status = ? AND status_publikasi = ?", id, "active", "published").
+		First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetPublicOtherArticles retrieves 5 latest published and active articles excluding the specified ID
+func (r *ArticleRepositoryImpl) GetPublicOtherArticles(excludeID uint) ([]models.Article, error) {
+	var data []models.Article
+	if err := r.db.Where("status = ? AND status_publikasi = ? AND id != ?", "active", "published", excludeID).
+		Order("tanggal DESC").
+		Limit(5).
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

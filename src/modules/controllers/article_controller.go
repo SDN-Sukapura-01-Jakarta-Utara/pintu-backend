@@ -395,3 +395,57 @@ func (c *ArticleController) GetPublicList(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, data)
 }
+
+// GetPublicDetailByID retrieves article detail by ID for public display (no auth required)
+// @Summary Get article detail for public
+// @Description Retrieve article detail by ID (only if active and published, no authentication required)
+// @Tags articles
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with article ID"
+// @Success 200 {object} dtos.ArticlePublicDetailResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-detail-artikel [post]
+func (c *ArticleController) GetPublicDetailByID(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicDetailByID(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+
+// GetPublicOtherArticles retrieves 5 latest other articles excluding the current one (no auth required)
+// @Summary Get other articles for public
+// @Description Retrieve 5 latest published and active articles excluding the specified ID (no authentication required)
+// @Tags articles
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with article ID to exclude"
+// @Success 200 {object} dtos.ArticlePublicListResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-artikel-lainnya [post]
+func (c *ArticleController) GetPublicOtherArticles(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicOtherArticles(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

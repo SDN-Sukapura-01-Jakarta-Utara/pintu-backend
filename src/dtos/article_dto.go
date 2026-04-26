@@ -118,3 +118,15 @@ type ArticlePublicDaftarResponse struct {
 	Offset  int                     `json:"offset"`
 	HasMore bool                    `json:"has_more"`
 }
+
+// ArticlePublicDetailResponse represents the public detail response for a single article
+type ArticlePublicDetailResponse struct {
+	ID        uint          `json:"id"`
+	Judul     string        `json:"judul"`
+	Tanggal   time.Time     `json:"tanggal"`
+	Kategori  string        `json:"kategori"`
+	Deskripsi string        `json:"deskripsi"`
+	Gambar    string        `json:"gambar"`
+	Penulis   string        `json:"penulis"`
+	Files     []FileItemDTO `json:"files"`
+}
