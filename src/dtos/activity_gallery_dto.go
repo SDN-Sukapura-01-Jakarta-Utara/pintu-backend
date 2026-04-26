@@ -78,3 +78,26 @@ type ActivityGalleryPublicResponse struct {
 type ActivityGalleryPublicListResponse struct {
 	Data []ActivityGalleryPublicResponse `json:"data"`
 }
+
+// ActivityGalleryPublicListRequest represents the request payload for public activity gallery list with filters
+type ActivityGalleryPublicListRequest struct {
+	Filter struct {
+		Sort string `json:"sort"` // "terbaru" or "terlama"
+	} `json:"filter"`
+	Offset int `json:"offset"` // Offset for pagination (default 0)
+}
+
+// ActivityGalleryPublicDaftarResponse represents the public list response with pagination
+type ActivityGalleryPublicDaftarResponse struct {
+	Data    []ActivityGalleryPublicResponse `json:"data"`
+	Total   int64                           `json:"total"`
+	Offset  int                             `json:"offset"`
+	HasMore bool                            `json:"has_more"`
+}
+// ActivityGalleryPublicDetailResponse represents the public detail response for a single activity gallery
+type ActivityGalleryPublicDetailResponse struct {
+	ID      uint          `json:"id"`
+	Judul   string        `json:"judul"`
+	Tanggal time.Time     `json:"tanggal"`
+	Foto    []FileItemDTO `json:"foto"`
+}

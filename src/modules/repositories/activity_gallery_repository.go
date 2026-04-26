@@ -31,6 +31,9 @@ type ActivityGalleryRepository interface {
 	GetAll(limit int, offset int) ([]models.ActivityGallery, int64, error)
 	GetAllWithFilter(params GetActivityGalleryParams) ([]models.ActivityGallery, int64, error)
 	GetPublicLatest() ([]models.ActivityGallery, error)
+	GetPublicList(sort string, offset int) ([]models.ActivityGallery, int64, error)
+	GetPublicDetailByID(id uint) (*models.ActivityGallery, error)
+	GetPublicOtherGalleries(excludeID uint) ([]models.ActivityGallery, error)
 	Update(data *models.ActivityGallery) error
 	Delete(id uint) error
 }
@@ -131,6 +134,52 @@ func (r *ActivityGalleryRepositoryImpl) GetPublicLatest() ([]models.ActivityGall
 	if err := r.db.Where("status = ? AND status_publikasi = ?", "active", "published").
 		Order("tanggal DESC").
 		Limit(10).
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetPublicList retrieves published and active activity galleries with sorting and pagination (12 items per request)
+func (r *ActivityGalleryRepositoryImpl) GetPublicList(sort string, offset int) ([]models.ActivityGallery, int64, error) {
+	var data []models.ActivityGallery
+	var total int64
+
+	query := r.db.Where("status = ? AND status_publikasi = ?", "active", "published")
+
+	// Get total count
+	if err := query.Model(&models.ActivityGallery{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply sorting
+	orderBy := "tanggal DESC" // default: terbaru
+	if sort == "terlama" {
+		orderBy = "tanggal ASC"
+	}
+
+	// Get paginated data (12 items per request)
+	if err := query.Order(orderBy).Limit(12).Offset(offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+// GetPublicDetailByID retrieves activity gallery detail by ID for public (only if active and published)
+func (r *ActivityGalleryRepositoryImpl) GetPublicDetailByID(id uint) (*models.ActivityGallery, error) {
+	var data models.ActivityGallery
+	if err := r.db.Where("id = ? AND status = ? AND status_publikasi = ?", id, "active", "published").
+		First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+// GetPublicOtherGalleries retrieves 4 latest published and active activity galleries excluding the specified ID
+func (r *ActivityGalleryRepositoryImpl) GetPublicOtherGalleries(excludeID uint) ([]models.ActivityGallery, error) {
+	var data []models.ActivityGallery
+	if err := r.db.Where("status = ? AND status_publikasi = ? AND id != ?", "active", "published", excludeID).
+		Order("tanggal DESC").
+		Limit(4).
 		Find(&data).Error; err != nil {
 		return nil, err
 	}

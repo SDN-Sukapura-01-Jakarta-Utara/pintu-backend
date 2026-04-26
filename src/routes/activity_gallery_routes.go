@@ -45,5 +45,8 @@ func RegisterActivityGalleryRoutes(router *gin.Engine, db *gorm.DB) {
 	public := router.Group("/api/v1/public")
 	{
 		public.POST("/get-data-galeri-kegiatan", galleryController.GetPublicLatest)
+		public.POST("/get-data-daftar-galeri", galleryController.GetPublicList)
+		public.POST("/get-data-detail-galeri", galleryController.GetPublicDetailByID)
+		public.POST("/get-data-galeri-lainnya", galleryController.GetPublicOtherGalleries)
 	}
 }

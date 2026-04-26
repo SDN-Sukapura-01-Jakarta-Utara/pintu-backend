@@ -19,6 +19,9 @@ type ActivityGalleryService interface {
 	GetAll(limit int, offset int) (*dtos.ActivityGalleryListResponse, error)
 	GetAllWithFilter(params repositories.GetActivityGalleryParams) (*dtos.ActivityGalleryListWithPaginationResponse, error)
 	GetPublicLatest() (*dtos.ActivityGalleryPublicListResponse, error)
+	GetPublicList(req *dtos.ActivityGalleryPublicListRequest) (*dtos.ActivityGalleryPublicDaftarResponse, error)
+	GetPublicDetailByID(id uint) (*dtos.ActivityGalleryPublicDetailResponse, error)
+	GetPublicOtherGalleries(excludeID uint) (*dtos.ActivityGalleryPublicListResponse, error)
 	Update(id uint, fotos []*multipart.FileHeader, fotoThumbnails []string, req *dtos.ActivityGalleryUpdateRequest, userID uint) (*dtos.ActivityGalleryResponse, error)
 	Delete(id uint) error
 }
@@ -413,6 +416,119 @@ func (s *ActivityGalleryServiceImpl) mapToResponse(data *models.ActivityGallery)
 // GetPublicLatest retrieves 10 latest published and active activity galleries for public display
 func (s *ActivityGalleryServiceImpl) GetPublicLatest() (*dtos.ActivityGalleryPublicListResponse, error) {
 	data, err := s.repository.GetPublicLatest()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.ActivityGalleryPublicResponse, 0)
+	for _, item := range data {
+		// Get active thumbnail
+		var fotoThumbnail string
+		var fotoModels []models.FileItem
+		if err := json.Unmarshal(item.Foto, &fotoModels); err == nil {
+			for _, fotoItem := range fotoModels {
+				if fotoItem.Thumbnail == "active" {
+					fotoThumbnail = s.r2Storage.GetPublicURL(fotoItem.URL)
+					break
+				}
+			}
+		}
+
+		publicResponse := dtos.ActivityGalleryPublicResponse{
+			ID:            item.ID,
+			Judul:         item.Judul,
+			Tanggal:       item.Tanggal,
+			FotoThumbnail: fotoThumbnail,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.ActivityGalleryPublicListResponse{
+		Data: responses,
+	}, nil
+}
+
+// GetPublicList retrieves published and active activity galleries with sorting and pagination for public display
+func (s *ActivityGalleryServiceImpl) GetPublicList(req *dtos.ActivityGalleryPublicListRequest) (*dtos.ActivityGalleryPublicDaftarResponse, error) {
+	// Default offset to 0 if not provided
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get data from repository (12 items per request)
+	data, total, err := s.repository.GetPublicList(req.Filter.Sort, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.ActivityGalleryPublicResponse, 0)
+	for _, item := range data {
+		// Get active thumbnail
+		var fotoThumbnail string
+		var fotoModels []models.FileItem
+		if err := json.Unmarshal(item.Foto, &fotoModels); err == nil {
+			for _, fotoItem := range fotoModels {
+				if fotoItem.Thumbnail == "active" {
+					fotoThumbnail = s.r2Storage.GetPublicURL(fotoItem.URL)
+					break
+				}
+			}
+		}
+
+		publicResponse := dtos.ActivityGalleryPublicResponse{
+			ID:            item.ID,
+			Judul:         item.Judul,
+			Tanggal:       item.Tanggal,
+			FotoThumbnail: fotoThumbnail,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	// Check if there are more items
+	hasMore := int64(offset+12) < total
+
+	return &dtos.ActivityGalleryPublicDaftarResponse{
+		Data:    responses,
+		Total:   total,
+		Offset:  offset,
+		HasMore: hasMore,
+	}, nil
+}
+// GetPublicDetailByID retrieves activity gallery detail by ID for public display (only if active and published)
+func (s *ActivityGalleryServiceImpl) GetPublicDetailByID(id uint) (*dtos.ActivityGalleryPublicDetailResponse, error) {
+	data, err := s.repository.GetPublicDetailByID(id)
+	if err != nil {
+		return nil, errors.New("activity gallery not found or not published")
+	}
+
+	// Map all fotos from JSON
+	var fotoItems []dtos.FileItemDTO
+	var fotoModels []models.FileItem
+	if err := json.Unmarshal(data.Foto, &fotoModels); err == nil {
+		for _, foto := range fotoModels {
+			fotoItems = append(fotoItems, dtos.FileItemDTO{
+				ID:        foto.ID,
+				Filename:  foto.Filename,
+				URL:       s.r2Storage.GetPublicURL(foto.URL),
+				Size:      foto.Size,
+				Thumbnail: foto.Thumbnail,
+			})
+		}
+	}
+
+	return &dtos.ActivityGalleryPublicDetailResponse{
+		ID:      data.ID,
+		Judul:   data.Judul,
+		Tanggal: data.Tanggal,
+		Foto:    fotoItems,
+	}, nil
+}
+// GetPublicOtherGalleries retrieves 4 latest published and active activity galleries excluding the specified ID
+func (s *ActivityGalleryServiceImpl) GetPublicOtherGalleries(excludeID uint) (*dtos.ActivityGalleryPublicListResponse, error) {
+	data, err := s.repository.GetPublicOtherGalleries(excludeID)
 	if err != nil {
 		return nil, err
 	}

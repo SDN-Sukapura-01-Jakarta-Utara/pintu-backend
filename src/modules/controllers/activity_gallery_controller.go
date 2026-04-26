@@ -392,3 +392,82 @@ func (c *ActivityGalleryController) GetPublicLatest(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, data)
 }
+
+// GetPublicList retrieves published and active activity galleries with sorting and pagination for public display (no auth required)
+// @Summary Get activity gallery list for public with sorting and pagination
+// @Description Retrieve published and active activity galleries with sort (terbaru/terlama) and pagination (12 items per request)
+// @Tags activity-gallery
+// @Accept json
+// @Produce json
+// @Param body body dtos.ActivityGalleryPublicListRequest true "Request body with filters and offset"
+// @Success 200 {object} dtos.ActivityGalleryPublicDaftarResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-daftar-galeri [post]
+func (c *ActivityGalleryController) GetPublicList(ctx *gin.Context) {
+	var req dtos.ActivityGalleryPublicListRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetPublicList(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+// GetPublicDetailByID retrieves activity gallery detail by ID for public display (no auth required)
+// @Summary Get activity gallery detail for public
+// @Description Retrieve activity gallery detail by ID (only if active and published, no authentication required)
+// @Tags activity-gallery
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with activity gallery ID"
+// @Success 200 {object} dtos.ActivityGalleryPublicDetailResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-detail-galeri [post]
+func (c *ActivityGalleryController) GetPublicDetailByID(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicDetailByID(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+// GetPublicOtherGalleries retrieves 4 latest other activity galleries excluding the current one (no auth required)
+// @Summary Get other activity galleries for public
+// @Description Retrieve 4 latest published and active activity galleries excluding the specified ID (no authentication required)
+// @Tags activity-gallery
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with activity gallery ID to exclude"
+// @Success 200 {object} dtos.ActivityGalleryPublicListResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-galeri-lainnya [post]
+func (c *ActivityGalleryController) GetPublicOtherGalleries(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicOtherGalleries(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
