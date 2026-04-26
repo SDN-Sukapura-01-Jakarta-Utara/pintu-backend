@@ -101,3 +101,20 @@ type ArticlePublicResponse struct {
 type ArticlePublicListResponse struct {
 	Data []ArticlePublicResponse `json:"data"`
 }
+
+// ArticlePublicListRequest represents the request payload for public article list with filters
+type ArticlePublicListRequest struct {
+	Filter struct {
+		Kategori string `json:"kategori"` // Filter by category
+		Sort     string `json:"sort"`     // "terbaru" or "terlama"
+	} `json:"filter"`
+	Offset int `json:"offset"` // Offset for pagination (default 0)
+}
+
+// ArticlePublicDaftarResponse represents the public list response with pagination
+type ArticlePublicDaftarResponse struct {
+	Data    []ArticlePublicResponse `json:"data"`
+	Total   int64                   `json:"total"`
+	Offset  int                     `json:"offset"`
+	HasMore bool                    `json:"has_more"`
+}

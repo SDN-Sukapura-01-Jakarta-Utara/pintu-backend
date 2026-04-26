@@ -45,5 +45,6 @@ func RegisterArticleRoutes(router *gin.Engine, db *gorm.DB) {
 	public := router.Group("/api/v1/public")
 	{
 		public.POST("/get-data-artikel", articleController.GetPublicLatest)
+		public.POST("/get-data-daftar-artikel", articleController.GetPublicList)
 	}
 }

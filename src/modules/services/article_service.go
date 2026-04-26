@@ -19,6 +19,7 @@ type ArticleService interface {
 	GetAll(limit int, offset int) (*dtos.ArticleListResponse, error)
 	GetAllWithFilter(params repositories.GetArticleParams) (*dtos.ArticleListWithPaginationResponse, error)
 	GetPublicLatest() (*dtos.ArticlePublicListResponse, error)
+	GetPublicList(req *dtos.ArticlePublicListRequest) (*dtos.ArticlePublicDaftarResponse, error)
 	Update(id uint, gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.ArticleUpdateRequest, userID uint) (*dtos.ArticleResponse, error)
 	Delete(id uint) error
 }
@@ -488,5 +489,45 @@ func (s *ArticleServiceImpl) GetPublicLatest() (*dtos.ArticlePublicListResponse,
 
 	return &dtos.ArticlePublicListResponse{
 		Data: responses,
+	}, nil
+}
+
+// GetPublicList retrieves published and active articles with filters and pagination for public display
+func (s *ArticleServiceImpl) GetPublicList(req *dtos.ArticlePublicListRequest) (*dtos.ArticlePublicDaftarResponse, error) {
+	// Default offset to 0 if not provided
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get data from repository (12 items per request)
+	data, total, err := s.repository.GetPublicList(req.Filter.Kategori, req.Filter.Sort, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.ArticlePublicResponse, 0)
+	for _, item := range data {
+		publicResponse := dtos.ArticlePublicResponse{
+			ID:        item.ID,
+			Judul:     item.Judul,
+			Tanggal:   item.Tanggal,
+			Kategori:  item.Kategori,
+			Deskripsi: item.Deskripsi,
+			Gambar:    s.r2Storage.GetPublicURL(item.Gambar),
+			Penulis:   item.Penulis,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	// Check if there are more items
+	hasMore := int64(offset+12) < total
+
+	return &dtos.ArticlePublicDaftarResponse{
+		Data:    responses,
+		Total:   total,
+		Offset:  offset,
+		HasMore: hasMore,
 	}, nil
 }

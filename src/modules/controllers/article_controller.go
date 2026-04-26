@@ -368,3 +368,30 @@ func (c *ArticleController) GetPublicLatest(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, data)
 }
+
+// GetPublicList retrieves published and active articles with filters and pagination for public display (no auth required)
+// @Summary Get article list for public with filters and pagination
+// @Description Retrieve published and active articles with category filter, sort (terbaru/terlama), and pagination (12 items per request)
+// @Tags articles
+// @Accept json
+// @Produce json
+// @Param body body dtos.ArticlePublicListRequest true "Request body with filters and offset"
+// @Success 200 {object} dtos.ArticlePublicDaftarResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-daftar-artikel [post]
+func (c *ArticleController) GetPublicList(ctx *gin.Context) {
+	var req dtos.ArticlePublicListRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetPublicList(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

@@ -33,6 +33,7 @@ type ArticleRepository interface {
 	GetAll(limit int, offset int) ([]models.Article, int64, error)
 	GetAllWithFilter(params GetArticleParams) ([]models.Article, int64, error)
 	GetPublicLatest() ([]models.Article, error)
+	GetPublicList(kategori string, sort string, offset int) ([]models.Article, int64, error)
 	Update(data *models.Article) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -148,4 +149,35 @@ func (r *ArticleRepositoryImpl) GetPublicLatest() ([]models.Article, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+// GetPublicList retrieves published and active articles with filters and pagination (12 items per request)
+func (r *ArticleRepositoryImpl) GetPublicList(kategori string, sort string, offset int) ([]models.Article, int64, error) {
+	var data []models.Article
+	var total int64
+
+	query := r.db.Where("status = ? AND status_publikasi = ?", "active", "published")
+
+	// Apply category filter if provided
+	if kategori != "" {
+		query = query.Where("LOWER(kategori) = ?", strings.ToLower(kategori))
+	}
+
+	// Get total count
+	if err := query.Model(&models.Article{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply sorting
+	orderBy := "tanggal DESC" // default: terbaru
+	if sort == "terlama" {
+		orderBy = "tanggal ASC"
+	}
+
+	// Get paginated data (12 items per request)
+	if err := query.Order(orderBy).Limit(12).Offset(offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
 }
