@@ -375,3 +375,84 @@ func (c *AnnouncementController) GetPublicNext3(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, data)
 }
+
+// GetPublicList retrieves published and active announcements with sorting and pagination for public display (no auth required)
+// @Summary Get announcement list for public with sorting and pagination
+// @Description Retrieve published and active announcements with sort (terbaru/terlama) and pagination (12 items per request)
+// @Tags announcements
+// @Accept json
+// @Produce json
+// @Param body body dtos.AnnouncementPublicListRequest true "Request body with filters and offset"
+// @Success 200 {object} dtos.AnnouncementPublicDaftarResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-daftar-pengumuman [post]
+func (c *AnnouncementController) GetPublicList(ctx *gin.Context) {
+	var req dtos.AnnouncementPublicListRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetPublicList(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+
+// GetPublicDetailByID retrieves announcement detail by ID for public display (no auth required)
+// @Summary Get announcement detail for public
+// @Description Retrieve announcement detail by ID (only if active and published, no authentication required)
+// @Tags announcements
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with announcement ID"
+// @Success 200 {object} dtos.AnnouncementPublicDetailResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-detail-pengumuman [post]
+func (c *AnnouncementController) GetPublicDetailByID(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicDetailByID(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+
+// GetPublicOtherAnnouncements retrieves 5 latest other announcements excluding the current one (no auth required)
+// @Summary Get other announcements for public
+// @Description Retrieve 5 latest published and active announcements excluding the specified ID (no authentication required)
+// @Tags announcements
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with announcement ID to exclude"
+// @Success 200 {object} dtos.AnnouncementPublicListResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-pengumuman-lainnya [post]
+func (c *AnnouncementController) GetPublicOtherAnnouncements(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicOtherAnnouncements(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

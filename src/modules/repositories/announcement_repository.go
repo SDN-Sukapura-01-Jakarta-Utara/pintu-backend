@@ -33,6 +33,9 @@ type AnnouncementRepository interface {
 	GetAllWithFilter(params GetAnnouncementParams) ([]models.Announcement, int64, error)
 	GetPublicLatest() (*models.Announcement, error)
 	GetPublicNext3() ([]models.Announcement, error)
+	GetPublicList(sort string, offset int) ([]models.Announcement, int64, error)
+	GetPublicDetailByID(id uint) (*models.Announcement, error)
+	GetPublicOtherAnnouncements(excludeID uint) ([]models.Announcement, error)
 	Update(data *models.Announcement) error
 	Delete(id uint) error
 	DeleteByGambar(gambar string) error
@@ -153,6 +156,54 @@ func (r *AnnouncementRepositoryImpl) GetPublicNext3() ([]models.Announcement, er
 		Order("tanggal DESC").
 		Offset(1). // Skip the first (latest) one
 		Limit(3).  // Get next 3
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetPublicList retrieves published and active announcements with sorting and pagination (12 items per request)
+func (r *AnnouncementRepositoryImpl) GetPublicList(sort string, offset int) ([]models.Announcement, int64, error) {
+	var data []models.Announcement
+	var total int64
+
+	query := r.db.Where("status = ? AND status_publikasi = ?", "active", "published")
+
+	// Get total count
+	if err := query.Model(&models.Announcement{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply sorting
+	orderBy := "tanggal DESC" // default: terbaru
+	if sort == "terlama" {
+		orderBy = "tanggal ASC"
+	}
+
+	// Get paginated data (12 items per request)
+	if err := query.Order(orderBy).Limit(12).Offset(offset).Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+// GetPublicDetailByID retrieves announcement detail by ID for public (only if active and published)
+func (r *AnnouncementRepositoryImpl) GetPublicDetailByID(id uint) (*models.Announcement, error) {
+	var data models.Announcement
+	if err := r.db.Where("id = ? AND status = ? AND status_publikasi = ?", id, "active", "published").
+		First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetPublicOtherAnnouncements retrieves 5 latest published and active announcements excluding the specified ID
+func (r *AnnouncementRepositoryImpl) GetPublicOtherAnnouncements(excludeID uint) ([]models.Announcement, error) {
+	var data []models.Announcement
+	if err := r.db.Where("status = ? AND status_publikasi = ? AND id != ?", "active", "published", excludeID).
+		Order("tanggal DESC").
+		Limit(5).
 		Find(&data).Error; err != nil {
 		return nil, err
 	}

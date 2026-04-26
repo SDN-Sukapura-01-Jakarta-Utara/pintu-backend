@@ -20,6 +20,9 @@ type AnnouncementService interface {
 	GetAllWithFilter(params repositories.GetAnnouncementParams) (*dtos.AnnouncementListWithPaginationResponse, error)
 	GetPublicLatest() (*dtos.AnnouncementPublicResponse, error)
 	GetPublicNext3() (*dtos.AnnouncementPublicListResponse, error)
+	GetPublicList(req *dtos.AnnouncementPublicListRequest) (*dtos.AnnouncementPublicDaftarResponse, error)
+	GetPublicDetailByID(id uint) (*dtos.AnnouncementPublicDetailResponse, error)
+	GetPublicOtherAnnouncements(excludeID uint) (*dtos.AnnouncementPublicListResponse, error)
 	Update(id uint, gambar *multipart.FileHeader, files []*multipart.FileHeader, req *dtos.AnnouncementUpdateRequest, userID uint) (*dtos.AnnouncementResponse, error)
 	Delete(id uint) error
 }
@@ -480,6 +483,103 @@ func (s *AnnouncementServiceImpl) GetPublicLatest() (*dtos.AnnouncementPublicRes
 // GetPublicNext3 retrieves 3 announcements (2nd to 4th latest) for public display
 func (s *AnnouncementServiceImpl) GetPublicNext3() (*dtos.AnnouncementPublicListResponse, error) {
 	data, err := s.repository.GetPublicNext3()
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.AnnouncementPublicResponse, 0)
+	for _, item := range data {
+		publicResponse := dtos.AnnouncementPublicResponse{
+			ID:        item.ID,
+			Judul:     item.Judul,
+			Tanggal:   item.Tanggal,
+			Deskripsi: item.Deskripsi,
+			Gambar:    s.r2Storage.GetPublicURL(item.Gambar),
+			Penulis:   item.Penulis,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.AnnouncementPublicListResponse{
+		Data: responses,
+	}, nil
+}
+
+// GetPublicList retrieves published and active announcements with sorting and pagination for public display
+func (s *AnnouncementServiceImpl) GetPublicList(req *dtos.AnnouncementPublicListRequest) (*dtos.AnnouncementPublicDaftarResponse, error) {
+	// Default offset to 0 if not provided
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get data from repository (12 items per request)
+	data, total, err := s.repository.GetPublicList(req.Filter.Sort, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.AnnouncementPublicResponse, 0)
+	for _, item := range data {
+		publicResponse := dtos.AnnouncementPublicResponse{
+			ID:        item.ID,
+			Judul:     item.Judul,
+			Tanggal:   item.Tanggal,
+			Deskripsi: item.Deskripsi,
+			Gambar:    s.r2Storage.GetPublicURL(item.Gambar),
+			Penulis:   item.Penulis,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	// Check if there are more items
+	hasMore := int64(offset+12) < total
+
+	return &dtos.AnnouncementPublicDaftarResponse{
+		Data:    responses,
+		Total:   total,
+		Offset:  offset,
+		HasMore: hasMore,
+	}, nil
+}
+
+// GetPublicDetailByID retrieves announcement detail by ID for public display (only if active and published)
+func (s *AnnouncementServiceImpl) GetPublicDetailByID(id uint) (*dtos.AnnouncementPublicDetailResponse, error) {
+	data, err := s.repository.GetPublicDetailByID(id)
+	if err != nil {
+		return nil, errors.New("announcement not found or not published")
+	}
+
+	// Map files from JSON
+	var fileItems []dtos.FileItemDTO
+	var fileModels []models.FileItem
+	if err := json.Unmarshal(data.Files, &fileModels); err == nil {
+		for _, file := range fileModels {
+			fileItems = append(fileItems, dtos.FileItemDTO{
+				ID:       file.ID,
+				Filename: file.Filename,
+				URL:      s.r2Storage.GetPublicURL(file.URL),
+				Size:     file.Size,
+			})
+		}
+	}
+
+	return &dtos.AnnouncementPublicDetailResponse{
+		ID:        data.ID,
+		Judul:     data.Judul,
+		Tanggal:   data.Tanggal,
+		Deskripsi: data.Deskripsi,
+		Gambar:    s.r2Storage.GetPublicURL(data.Gambar),
+		Penulis:   data.Penulis,
+		Files:     fileItems,
+	}, nil
+}
+
+// GetPublicOtherAnnouncements retrieves 5 latest published and active announcements excluding the specified ID
+func (s *AnnouncementServiceImpl) GetPublicOtherAnnouncements(excludeID uint) (*dtos.AnnouncementPublicListResponse, error) {
+	data, err := s.repository.GetPublicOtherAnnouncements(excludeID)
 	if err != nil {
 		return nil, err
 	}

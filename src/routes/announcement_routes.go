@@ -46,5 +46,8 @@ func RegisterAnnouncementRoutes(router *gin.Engine, db *gorm.DB) {
 	{
 		public.POST("/get-data-pengumuman-latest", announcementController.GetPublicLatest)
 		public.POST("/get-data-pengumuman", announcementController.GetPublicNext3)
+		public.POST("/get-data-daftar-pengumuman", announcementController.GetPublicList)
+		public.POST("/get-data-detail-pengumuman", announcementController.GetPublicDetailByID)
+		public.POST("/get-data-pengumuman-lainnya", announcementController.GetPublicOtherAnnouncements)
 	}
 }

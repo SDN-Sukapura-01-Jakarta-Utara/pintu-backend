@@ -87,3 +87,30 @@ type AnnouncementPublicResponse struct {
 type AnnouncementPublicListResponse struct {
 	Data []AnnouncementPublicResponse `json:"data"`
 }
+
+// AnnouncementPublicListRequest represents the request payload for public announcement list with filters
+type AnnouncementPublicListRequest struct {
+	Filter struct {
+		Sort string `json:"sort"` // "terbaru" or "terlama"
+	} `json:"filter"`
+	Offset int `json:"offset"` // Offset for pagination (default 0)
+}
+
+// AnnouncementPublicDaftarResponse represents the public list response with pagination
+type AnnouncementPublicDaftarResponse struct {
+	Data    []AnnouncementPublicResponse `json:"data"`
+	Total   int64                        `json:"total"`
+	Offset  int                          `json:"offset"`
+	HasMore bool                         `json:"has_more"`
+}
+
+// AnnouncementPublicDetailResponse represents the public detail response for a single announcement
+type AnnouncementPublicDetailResponse struct {
+	ID        uint          `json:"id"`
+	Judul     string        `json:"judul"`
+	Tanggal   time.Time     `json:"tanggal"`
+	Deskripsi string        `json:"deskripsi"`
+	Gambar    string        `json:"gambar"`
+	Penulis   string        `json:"penulis"`
+	Files     []FileItemDTO `json:"files"`
+}
