@@ -172,3 +172,20 @@ type AnggotaTimPublicDetail struct {
 type PrestasiPublicListResponse struct {
 	Data []PrestasiPublicResponse `json:"data"`
 }
+
+// PrestasiPublicListRequest represents the request payload for public prestasi list with filters
+type PrestasiPublicListRequest struct {
+	Filter struct {
+		Sort string `json:"sort"` // "terbaru" or "terlama"
+	} `json:"filter"`
+	Offset int `json:"offset"` // Offset for pagination (default 0)
+}
+
+// PrestasiPublicDaftarResponse represents the public list response with pagination
+type PrestasiPublicDaftarResponse struct {
+	Data    []PrestasiPublicResponse `json:"data"`
+	Total   int64                    `json:"total"`
+	Offset  int                      `json:"offset"`
+	HasMore bool                     `json:"has_more"`
+}
+

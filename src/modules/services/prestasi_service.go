@@ -20,6 +20,8 @@ type PrestasiService interface {
 	GetAll(limit int, offset int) (*dtos.PrestasiListResponse, error)
 	GetAllWithFilter(params repositories.GetPrestasiParams) (*dtos.PrestasiListWithPaginationResponse, error)
 	GetPublicLatest() (*dtos.PrestasiPublicListResponse, error)
+	GetPublicList(req *dtos.PrestasiPublicListRequest) (*dtos.PrestasiPublicDaftarResponse, error)
+	GetPublicDetailByID(id uint) (*dtos.PrestasiResponse, error)
 	Update(id uint, foto []*multipart.FileHeader, fotoThumbnails []string, req *dtos.PrestasiUpdateRequest, userID uint) (*dtos.PrestasiResponse, error)
 	Delete(id uint) error
 }
@@ -693,4 +695,94 @@ func (s *PrestasiServiceImpl) GetPublicLatest() (*dtos.PrestasiPublicListRespons
 	return &dtos.PrestasiPublicListResponse{
 		Data: responses,
 	}, nil
+}
+
+
+// GetPublicList retrieves active prestasi with sorting and pagination for public display
+func (s *PrestasiServiceImpl) GetPublicList(req *dtos.PrestasiPublicListRequest) (*dtos.PrestasiPublicDaftarResponse, error) {
+	// Default offset to 0 if not provided
+	offset := req.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Get data from repository (12 items per request)
+	data, total, err := s.repository.GetPublicList(req.Filter.Sort, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.PrestasiPublicResponse, 0)
+	for _, item := range data {
+		// Get active thumbnail
+		var fotoThumbnail string
+		var fotoModels []models.FotoItem
+		if err := json.Unmarshal(item.Foto, &fotoModels); err == nil {
+			for _, fotoItem := range fotoModels {
+				if fotoItem.Thumbnail == "active" {
+					fotoThumbnail = s.r2Storage.GetPublicURL(fotoItem.URL)
+					break
+				}
+			}
+		}
+
+		publicResponse := dtos.PrestasiPublicResponse{
+			ID:              item.ID,
+			Jenis:           item.Jenis,
+			NamaPrestasi:    item.NamaPrestasi,
+			TingkatPrestasi: item.TingkatPrestasi,
+			Juara:           item.Juara,
+			TanggalLomba:    item.TanggalLomba,
+			FotoThumbnail:   fotoThumbnail,
+		}
+
+		// Set nama based on jenis
+		jenisLower := strings.ToLower(item.Jenis)
+		if jenisLower == "individu" {
+			if item.PesertaDidik != nil {
+				publicResponse.NamaPesertaDidik = item.PesertaDidik.Nama
+			}
+		} else if jenisLower == "grup" || jenisLower == "tim" {
+			publicResponse.NamaGrup = item.NamaGrup
+			// Get anggota tim details
+			anggotaDetails := make([]dtos.AnggotaTimPublicDetail, 0)
+			for _, anggota := range item.AnggotaTimPrestasi {
+				if anggota.PesertaDidik != nil {
+					detail := dtos.AnggotaTimPublicDetail{
+						Nama: anggota.PesertaDidik.Nama,
+						NIS:  anggota.PesertaDidik.NIS,
+					}
+					// Get rombel name
+					if anggota.PesertaDidik.Rombel != nil {
+						detail.Rombel = anggota.PesertaDidik.Rombel.Name
+					}
+					anggotaDetails = append(anggotaDetails, detail)
+				}
+			}
+			publicResponse.AnggotaTim = anggotaDetails
+		}
+
+		responses = append(responses, publicResponse)
+	}
+
+	// Check if there are more items
+	hasMore := int64(offset+12) < total
+
+	return &dtos.PrestasiPublicDaftarResponse{
+		Data:    responses,
+		Total:   total,
+		Offset:  offset,
+		HasMore: hasMore,
+	}, nil
+}
+
+
+// GetPublicDetailByID retrieves prestasi detail by ID for public display (only if active)
+func (s *PrestasiServiceImpl) GetPublicDetailByID(id uint) (*dtos.PrestasiResponse, error) {
+	data, err := s.repository.GetPublicDetailByID(id)
+	if err != nil {
+		return nil, errors.New("prestasi not found or not active")
+	}
+	return s.mapToResponse(data), nil
 }

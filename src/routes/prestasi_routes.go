@@ -50,4 +50,6 @@ func PrestasiRoutes(router *gin.RouterGroup, controller *controllers.PrestasiCon
 // PrestasiPublicRoutes sets up public routes for prestasi endpoints (no auth required)
 func PrestasiPublicRoutes(router *gin.RouterGroup, controller *controllers.PrestasiController) {
 	router.POST("/get-data-prestasi", controller.GetPublicLatest)
+	router.POST("/get-data-daftar-prestasi", controller.GetPublicList)
+	router.POST("/get-data-detail-prestasi", controller.GetPublicDetailByID)
 }

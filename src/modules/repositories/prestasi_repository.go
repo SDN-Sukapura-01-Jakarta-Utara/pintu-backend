@@ -39,6 +39,8 @@ type PrestasiRepository interface {
 	GetAll(limit int, offset int) ([]models.Prestasi, int64, error)
 	GetAllWithFilter(params GetPrestasiParams) ([]models.Prestasi, int64, error)
 	GetPublicLatest() ([]models.Prestasi, error)
+	GetPublicList(sort string, offset int) ([]models.Prestasi, int64, error)
+	GetPublicDetailByID(id uint) (*models.Prestasi, error)
 	Update(data *models.Prestasi) error
 	Delete(id uint) error
 	// Anggota Tim methods
@@ -247,4 +249,57 @@ func (r *PrestasiRepositoryImpl) GetPublicLatest() ([]models.Prestasi, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+
+// GetPublicList retrieves active prestasi with sorting and pagination (12 items per request)
+func (r *PrestasiRepositoryImpl) GetPublicList(sort string, offset int) ([]models.Prestasi, int64, error) {
+	var data []models.Prestasi
+	var total int64
+
+	query := r.db.Where("status = ?", "active")
+
+	// Get total count
+	if err := query.Model(&models.Prestasi{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Apply sorting
+	orderBy := "tanggal_lomba DESC" // default: terbaru
+	if sort == "terlama" {
+		orderBy = "tanggal_lomba ASC"
+	}
+
+	// Get paginated data (12 items per request)
+	if err := query.Preload("PesertaDidik").
+		Preload("AnggotaTimPrestasi").
+		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Order(orderBy).
+		Limit(12).
+		Offset(offset).
+		Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
+}
+
+
+// GetPublicDetailByID retrieves prestasi detail by ID for public (only if active)
+func (r *PrestasiRepositoryImpl) GetPublicDetailByID(id uint) (*models.Prestasi, error) {
+	var data models.Prestasi
+	if err := r.db.Where("id = ? AND status = ?", id, "active").
+		Preload("PesertaDidik").
+		Preload("PesertaDidik.Rombel").
+		Preload("Ekstrakurikuler").
+		Preload("TahunPelajaran").
+		Preload("AnggotaTimPrestasi").
+		Preload("AnggotaTimPrestasi.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
 }

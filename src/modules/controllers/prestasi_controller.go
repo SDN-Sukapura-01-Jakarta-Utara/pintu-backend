@@ -475,3 +475,59 @@ func (c *PrestasiController) GetPublicLatest(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, data)
 }
+
+
+// GetPublicList retrieves active prestasi with sorting and pagination for public display (no auth required)
+// @Summary Get prestasi list for public with sorting and pagination
+// @Description Retrieve active prestasi with sort (terbaru/terlama) and pagination (12 items per request)
+// @Tags prestasi
+// @Accept json
+// @Produce json
+// @Param body body dtos.PrestasiPublicListRequest true "Request body with filters and offset"
+// @Success 200 {object} dtos.PrestasiPublicDaftarResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-daftar-prestasi [post]
+func (c *PrestasiController) GetPublicList(ctx *gin.Context) {
+	var req dtos.PrestasiPublicListRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetPublicList(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}
+
+
+// GetPublicDetailByID retrieves prestasi detail by ID for public display (no auth required)
+// @Summary Get prestasi detail for public
+// @Description Retrieve prestasi detail by ID (only if active, no authentication required)
+// @Tags prestasi
+// @Accept json
+// @Produce json
+// @Param body body dtos.IDRequest true "Request body with prestasi ID"
+// @Success 200 {object} gin.H{data=dtos.PrestasiResponse}
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-detail-prestasi [post]
+func (c *PrestasiController) GetPublicDetailByID(ctx *gin.Context) {
+	var req dtos.IDRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	data, err := c.service.GetPublicDetailByID(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}
