@@ -36,4 +36,11 @@ func RegisterApplicationRoutes(router *gin.Engine, db *gorm.DB) {
 		// Delete application
 		protected.POST("/delete-application", applicationController.Delete)
 	}
+
+	// Public routes (no auth required)
+	public := router.Group("/api/v1/public")
+	{
+		// Get all active applications for public
+		public.POST("/get-data-aplikasi-sekolah", applicationController.GetPublicList)
+	}
 }

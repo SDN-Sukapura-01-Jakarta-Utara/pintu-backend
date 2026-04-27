@@ -15,6 +15,7 @@ type ApplicationService interface {
 	GetAllWithFilter(params repositories.GetApplicationParams) (*dtos.ApplicationListWithPaginationResponse, error)
 	Update(req *dtos.ApplicationUpdateRequest, userID uint) (*dtos.ApplicationResponse, error)
 	Delete(id uint) error
+	GetPublicList(req *dtos.ApplicationPublicRequest) (*dtos.ApplicationPublicListResponse, error)
 }
 
 type ApplicationServiceImpl struct {
@@ -193,4 +194,30 @@ func (s *ApplicationServiceImpl) mapToResponse(data *models.Application) *dtos.A
 		CreatedByID:     data.CreatedByID,
 		UpdatedByID:     data.UpdatedByID,
 	}
+}
+
+// GetPublicList retrieves all active applications for public display
+func (s *ApplicationServiceImpl) GetPublicList(req *dtos.ApplicationPublicRequest) (*dtos.ApplicationPublicListResponse, error) {
+	// Get data from repository
+	data, total, err := s.repository.GetPublicList(req.Filter.ShowInJumbotron)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to public response
+	responses := make([]dtos.ApplicationPublicResponse, 0)
+	for _, item := range data {
+		publicResponse := dtos.ApplicationPublicResponse{
+			ID:              item.ID,
+			Nama:            item.Nama,
+			Link:            item.Link,
+			ShowInJumbotron: item.ShowInJumbotron,
+		}
+		responses = append(responses, publicResponse)
+	}
+
+	return &dtos.ApplicationPublicListResponse{
+		Data:  responses,
+		Total: total,
+	}, nil
 }

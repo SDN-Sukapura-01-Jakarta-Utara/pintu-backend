@@ -30,6 +30,7 @@ type ApplicationRepository interface {
 	Update(data *models.Application) error
 	Delete(id uint) error
 	UnsetAllShowInJumbotron() error
+	GetPublicList(showInJumbotron *bool) ([]models.Application, int64, error)
 }
 
 type ApplicationRepositoryImpl struct {
@@ -126,4 +127,29 @@ func (r *ApplicationRepositoryImpl) GetAllWithFilter(params GetApplicationParams
 // UnsetAllShowInJumbotron sets all applications show_in_jumbotron to false
 func (r *ApplicationRepositoryImpl) UnsetAllShowInJumbotron() error {
 	return r.db.Model(&models.Application{}).Where("show_in_jumbotron = ?", true).Update("show_in_jumbotron", false).Error
+}
+
+// GetPublicList retrieves all active applications for public display (sorted from oldest to newest)
+func (r *ApplicationRepositoryImpl) GetPublicList(showInJumbotron *bool) ([]models.Application, int64, error) {
+	var data []models.Application
+	var total int64
+
+	query := r.db.Where("status = ?", "active")
+
+	// Apply filter if provided
+	if showInJumbotron != nil {
+		query = query.Where("show_in_jumbotron = ?", *showInJumbotron)
+	}
+
+	// Get total count
+	if err := query.Model(&models.Application{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get all data ordered by created_at ASC (oldest to newest)
+	if err := query.Order("created_at ASC").Find(&data).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return data, total, nil
 }

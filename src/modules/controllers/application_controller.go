@@ -200,3 +200,30 @@ func (c *ApplicationController) Delete(ctx *gin.Context) {
 		"message": "Application deleted successfully",
 	})
 }
+
+// GetPublicList retrieves all active applications for public display (no auth required)
+// @Summary Get all active applications for public
+// @Description Retrieve all active applications (no authentication required, sorted from oldest to newest)
+// @Tags application
+// @Accept json
+// @Produce json
+// @Param body body dtos.ApplicationPublicRequest true "Request body with filter"
+// @Success 200 {object} dtos.ApplicationPublicListResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 500 {object} gin.H{error=string}
+// @Router /api/v1/public/get-data-aplikasi-sekolah [post]
+func (c *ApplicationController) GetPublicList(ctx *gin.Context) {
+	var req dtos.ApplicationPublicRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetPublicList(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, data)
+}

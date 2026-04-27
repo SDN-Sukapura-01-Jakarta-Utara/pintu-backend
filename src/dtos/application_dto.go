@@ -55,3 +55,24 @@ type ApplicationListWithPaginationResponse struct {
 	Data       []ApplicationResponse `json:"data"`
 	Pagination PaginationInfo        `json:"pagination"`
 }
+
+// ApplicationPublicRequest represents the request payload for public application list
+type ApplicationPublicRequest struct {
+	Filter struct {
+		ShowInJumbotron *bool `json:"show_in_jumbotron"`
+	} `json:"filter"`
+}
+
+// ApplicationPublicResponse represents the public response for applications
+type ApplicationPublicResponse struct {
+	ID              uint   `json:"id"`
+	Nama            string `json:"nama"`
+	Link            string `json:"link"`
+	ShowInJumbotron bool   `json:"show_in_jumbotron"`
+}
+
+// ApplicationPublicListResponse represents the public list response
+type ApplicationPublicListResponse struct {
+	Data  []ApplicationPublicResponse `json:"data"`
+	Total int64                       `json:"total"`
+}
