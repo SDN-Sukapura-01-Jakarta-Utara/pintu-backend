@@ -90,6 +90,7 @@ func main() {
 	routes.RegisterPesertaDidikRoutes(router, db)
 	routes.RegisterPrestasiRoutes(router, db)
 	routes.RegisterApplicationRoutes(router, db)
+	routes.RegisterKritikSaranRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
