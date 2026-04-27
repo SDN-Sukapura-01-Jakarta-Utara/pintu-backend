@@ -46,6 +46,7 @@ type PrestasiCreateRequest struct {
 	Keterangan        string `json:"keterangan" binding:"omitempty"`
 	EkstrakurikulerID *uint  `json:"ekstrakurikuler_id" binding:"omitempty"`
 	TahunPelajaranID  uint   `json:"tahun_pelajaran_id" binding:"required"`
+	Status            string `json:"status" binding:"omitempty,oneof=active inactive"`
 	// Anggota tim data
 	AnggotaTim        []AnggotaTimCreateRequest `json:"anggota_tim" binding:"omitempty"`
 }
@@ -70,6 +71,7 @@ type PrestasiUpdateRequest struct {
 	Keterangan        string                    `json:"keterangan" binding:"omitempty"`
 	EkstrakurikulerID *uint                     `json:"ekstrakurikuler_id" binding:"omitempty"`
 	TahunPelajaranID  uint                      `json:"tahun_pelajaran_id" binding:"omitempty"`
+	Status            string                    `json:"status" binding:"omitempty,oneof=active inactive"`
 	FotoToDelete      []string                  `json:"foto_to_delete" binding:"omitempty"`
 	// Anggota tim data
 	AnggotaTim        []AnggotaTimUpdateRequest `json:"anggota_tim" binding:"omitempty"`
@@ -100,6 +102,7 @@ type PrestasiResponse struct {
 	Ekstrakurikuler    *EkstrakurikulerDetailDTO   `json:"ekstrakurikuler"`
 	TahunPelajaranID   uint                        `json:"tahun_pelajaran_id"`
 	TahunPelajaran     *TahunPelajaranDetailResponse `json:"tahun_pelajaran"`
+	Status             string                      `json:"status"`
 	AnggotaTimPrestasi []AnggotaTimPrestasiDTO     `json:"anggota_tim_prestasi"`
 	CreatedAt          time.Time                   `json:"created_at"`
 	UpdatedAt          time.Time                   `json:"updated_at"`
@@ -130,6 +133,7 @@ type PrestasiGetAllRequest struct {
 		Juara             string `json:"juara"`
 		EkstrakurikulerID *uint  `json:"ekstrakurikuler_id"`
 		TahunPelajaranID  *uint  `json:"tahun_pelajaran_id"`
+		Status            string `json:"status"`
 	} `json:"search"`
 	Pagination struct {
 		Limit int `json:"limit"`

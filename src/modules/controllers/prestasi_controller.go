@@ -103,6 +103,7 @@ func (c *PrestasiController) Create(ctx *gin.Context) {
 	tingkatPrestasi := ctx.PostForm("tingkat_prestasi")
 	penyelenggara := ctx.PostForm("penyelenggara")
 	keterangan := ctx.PostForm("keterangan")
+	status := ctx.PostForm("status")
 
 	var ekstrakurikulerID *uint
 	if ekstrakurikulerIDStr := ctx.PostForm("ekstrakurikuler_id"); ekstrakurikulerIDStr != "" {
@@ -152,6 +153,7 @@ func (c *PrestasiController) Create(ctx *gin.Context) {
 		Keterangan:        keterangan,
 		EkstrakurikulerID: ekstrakurikulerID,
 		TahunPelajaranID:  uint(tahunPelajaranIDUint),
+		Status:            status,
 		AnggotaTim:        anggotaTim,
 	}
 
@@ -229,6 +231,7 @@ func (c *PrestasiController) GetAll(ctx *gin.Context) {
 			Juara:             req.Search.Juara,
 			EkstrakurikulerID: req.Search.EkstrakurikulerID,
 			TahunPelajaranID:  req.Search.TahunPelajaranID,
+			Status:            req.Search.Status,
 		},
 		Limit:  limit,
 		Offset: offset,
@@ -340,6 +343,7 @@ func (c *PrestasiController) Update(ctx *gin.Context) {
 	tanggalLomba := ctx.PostForm("tanggal_lomba")
 	juara := ctx.PostForm("juara")
 	keterangan := ctx.PostForm("keterangan")
+	status := ctx.PostForm("status")
 
 	var tahunPelajaranID uint
 	if tahunPelajaranIDStr := ctx.PostForm("tahun_pelajaran_id"); tahunPelajaranIDStr != "" {
@@ -403,6 +407,7 @@ func (c *PrestasiController) Update(ctx *gin.Context) {
 		Keterangan:        keterangan,
 		EkstrakurikulerID: ekstrakurikulerID,
 		TahunPelajaranID:  tahunPelajaranID,
+		Status:            status,
 		FotoToDelete:      fotoToDelete,
 		AnggotaTim:        anggotaTim,
 	}

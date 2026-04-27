@@ -22,6 +22,7 @@ type GetPrestasiFilter struct {
 	Juara             string
 	EkstrakurikulerID *uint
 	TahunPelajaranID  *uint
+	Status            string
 }
 
 // GetPrestasiParams represents parameters for GetAllWithFilter with filters
@@ -159,6 +160,9 @@ func (r *PrestasiRepositoryImpl) GetAllWithFilter(params GetPrestasiParams) ([]m
 	if params.Filter.TahunPelajaranID != nil {
 		query = query.Where("tahun_pelajaran_id = ?", *params.Filter.TahunPelajaranID)
 	}
+	if params.Filter.Status != "" {
+		query = query.Where("status = ?", params.Filter.Status)
+	}
 
 	// Get total count
 	if err := query.Model(&models.Prestasi{}).Count(&total).Error; err != nil {
@@ -232,7 +236,8 @@ func (r *PrestasiRepositoryImpl) DeleteAnggotaTimByPrestasiID(prestasiID uint) e
 // GetPublicLatest retrieves 10 latest prestasi ordered by tanggal_lomba DESC
 func (r *PrestasiRepositoryImpl) GetPublicLatest() ([]models.Prestasi, error) {
 	var data []models.Prestasi
-	if err := r.db.Preload("PesertaDidik").
+	if err := r.db.Where("status = ?", "active").
+		Preload("PesertaDidik").
 		Preload("AnggotaTimPrestasi").
 		Preload("AnggotaTimPrestasi.PesertaDidik").
 		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").

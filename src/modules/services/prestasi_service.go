@@ -100,6 +100,12 @@ func (s *PrestasiServiceImpl) Create(foto []*multipart.FileHeader, fotoThumbnail
 	// Convert fotoItems to JSON
 	fotoJSON, _ := json.Marshal(fotoItems)
 
+	// Set defaults
+	status := req.Status
+	if status == "" {
+		status = "active"
+	}
+
 	// Create prestasi record
 	data := &models.Prestasi{
 		PesertaDidikID:    req.PesertaDidikID,
@@ -114,6 +120,7 @@ func (s *PrestasiServiceImpl) Create(foto []*multipart.FileHeader, fotoThumbnail
 		Foto:              fotoJSON,
 		EkstrakurikulerID: req.EkstrakurikulerID,
 		TahunPelajaranID:  req.TahunPelajaranID,
+		Status:            status,
 		CreatedByID:       &userID,
 	}
 
@@ -283,6 +290,9 @@ func (s *PrestasiServiceImpl) Update(id uint, foto []*multipart.FileHeader, foto
 	}
 	if req.TahunPelajaranID != 0 {
 		existing.TahunPelajaranID = req.TahunPelajaranID
+	}
+	if req.Status != "" {
+		existing.Status = req.Status
 	}
 
 	// Delete foto if specified
@@ -533,6 +543,7 @@ func (s *PrestasiServiceImpl) mapToResponse(data *models.Prestasi) *dtos.Prestas
 		Ekstrakurikuler:    ekstrakurikuler,
 		TahunPelajaranID:   data.TahunPelajaranID,
 		TahunPelajaran:     tahunPelajaran,
+		Status:             data.Status,
 		AnggotaTimPrestasi: anggotaTimPrestasi,
 		CreatedAt:          data.CreatedAt,
 		UpdatedAt:          data.UpdatedAt,

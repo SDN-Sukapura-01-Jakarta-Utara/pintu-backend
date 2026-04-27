@@ -50,6 +50,7 @@ type Prestasi struct {
 	Foto               datatypes.JSON       `gorm:"type:jsonb;default:'[]'" json:"foto"`
 	EkstrakurikulerID  *uint                `gorm:"column:ekstrakurikuler_id" json:"ekstrakurikuler_id"`
 	TahunPelajaranID   uint                 `gorm:"not null;column:tahun_pelajaran_id" json:"tahun_pelajaran_id"`
+	Status             string               `gorm:"default:active" json:"status"`
 	CreatedAt          time.Time            `json:"created_at"`
 	UpdatedAt          time.Time            `json:"updated_at"`
 	DeletedAt          gorm.DeletedAt       `gorm:"index" json:"deleted_at,omitempty"`
