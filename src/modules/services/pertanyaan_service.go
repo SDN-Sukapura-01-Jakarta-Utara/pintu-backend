@@ -105,18 +105,17 @@ func (s *PertanyaanServiceImpl) CreatePublic(files []*multipart.FileHeader, req 
 
 	// Create pertanyaan record
 	data := &models.Pertanyaan{
-		IDTiket:          ticketID,
-		TanggalPengajuan: time.Now(),
-		Nama:             req.Nama,
-		Email:            req.Email,
-		Telepon:          req.Telepon,
-		Kategori:         req.Kategori,
-		Prioritas:        prioritas,
-		Judul:            req.Judul,
-		Deskripsi:        req.Deskripsi,
-		FilePertanyaan:   fileJSON,
-		Status:           "pending",
-		EmailTerkirim:    false,
+		IDTiket:        ticketID,
+		Nama:           req.Nama,
+		Email:          req.Email,
+		Telepon:        req.Telepon,
+		Kategori:       req.Kategori,
+		Prioritas:      prioritas,
+		Judul:          req.Judul,
+		Deskripsi:      req.Deskripsi,
+		FilePertanyaan: fileJSON,
+		Status:         "pending",
+		EmailTerkirim:  false,
 	}
 
 	if err := s.repository.Create(data); err != nil {
@@ -328,7 +327,32 @@ func (s *PertanyaanServiceImpl) SendReply(files []*multipart.FileHeader, req *dt
 	// Convert fileItems to JSON
 	fileJSON, _ := json.Marshal(fileItems)
 
-	// Prepare email data
+	// Update database FIRST before sending email
+	// Use Asia/Jakarta timezone (WIB - UTC+7)
+	// Use FixedZone to ensure WIB timezone works even without timezone database
+	wib := time.FixedZone("WIB", 7*60*60) // UTC+7
+	now := time.Now().In(wib)
+	judulJawaban := req.JudulJawaban
+	deskripsiJawaban := req.DeskripsiJawaban
+
+	data.JudulJawaban = &judulJawaban
+	data.DeskripsiJawaban = &deskripsiJawaban
+	data.FileJawaban = fileJSON
+	data.TanggalProses = &now
+	data.EmailTerkirim = false // Set to false first, will update after email sent
+	data.Status = "processed"
+	data.RepliedBy = &userID
+
+	// Save to database first
+	if err := s.repository.Update(data); err != nil {
+		// Cleanup uploaded files if database update fails
+		for _, item := range fileItems {
+			_ = s.r2Storage.DeleteFile(item.URL)
+		}
+		return nil, fmt.Errorf("gagal menyimpan data ke database: %w", err)
+	}
+
+	// Database saved successfully, now prepare and send email
 	// Parse file_pertanyaan for email
 	var filePertanyaanItems []models.FileItem
 	if len(data.FilePertanyaan) > 0 {
@@ -367,32 +391,18 @@ func (s *PertanyaanServiceImpl) SendReply(files []*multipart.FileHeader, req *dt
 		FileJawaban:         fileJawabanLinks,
 	}
 
-	// Send email first - if this fails, don't update database
+	// Try to send email
 	if err := s.emailService.SendPertanyaanReply(data.Email, emailData); err != nil {
-		// Cleanup uploaded files if email fails
-		for _, item := range fileItems {
-			_ = s.r2Storage.DeleteFile(item.URL)
-		}
-		return nil, fmt.Errorf("gagal mengirim email: %w", err)
+		// Email failed but data already saved - return success with warning
+		// Keep email_terkirim as false to indicate email wasn't sent
+		return s.mapToResponse(data), nil
 	}
 
-	// Email sent successfully, now update database
-	now := time.Now()
-	judulJawaban := req.JudulJawaban
-	deskripsiJawaban := req.DeskripsiJawaban
-
-	data.JudulJawaban = &judulJawaban
-	data.DeskripsiJawaban = &deskripsiJawaban
-	data.FileJawaban = fileJSON
-	data.TanggalProses = &now
+	// Email sent successfully, update email_terkirim flag
 	data.EmailTerkirim = true
-	data.Status = "processed"
-	data.RepliedBy = &userID
-
 	if err := s.repository.Update(data); err != nil {
-		// Database update failed but email already sent
-		// Log this error but don't fail the request
-		return nil, fmt.Errorf("email terkirim tetapi gagal update database: %w", err)
+		// Failed to update email flag but email was sent - not critical
+		// Return success anyway since main data is saved
 	}
 
 	return s.mapToResponse(data), nil
@@ -407,7 +417,10 @@ func (s *PertanyaanServiceImpl) ClosePertanyaan(id uint) (*dtos.PertanyaanRespon
 	}
 
 	// Update status and tanggal_selesai
-	now := time.Now()
+	// Use Asia/Jakarta timezone (WIB - UTC+7)
+	// Use FixedZone to ensure WIB timezone works even without timezone database
+	wib := time.FixedZone("WIB", 7*60*60) // UTC+7
+	now := time.Now().In(wib)
 	data.Status = "closed"
 	data.TanggalSelesai = &now
 
