@@ -10,7 +10,8 @@ type LoginRequest struct {
 
 // LoginResponse represents the response payload for successful login
 type LoginResponse struct {
-	Token     string    `json:"token"`
-	User      UserLoginResponse `json:"user"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Token       string              `json:"token"`
+	User        UserLoginResponse   `json:"user"`
+	Permissions []string            `json:"permissions"`
+	ExpiresAt   time.Time           `json:"expires_at"`
 }

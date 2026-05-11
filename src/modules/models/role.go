@@ -13,6 +13,7 @@ type Role struct {
 	Description string          `json:"description"`
 	SystemID    *uint           `json:"system_id"`
 	System      *System         `gorm:"foreignKey:SystemID" json:"system,omitempty"`
+	Permissions []Permission    `gorm:"many2many:role_permissions;" json:"permissions,omitempty"`
 	Status      string          `gorm:"default:active" json:"status"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
