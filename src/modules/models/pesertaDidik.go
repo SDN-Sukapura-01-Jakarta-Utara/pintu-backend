@@ -30,6 +30,8 @@ type PesertaDidik struct {
 	Status             string         `gorm:"default:active" json:"status"`
 	Username           string         `json:"username"`
 	Password           string         `gorm:"not null" json:"password,omitempty"`
+	Barcode            string         `gorm:"unique" json:"barcode,omitempty"`
+	BarcodeGeneratedAt *time.Time     `json:"barcode_generated_at,omitempty"`
 	CreatedAt          time.Time      `json:"created_at"`
 	UpdatedAt          time.Time      `json:"updated_at"`
 	CreatedByID        *uint          `json:"created_by_id"`

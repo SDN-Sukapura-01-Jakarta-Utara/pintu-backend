@@ -239,3 +239,41 @@ func (c *PesertaDidikController) GetTotalSiswa(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"data": result})
 }
+
+// GenerateBarcodeByTahunPelajaran generates barcodes for all peserta didik in a tahun pelajaran
+func (c *PesertaDidikController) GenerateBarcodeByTahunPelajaran(ctx *gin.Context) {
+	var req dtos.GenerateBarcodeByTahunPelajaranRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	result, err := c.service.GenerateBarcodeByTahunPelajaran(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GenerateBarcodeByTahunPelajaranAndRombel generates barcodes for all peserta didik in a tahun pelajaran and rombel
+func (c *PesertaDidikController) GenerateBarcodeByTahunPelajaranAndRombel(ctx *gin.Context) {
+	var req dtos.GenerateBarcodeByTahunPelajaranAndRombelRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	result, err := c.service.GenerateBarcodeByTahunPelajaranAndRombel(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

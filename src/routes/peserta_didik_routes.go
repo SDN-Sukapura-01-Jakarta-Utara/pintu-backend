@@ -47,5 +47,9 @@ func RegisterPesertaDidikRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Download Template
 		api.POST("/download-template", controller.DownloadTemplate)
+
+		// Generate Barcode
+		api.POST("/generate-barcode-by-tahun-pelajaran", controller.GenerateBarcodeByTahunPelajaran)
+		api.POST("/generate-barcode-by-tahun-pelajaran-and-rombel", controller.GenerateBarcodeByTahunPelajaranAndRombel)
 	}
 }

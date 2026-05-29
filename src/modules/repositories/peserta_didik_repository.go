@@ -49,6 +49,9 @@ type PesertaDidikRepository interface {
 	GetAllTahunPelajaran() ([]models.TahunPelajaran, error)
 	GetAllTahunPelajaranAll() ([]models.TahunPelajaran, error)
 	GetTotalSiswaByActiveTahunPelajaran() (int64, error)
+	GetPesertaDidikByTahunPelajaran(tahunPelajaranID uint) ([]models.PesertaDidik, error)
+	GetPesertaDidikByTahunPelajaranAndRombel(tahunPelajaranID uint, rombelID uint) ([]models.PesertaDidik, error)
+	UpdateBarcode(pesertaDidikID uint, barcode string) error
 }
 
 type PesertaDidikRepositoryImpl struct {
@@ -316,4 +319,32 @@ func (r *PesertaDidikRepositoryImpl) GetTotalSiswaByActiveTahunPelajaran() (int6
 	}
 	
 	return total, nil
+}
+
+// GetPesertaDidikByTahunPelajaran retrieves all peserta didik by tahun pelajaran ID
+func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByTahunPelajaran(tahunPelajaranID uint) ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	if err := r.db.Where("tahun_pelajaran_id = ?", tahunPelajaranID).Order("nis ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetPesertaDidikByTahunPelajaranAndRombel retrieves all peserta didik by tahun pelajaran ID and rombel ID
+func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByTahunPelajaranAndRombel(tahunPelajaranID uint, rombelID uint) ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	if err := r.db.Where("tahun_pelajaran_id = ? AND rombel_id = ?", tahunPelajaranID, rombelID).Order("nis ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// UpdateBarcode updates barcode and barcode_generated_at for a peserta didik
+func (r *PesertaDidikRepositoryImpl) UpdateBarcode(pesertaDidikID uint, barcode string) error {
+	return r.db.Model(&models.PesertaDidik{}).
+		Where("id = ?", pesertaDidikID).
+		Updates(map[string]interface{}{
+			"barcode":             barcode,
+			"barcode_generated_at": gorm.Expr("CURRENT_TIMESTAMP"),
+		}).Error
 }

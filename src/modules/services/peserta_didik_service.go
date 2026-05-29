@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"crypto/rand"
+	"math/big"
 
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
@@ -26,6 +28,8 @@ type PesertaDidikService interface {
 	ImportExcel(file multipart.File, userID uint) (*dtos.ImportExcelResponse, error)
 	DownloadTemplate() (*excelize.File, error)
 	GetTotalSiswa() (*dtos.TotalSiswaResponse, error)
+	GenerateBarcodeByTahunPelajaran(req *dtos.GenerateBarcodeByTahunPelajaranRequest) (*dtos.GenerateBarcodeResponse, error)
+	GenerateBarcodeByTahunPelajaranAndRombel(req *dtos.GenerateBarcodeByTahunPelajaranAndRombelRequest) (*dtos.GenerateBarcodeResponse, error)
 }
 
 type PesertaDidikServiceImpl struct {
@@ -807,6 +811,11 @@ func (s *PesertaDidikServiceImpl) mapToResponse(data *models.PesertaDidik) *dtos
 		tanggalLahirStr = data.TanggalLahir.Format("2006-01-02")
 	}
 
+	barcodeGeneratedAtStr := ""
+	if data.BarcodeGeneratedAt != nil {
+		barcodeGeneratedAtStr = data.BarcodeGeneratedAt.Format("2006-01-02T15:04:05Z")
+	}
+
 	return &dtos.PesertaDidikResponse{
 		ID:               data.ID,
 		Nama:             data.Nama,
@@ -831,6 +840,8 @@ func (s *PesertaDidikServiceImpl) mapToResponse(data *models.PesertaDidik) *dtos
 		TahunPelajaran:   tahunPelajaran,
 		Status:           data.Status,
 		Username:         data.Username,
+		Barcode:          data.Barcode,
+		BarcodeGeneratedAt: barcodeGeneratedAtStr,
 		Roles:            roles,
 		CreatedAt:        data.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:        data.UpdatedAt.Format("2006-01-02T15:04:05Z"),
@@ -848,5 +859,104 @@ func (s *PesertaDidikServiceImpl) GetTotalSiswa() (*dtos.TotalSiswaResponse, err
 
 	return &dtos.TotalSiswaResponse{
 		TotalSiswa: total,
+	}, nil
+}
+
+// generateRandomString generates a random alphanumeric string of specified length
+func generateRandomString(length int) string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		num, _ := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		result[i] = charset[num.Int64()]
+	}
+	return string(result)
+}
+
+// generateBarcode generates a unique barcode for a peserta didik
+// Format: {NIS}-TP{TAHUN_PELAJARAN_ID}-{5_RANDOM}
+// Example: 001234-TP1-A7B9X
+func generateBarcode(nis string, tahunPelajaranID uint) string {
+	random := generateRandomString(5)
+	return fmt.Sprintf("%s-TP%d-%s", nis, tahunPelajaranID, random)
+}
+
+// GenerateBarcodeByTahunPelajaran generates barcodes for all peserta didik in a tahun pelajaran
+func (s *PesertaDidikServiceImpl) GenerateBarcodeByTahunPelajaran(req *dtos.GenerateBarcodeByTahunPelajaranRequest) (*dtos.GenerateBarcodeResponse, error) {
+	// Get all peserta didik by tahun pelajaran
+	pesertaDidikList, err := s.repository.GetPesertaDidikByTahunPelajaran(req.TahunPelajaranID)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data peserta didik")
+	}
+
+	if len(pesertaDidikList) == 0 {
+		return nil, errors.New("tidak ada peserta didik di tahun pelajaran ini")
+	}
+
+	totalGenerated := 0
+	var errorMessages []string
+
+	// Generate barcode for each peserta didik
+	for _, pd := range pesertaDidikList {
+		barcode := generateBarcode(pd.NIS, req.TahunPelajaranID)
+		
+		// Update barcode
+		if err := s.repository.UpdateBarcode(pd.ID, barcode); err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("Gagal generate barcode untuk NIS %s: %s", pd.NIS, err.Error()))
+			continue
+		}
+		
+		totalGenerated++
+	}
+
+	message := fmt.Sprintf("Berhasil generate barcode untuk %d peserta didik", totalGenerated)
+	if len(errorMessages) > 0 {
+		message += fmt.Sprintf(", %d gagal", len(errorMessages))
+	}
+
+	return &dtos.GenerateBarcodeResponse{
+		TotalGenerated: totalGenerated,
+		Message:        message,
+		Errors:         errorMessages,
+	}, nil
+}
+
+// GenerateBarcodeByTahunPelajaranAndRombel generates barcodes for all peserta didik in a tahun pelajaran and rombel
+func (s *PesertaDidikServiceImpl) GenerateBarcodeByTahunPelajaranAndRombel(req *dtos.GenerateBarcodeByTahunPelajaranAndRombelRequest) (*dtos.GenerateBarcodeResponse, error) {
+	// Get all peserta didik by tahun pelajaran and rombel
+	pesertaDidikList, err := s.repository.GetPesertaDidikByTahunPelajaranAndRombel(req.TahunPelajaranID, req.RombelID)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data peserta didik")
+	}
+
+	if len(pesertaDidikList) == 0 {
+		return nil, errors.New("tidak ada peserta didik di tahun pelajaran dan rombel ini")
+	}
+
+	totalGenerated := 0
+	var errorMessages []string
+
+	// Generate barcode for each peserta didik
+	for _, pd := range pesertaDidikList {
+		barcode := generateBarcode(pd.NIS, req.TahunPelajaranID)
+		
+		// Update barcode
+		if err := s.repository.UpdateBarcode(pd.ID, barcode); err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("Gagal generate barcode untuk NIS %s: %s", pd.NIS, err.Error()))
+			continue
+		}
+		
+		totalGenerated++
+	}
+
+	message := fmt.Sprintf("Berhasil generate barcode untuk %d peserta didik", totalGenerated)
+	if len(errorMessages) > 0 {
+		message += fmt.Sprintf(", %d gagal", len(errorMessages))
+	}
+
+	return &dtos.GenerateBarcodeResponse{
+		TotalGenerated: totalGenerated,
+		Message:        message,
+		Errors:         errorMessages,
 	}, nil
 }

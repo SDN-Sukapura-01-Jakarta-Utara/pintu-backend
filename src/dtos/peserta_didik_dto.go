@@ -109,6 +109,8 @@ type PesertaDidikResponse struct {
 	TahunPelajaran   *TahunPelajaranDetailResponse `json:"tahun_pelajaran"`
 	Status           string                        `json:"status"`
 	Username         string                        `json:"username"`
+	Barcode          string                        `json:"barcode,omitempty"`
+	BarcodeGeneratedAt string                      `json:"barcode_generated_at,omitempty"`
 	Roles            []RoleResponse                `json:"roles"`
 	CreatedAt        string                        `json:"created_at"`
 	UpdatedAt        string                        `json:"updated_at"`
@@ -166,4 +168,22 @@ type ImportExcelRowError struct {
 // TotalSiswaResponse represents the response for total siswa count
 type TotalSiswaResponse struct {
 	TotalSiswa int64 `json:"total_siswa"`
+}
+
+// GenerateBarcodeByTahunPelajaranRequest represents the request for generating barcode by tahun pelajaran
+type GenerateBarcodeByTahunPelajaranRequest struct {
+	TahunPelajaranID uint `json:"tahun_pelajaran_id" binding:"required"`
+}
+
+// GenerateBarcodeByTahunPelajaranAndRombelRequest represents the request for generating barcode by tahun pelajaran and rombel
+type GenerateBarcodeByTahunPelajaranAndRombelRequest struct {
+	TahunPelajaranID uint `json:"tahun_pelajaran_id" binding:"required"`
+	RombelID         uint `json:"rombel_id" binding:"required"`
+}
+
+// GenerateBarcodeResponse represents the response for barcode generation
+type GenerateBarcodeResponse struct {
+	TotalGenerated int      `json:"total_generated"`
+	Message        string   `json:"message"`
+	Errors         []string `json:"errors,omitempty"`
 }
