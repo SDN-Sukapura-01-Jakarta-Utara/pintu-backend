@@ -29,5 +29,13 @@ func RegisterAbsensiRoutes(router *gin.Engine, db *gorm.DB) {
 		
 		// Update rekap absensi
 		api.POST("/update-rekap-absensi", controller.UpdateRekapAbsensi)
+		
+		// Dashboard monitoring
+		api.POST("/dashboard-summary", controller.GetDashboardSummary)
+		api.POST("/grafik-kehadiran", controller.GetGrafikKehadiran)
+		api.POST("/statistik-per-hari", controller.GetStatistikPerHari)
+		api.POST("/perbandingan-rombel", controller.GetPerbandinganRombel)
+		api.POST("/siswa-terendah", controller.GetSiswaTerendah)
+		api.POST("/dashboard-siswa", controller.GetDashboardSiswa)
 	}
 }

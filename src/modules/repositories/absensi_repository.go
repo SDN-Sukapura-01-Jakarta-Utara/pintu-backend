@@ -16,6 +16,11 @@ type AbsensiRepository interface {
 	BulkCreate(dataList []models.Absensi) error
 	GetRekapAbsensi(tahunPelajaranID, rombelID uint, semester, bulan, tahun *int, tanggalMulai, tanggalSelesai *time.Time, bidangStudiID *uint) ([]models.Absensi, error)
 	Update(data *models.Absensi) error
+	GetDashboardSummary(tahunPelajaranID uint, rombelID *uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error)
+	CountUniqueSiswa(tahunPelajaranID uint, rombelID *uint, semester *int, bidangStudiID *uint) (int, error)
+	GetPerbandinganRombel(tahunPelajaranID uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error)
+	GetSiswaTerendah(tahunPelajaranID uint, rombelID *uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error)
+	GetDashboardSiswa(pesertaDidikID, tahunPelajaranID, rombelID uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error)
 }
 
 type AbsensiRepositoryImpl struct {
@@ -150,4 +155,185 @@ func (r *AbsensiRepositoryImpl) CheckPertemuanExists(rombelID uint, bidangStudiI
 	}
 	
 	return &data, nil
+}
+
+// GetDashboardSummary retrieves attendance records for dashboard summary
+func (r *AbsensiRepositoryImpl) GetDashboardSummary(tahunPelajaranID uint, rombelID *uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error) {
+	var data []models.Absensi
+	
+	query := r.db.Where("tahun_pelajaran_id = ?", tahunPelajaranID)
+	
+	// Filter by rombel_id if provided
+	if rombelID != nil {
+		query = query.Where("rombel_id = ?", *rombelID)
+	}
+	
+	// Filter by semester if provided
+	if semester != nil {
+		query = query.Where("semester = ?", *semester)
+	}
+	
+	// Filter by bidang_studi_id
+	if bidangStudiID == nil {
+		query = query.Where("bidang_studi_id IS NULL")
+	} else {
+		query = query.Where("bidang_studi_id = ?", *bidangStudiID)
+	}
+	
+	// Filter by tanggal range if provided
+	if tanggalMulai != nil && tanggalSelesai != nil {
+		query = query.Where("tanggal BETWEEN ? AND ?", *tanggalMulai, *tanggalSelesai)
+	} else if tanggalMulai != nil {
+		query = query.Where("tanggal >= ?", *tanggalMulai)
+	} else if tanggalSelesai != nil {
+		query = query.Where("tanggal <= ?", *tanggalSelesai)
+	}
+	
+	if err := query.Find(&data).Error; err != nil {
+		return nil, err
+	}
+	
+	return data, nil
+}
+
+// CountUniqueSiswa counts unique students in the filtered data
+func (r *AbsensiRepositoryImpl) CountUniqueSiswa(tahunPelajaranID uint, rombelID *uint, semester *int, bidangStudiID *uint) (int, error) {
+	var count int64
+	
+	query := r.db.Model(&models.Absensi{}).
+		Distinct("peserta_didik_id").
+		Where("tahun_pelajaran_id = ?", tahunPelajaranID)
+	
+	if rombelID != nil {
+		query = query.Where("rombel_id = ?", *rombelID)
+	}
+	
+	if semester != nil {
+		query = query.Where("semester = ?", *semester)
+	}
+	
+	if bidangStudiID == nil {
+		query = query.Where("bidang_studi_id IS NULL")
+	} else {
+		query = query.Where("bidang_studi_id = ?", *bidangStudiID)
+	}
+	
+	if err := query.Count(&count).Error; err != nil {
+		return 0, err
+	}
+	
+	return int(count), nil
+}
+
+// GetPerbandinganRombel retrieves attendance records for rombel comparison (with Rombel preloaded)
+func (r *AbsensiRepositoryImpl) GetPerbandinganRombel(tahunPelajaranID uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error) {
+	var data []models.Absensi
+	
+	query := r.db.Preload("Rombel").Where("tahun_pelajaran_id = ?", tahunPelajaranID)
+	
+	// Filter by semester if provided
+	if semester != nil {
+		query = query.Where("semester = ?", *semester)
+	}
+	
+	// Filter by bidang_studi_id
+	if bidangStudiID == nil {
+		query = query.Where("bidang_studi_id IS NULL")
+	} else {
+		query = query.Where("bidang_studi_id = ?", *bidangStudiID)
+	}
+	
+	// Filter by tanggal range if provided
+	if tanggalMulai != nil && tanggalSelesai != nil {
+		query = query.Where("tanggal BETWEEN ? AND ?", *tanggalMulai, *tanggalSelesai)
+	} else if tanggalMulai != nil {
+		query = query.Where("tanggal >= ?", *tanggalMulai)
+	} else if tanggalSelesai != nil {
+		query = query.Where("tanggal <= ?", *tanggalSelesai)
+	}
+	
+	if err := query.Find(&data).Error; err != nil {
+		return nil, err
+	}
+	
+	return data, nil
+}
+
+// GetSiswaTerendah retrieves attendance records for students with lowest attendance (with PesertaDidik preloaded)
+func (r *AbsensiRepositoryImpl) GetSiswaTerendah(tahunPelajaranID uint, rombelID *uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error) {
+	var data []models.Absensi
+	
+	query := r.db.Preload("PesertaDidik").Where("tahun_pelajaran_id = ?", tahunPelajaranID)
+	
+	// Filter by rombel_id if provided
+	if rombelID != nil {
+		query = query.Where("rombel_id = ?", *rombelID)
+	}
+	
+	// Filter by semester if provided
+	if semester != nil {
+		query = query.Where("semester = ?", *semester)
+	}
+	
+	// Filter by bidang_studi_id
+	if bidangStudiID == nil {
+		query = query.Where("bidang_studi_id IS NULL")
+	} else {
+		query = query.Where("bidang_studi_id = ?", *bidangStudiID)
+	}
+	
+	// Filter by tanggal range if provided
+	if tanggalMulai != nil && tanggalSelesai != nil {
+		query = query.Where("tanggal BETWEEN ? AND ?", *tanggalMulai, *tanggalSelesai)
+	} else if tanggalMulai != nil {
+		query = query.Where("tanggal >= ?", *tanggalMulai)
+	} else if tanggalSelesai != nil {
+		query = query.Where("tanggal <= ?", *tanggalSelesai)
+	}
+	
+	if err := query.Find(&data).Error; err != nil {
+		return nil, err
+	}
+	
+	return data, nil
+}
+
+// GetDashboardSiswa retrieves attendance records for a specific student (with PesertaDidik and Rombel preloaded)
+func (r *AbsensiRepositoryImpl) GetDashboardSiswa(pesertaDidikID, tahunPelajaranID, rombelID uint, semester *int, bidangStudiID *uint, tanggalMulai, tanggalSelesai *time.Time) ([]models.Absensi, error) {
+	var data []models.Absensi
+	
+	query := r.db.Preload("PesertaDidik").Preload("Rombel").
+		Where("peserta_didik_id = ?", pesertaDidikID).
+		Where("tahun_pelajaran_id = ?", tahunPelajaranID).
+		Where("rombel_id = ?", rombelID)
+	
+	// Filter by semester if provided
+	if semester != nil {
+		query = query.Where("semester = ?", *semester)
+	}
+	
+	// Filter by bidang_studi_id
+	if bidangStudiID == nil {
+		query = query.Where("bidang_studi_id IS NULL")
+	} else {
+		query = query.Where("bidang_studi_id = ?", *bidangStudiID)
+	}
+	
+	// Filter by tanggal range if provided
+	if tanggalMulai != nil && tanggalSelesai != nil {
+		query = query.Where("tanggal BETWEEN ? AND ?", *tanggalMulai, *tanggalSelesai)
+	} else if tanggalMulai != nil {
+		query = query.Where("tanggal >= ?", *tanggalMulai)
+	} else if tanggalSelesai != nil {
+		query = query.Where("tanggal <= ?", *tanggalSelesai)
+	}
+	
+	// Order by tanggal descending (newest first)
+	query = query.Order("tanggal DESC")
+	
+	if err := query.Find(&data).Error; err != nil {
+		return nil, err
+	}
+	
+	return data, nil
 }

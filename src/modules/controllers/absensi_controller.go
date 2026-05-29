@@ -158,3 +158,117 @@ func (c *AbsensiController) UpdateRekapAbsensi(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, result)
 }
+
+// GetDashboardSummary retrieves dashboard summary statistics
+func (c *AbsensiController) GetDashboardSummary(ctx *gin.Context) {
+	var req dtos.DashboardSummaryRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetDashboardSummary(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GetGrafikKehadiran retrieves attendance chart data
+func (c *AbsensiController) GetGrafikKehadiran(ctx *gin.Context) {
+	var req dtos.GrafikKehadiranRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetGrafikKehadiran(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GetStatistikPerHari retrieves daily attendance statistics
+func (c *AbsensiController) GetStatistikPerHari(ctx *gin.Context) {
+	var req dtos.StatistikPerHariRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetStatistikPerHari(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GetPerbandinganRombel retrieves attendance comparison between rombel
+func (c *AbsensiController) GetPerbandinganRombel(ctx *gin.Context) {
+	var req dtos.PerbandinganRombelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetPerbandinganRombel(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GetSiswaTerendah retrieves students with lowest attendance
+func (c *AbsensiController) GetSiswaTerendah(ctx *gin.Context) {
+	var req dtos.SiswaTerendahRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetSiswaTerendah(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GetDashboardSiswa retrieves dashboard data for a specific student
+func (c *AbsensiController) GetDashboardSiswa(ctx *gin.Context) {
+	var req dtos.DashboardSiswaRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetDashboardSiswa(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
