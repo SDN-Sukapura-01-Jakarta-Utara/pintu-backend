@@ -12,6 +12,9 @@ type PengumumanKelulusan struct {
 	SambutanKelulusan          string         `gorm:"type:text;not null" json:"sambutan_kelulusan"`
 	TanggalPengumumanNilai     time.Time      `gorm:"type:timestamp;not null" json:"tanggal_pengumuman_nilai"`
 	TanggalPengumumanKelulusan time.Time      `gorm:"type:timestamp;not null" json:"tanggal_pengumuman_kelulusan"`
+	FotoKepsek                 string         `gorm:"type:varchar(500)" json:"foto_kepsek"`
+	TtdKepsek                  string         `gorm:"type:varchar(500)" json:"ttd_kepsek"`
+	NamaKepsek                 string         `gorm:"type:varchar(255)" json:"nama_kepsek"`
 	CreatedAt                  time.Time      `json:"created_at"`
 	UpdatedAt                  time.Time      `json:"updated_at"`
 	CreatedByID                *uint          `json:"created_by_id"`

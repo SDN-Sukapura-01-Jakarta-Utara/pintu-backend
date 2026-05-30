@@ -275,3 +275,41 @@ func (c *KelulusanController) Delete(ctx *gin.Context) {
 		"message": "Data kelulusan berhasil dihapus",
 	})
 }
+
+// CekNilaiKelulusan checks kelulusan by NISN and tanggal lahir (public API)
+func (c *KelulusanController) CekNilaiKelulusan(ctx *gin.Context) {
+	var req dtos.CekNilaiKelulusanRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	result, err := c.service.CekNilaiKelulusan(req.NISN, req.TanggalLahir)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// CekKelulusan checks full kelulusan data by NISN and tanggal lahir (public API, with lulus info)
+func (c *KelulusanController) CekKelulusan(ctx *gin.Context) {
+	var req dtos.CekKelulusanRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	result, err := c.service.CekKelulusan(req.NISN, req.TanggalLahir)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

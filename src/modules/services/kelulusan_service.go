@@ -24,6 +24,8 @@ type KelulusanService interface {
 	ImportExcel(file multipart.File, userID uint) (*dtos.ImportKelulusanResponse, error)
 	GetAllWithFilter(params repositories.GetKelulusanParams) (*dtos.KelulusanListWithPaginationResponse, error)
 	GetByID(id uint) (*dtos.KelulusanResponse, error)
+	CekNilaiKelulusan(nisn string, tanggalLahir string) (*dtos.CekNilaiKelulusanResponse, error)
+	CekKelulusan(nisn string, tanggalLahir string) (*dtos.KelulusanResponse, error)
 	Update(id uint, req *dtos.KelulusanUpdateRequest, file *multipart.FileHeader, userID uint) (*dtos.KelulusanResponse, error)
 	Delete(id uint) error
 }
@@ -587,6 +589,91 @@ func (s *KelulusanServiceImpl) GetByID(id uint) (*dtos.KelulusanResponse, error)
 		return nil, errors.New("data kelulusan tidak ditemukan")
 	}
 
+	return s.mapToResponse(data), nil
+}
+
+// CekNilaiKelulusan retrieves Kelulusan by NISN and tanggal lahir (public API, no lulus info)
+func (s *KelulusanServiceImpl) CekNilaiKelulusan(nisn string, tanggalLahir string) (*dtos.CekNilaiKelulusanResponse, error) {
+	// Parse tanggal_lahir to validate format
+	_, err := time.Parse("2006-01-02", tanggalLahir)
+	if err != nil {
+		return nil, errors.New("format tanggal_lahir tidak valid, gunakan YYYY-MM-DD")
+	}
+
+	// Get data from repository
+	data, err := s.repository.GetByNISNAndTanggalLahir(nisn, tanggalLahir)
+	if err != nil {
+		return nil, errors.New("data kelulusan tidak ditemukan")
+	}
+
+	// Parse nilai JSON to map
+	var nilaiMap map[string]interface{}
+	if err := json.Unmarshal(data.Nilai, &nilaiMap); err != nil {
+		nilaiMap = make(map[string]interface{})
+	}
+
+	// Calculate rata-rata nilai (average)
+	var totalNilai float64
+	var countMapel int
+	
+	for _, nilai := range nilaiMap {
+		// Convert nilai to float64
+		switch v := nilai.(type) {
+		case float64:
+			totalNilai += v
+			countMapel++
+		case int:
+			totalNilai += float64(v)
+			countMapel++
+		case int64:
+			totalNilai += float64(v)
+			countMapel++
+		}
+	}
+	
+	// Calculate average and round to 2 decimal places
+	var rataRata float64
+	if countMapel > 0 {
+		rataRata = totalNilai / float64(countMapel)
+		// Round to 2 decimal places
+		rataRata = float64(int(rataRata*100)) / 100
+	}
+
+	// Generate full URL for SKL file
+	sklURL := s.r2Storage.GetPublicURL(data.SKL)
+
+	// Map to response (without lulus field)
+	response := &dtos.CekNilaiKelulusanResponse{
+		ID:            data.ID,
+		NomorPeserta:  data.NomorPeserta,
+		NISN:          data.NISN,
+		Nama:          data.Nama,
+		TanggalLahir:  data.TanggalLahir.Format("2006-01-02"),
+		Nilai:         nilaiMap,
+		RataRataNilai: rataRata,
+		SKL:           sklURL,
+		CreatedAt:     data.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:     data.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}
+
+	return response, nil
+}
+
+// CekKelulusan retrieves full Kelulusan data by NISN and tanggal lahir (public API, with lulus info)
+func (s *KelulusanServiceImpl) CekKelulusan(nisn string, tanggalLahir string) (*dtos.KelulusanResponse, error) {
+	// Parse tanggal_lahir to validate format
+	_, err := time.Parse("2006-01-02", tanggalLahir)
+	if err != nil {
+		return nil, errors.New("format tanggal_lahir tidak valid, gunakan YYYY-MM-DD")
+	}
+
+	// Get data from repository
+	data, err := s.repository.GetByNISNAndTanggalLahir(nisn, tanggalLahir)
+	if err != nil {
+		return nil, errors.New("data kelulusan tidak ditemukan")
+	}
+
+	// Map to full response (with lulus field)
 	return s.mapToResponse(data), nil
 }
 

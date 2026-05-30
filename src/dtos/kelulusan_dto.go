@@ -77,3 +77,29 @@ type KelulusanUpdateRequest struct {
 	Lulus        *bool                  `json:"lulus" binding:"omitempty"`
 	DeleteSKL    bool                   `json:"delete_skl" binding:"omitempty"` // true = hapus file SKL
 }
+
+// CekNilaiKelulusanRequest represents the request for checking kelulusan by NISN and tanggal lahir
+type CekNilaiKelulusanRequest struct {
+	NISN         string `json:"nisn" binding:"required"`
+	TanggalLahir string `json:"tanggal_lahir" binding:"required"` // Format: YYYY-MM-DD
+}
+
+// CekKelulusanRequest represents the request for checking full kelulusan data by NISN and tanggal lahir
+type CekKelulusanRequest struct {
+	NISN         string `json:"nisn" binding:"required"`
+	TanggalLahir string `json:"tanggal_lahir" binding:"required"` // Format: YYYY-MM-DD
+}
+
+// CekNilaiKelulusanResponse represents the response for public kelulusan check (without informasi_lulus)
+type CekNilaiKelulusanResponse struct {
+	ID            uint                   `json:"id"`
+	NomorPeserta  string                 `json:"nomor_peserta"`
+	NISN          string                 `json:"nisn"`
+	Nama          string                 `json:"nama"`
+	TanggalLahir  string                 `json:"tanggal_lahir"`
+	Nilai         map[string]interface{} `json:"nilai"`
+	RataRataNilai float64                `json:"rata_rata_nilai"`
+	SKL           string                 `json:"skl,omitempty"`
+	CreatedAt     string                 `json:"created_at"`
+	UpdatedAt     string                 `json:"updated_at"`
+}

@@ -199,3 +199,14 @@ func (c *TahunPelajaranController) Delete(ctx *gin.Context) {
 		"message": "Tahun pelajaran deleted successfully",
 	})
 }
+
+// GetActiveTahunPelajaran retrieves the active tahun pelajaran (public API)
+func (c *TahunPelajaranController) GetActiveTahunPelajaran(ctx *gin.Context) {
+	data, err := c.service.GetActiveTahunPelajaran()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}

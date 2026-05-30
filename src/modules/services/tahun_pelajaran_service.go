@@ -13,6 +13,7 @@ type TahunPelajaranService interface {
 	GetByID(id uint) (*dtos.TahunPelajaranResponse, error)
 	GetAll(limit int, offset int) (*dtos.TahunPelajaranListResponse, error)
 	GetAllWithFilter(params repositories.GetTahunPelajaranParams) (*dtos.TahunPelajaranListWithPaginationResponse, error)
+	GetActiveTahunPelajaran() (*dtos.TahunPelajaranResponse, error)
 	Update(req *dtos.TahunPelajaranUpdateRequest, userID uint) (*dtos.TahunPelajaranResponse, error)
 	Delete(id uint) error
 }
@@ -171,6 +172,15 @@ func (s *TahunPelajaranServiceImpl) GetAllWithFilter(params repositories.GetTahu
 			TotalPages: totalPages,
 		},
 	}, nil
+}
+
+// GetActiveTahunPelajaran retrieves the active TahunPelajaran (public API)
+func (s *TahunPelajaranServiceImpl) GetActiveTahunPelajaran() (*dtos.TahunPelajaranResponse, error) {
+	data, err := s.repository.GetActiveAcademicYear()
+	if err != nil {
+		return nil, errors.New("tahun pelajaran aktif tidak ditemukan")
+	}
+	return s.mapToResponse(data), nil
 }
 
 // mapToResponse maps model to DTO response

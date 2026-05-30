@@ -12,6 +12,7 @@ type KelulusanRepository interface {
 	Create(data *models.Kelulusan) error
 	GetByID(id uint) (*models.Kelulusan, error)
 	GetByNomorPeserta(nomorPeserta string) (*models.Kelulusan, error)
+	GetByNISNAndTanggalLahir(nisn string, tanggalLahir string) (*models.Kelulusan, error)
 	GetAllWithFilter(params GetKelulusanParams) ([]models.Kelulusan, int64, error)
 	Update(data *models.Kelulusan) error
 	Delete(id uint) error
@@ -59,6 +60,15 @@ func (r *KelulusanRepositoryImpl) GetByID(id uint) (*models.Kelulusan, error) {
 func (r *KelulusanRepositoryImpl) GetByNomorPeserta(nomorPeserta string) (*models.Kelulusan, error) {
 	var data models.Kelulusan
 	if err := r.db.Where("nomor_peserta = ?", nomorPeserta).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetByNISNAndTanggalLahir retrieves Kelulusan by NISN and tanggal lahir
+func (r *KelulusanRepositoryImpl) GetByNISNAndTanggalLahir(nisn string, tanggalLahir string) (*models.Kelulusan, error) {
+	var data models.Kelulusan
+	if err := r.db.Where("nisn = ? AND DATE(tanggal_lahir) = ?", nisn, tanggalLahir).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil

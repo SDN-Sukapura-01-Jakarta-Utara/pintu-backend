@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"encoding/json"
+	"mime/multipart"
 	"net/http"
 
 	"pintu-backend/src/dtos"
@@ -8,6 +10,7 @@ import (
 	"pintu-backend/src/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 // PengumumanKelulusanController handles HTTP requests for PengumumanKelulusan
@@ -22,8 +25,29 @@ func NewPengumumanKelulusanController(service services.PengumumanKelulusanServic
 
 // ConfigurePengumuman creates or updates pengumuman kelulusan configuration
 func (c *PengumumanKelulusanController) ConfigurePengumuman(ctx *gin.Context) {
+	// Parse multipart form
+	if err := ctx.Request.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "gagal parse form data"})
+		return
+	}
+
+	// Get JSON data from form field
+	jsonData := ctx.PostForm("data")
+	if jsonData == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "field 'data' wajib diisi"})
+		return
+	}
+
+	// Parse JSON data
 	var req dtos.PengumumanKelulusanConfigRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "format JSON tidak valid"})
+		return
+	}
+
+	// Manual validation using validator
+	validate := validator.New()
+	if err := validate.Struct(&req); err != nil {
 		errors := utils.FormatValidationError(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
 		return
@@ -33,8 +57,22 @@ func (c *PengumumanKelulusanController) ConfigurePengumuman(ctx *gin.Context) {
 	userID, _ := ctx.Get("userID")
 	userIDUint := userID.(uint)
 
+	// Get foto_kepsek file if uploaded
+	var fotoKepsek *multipart.FileHeader
+	fotoKepsekHeader, err := ctx.FormFile("foto_kepsek")
+	if err == nil {
+		fotoKepsek = fotoKepsekHeader
+	}
+
+	// Get ttd_kepsek file if uploaded
+	var ttdKepsek *multipart.FileHeader
+	ttdKepsekHeader, err := ctx.FormFile("ttd_kepsek")
+	if err == nil {
+		ttdKepsek = ttdKepsekHeader
+	}
+
 	// Call service
-	result, err := c.service.ConfigurePengumuman(&req, userIDUint)
+	result, err := c.service.ConfigurePengumuman(&req, fotoKepsek, ttdKepsek, userIDUint)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -54,6 +92,17 @@ func (c *PengumumanKelulusanController) ConfigurePengumuman(ctx *gin.Context) {
 // GetPengumuman retrieves the pengumuman kelulusan configuration
 func (c *PengumumanKelulusanController) GetPengumuman(ctx *gin.Context) {
 	result, err := c.service.GetPengumuman()
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// GetSettingPengumumanPublic retrieves the pengumuman kelulusan configuration (public API)
+func (c *PengumumanKelulusanController) GetSettingPengumumanPublic(ctx *gin.Context) {
+	result, err := c.service.GetSettingPengumumanPublic()
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return

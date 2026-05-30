@@ -26,6 +26,7 @@ type TahunPelajaranRepository interface {
 	GetAll(limit int, offset int) ([]models.TahunPelajaran, int64, error)
 	GetAllWithFilter(params GetTahunPelajaranParams) ([]models.TahunPelajaran, int64, error)
 	GetByTahunPelajaran(tahunPelajaran string) (*models.TahunPelajaran, error)
+	GetActiveAcademicYear() (*models.TahunPelajaran, error)
 	Update(data *models.TahunPelajaran) error
 	Delete(id uint) error
 	UpdateAllStatusToInactive() error
@@ -76,6 +77,15 @@ func (r *TahunPelajaranRepositoryImpl) GetAll(limit int, offset int) ([]models.T
 func (r *TahunPelajaranRepositoryImpl) GetByTahunPelajaran(tahunPelajaran string) (*models.TahunPelajaran, error) {
 	var data models.TahunPelajaran
 	if err := r.db.Where("tahun_pelajaran = ?", tahunPelajaran).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetActiveAcademicYear retrieves the active TahunPelajaran (status = 'active')
+func (r *TahunPelajaranRepositoryImpl) GetActiveAcademicYear() (*models.TahunPelajaran, error) {
+	var data models.TahunPelajaran
+	if err := r.db.Where("status = ?", "active").First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil

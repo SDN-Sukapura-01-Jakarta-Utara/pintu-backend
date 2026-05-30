@@ -17,6 +17,16 @@ func RegisterKelulusanRoutes(router *gin.Engine, db *gorm.DB) {
 	service := services.NewKelulusanService(repository)
 	controller := controllers.NewKelulusanController(service)
 
+	// Public routes (no authentication required)
+	publicAPI := router.Group("/api/v1/public")
+	{
+		// Cek nilai kelulusan by NISN and tanggal lahir (without lulus info)
+		publicAPI.POST("/cek-nilai-kelulusan", controller.CekNilaiKelulusan)
+		
+		// Cek kelulusan by NISN and tanggal lahir (with lulus info and SKL)
+		publicAPI.POST("/cek-kelulusan", controller.CekKelulusan)
+	}
+
 	// Protected routes (require authentication)
 	api := router.Group("/api/v1/kelulusan")
 	api.Use(middleware.AuthMiddleware())

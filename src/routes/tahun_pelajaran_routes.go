@@ -17,6 +17,13 @@ func RegisterTahunPelajaranRoutes(router *gin.Engine, db *gorm.DB) {
 	tahunPelajaranService := services.NewTahunPelajaranService(tahunPelajaranRepo)
 	tahunPelajaranController := controllers.NewTahunPelajaranController(tahunPelajaranService)
 
+	// Public routes (no authentication required)
+	publicAPI := router.Group("/api/v1/public")
+	{
+		// Get active tahun pelajaran
+		publicAPI.POST("/get-tahun-pelajaran-aktif", tahunPelajaranController.GetActiveTahunPelajaran)
+	}
+
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/tahun-pelajaran")
 	protected.Use(middleware.AuthMiddleware())
