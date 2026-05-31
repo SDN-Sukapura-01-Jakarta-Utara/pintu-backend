@@ -61,17 +61,11 @@ func (s *PermissionSeeder) Run() error {
 		{Name: "UPDATE_MUTASI_SISWA", Description: "Update student mutation", GroupName: "MUTASI_SISWA", SystemID: 1, Status: "active"},
 		{Name: "DELETE_MUTASI_SISWA", Description: "Delete student mutation", GroupName: "MUTASI_SISWA", SystemID: 1, Status: "active"},
 
-		// Kritik Saran
-		{Name: "CREATE_KRITIK_SARAN", Description: "Create criticism and suggestion", GroupName: "KRITIK_SARAN", SystemID: 1, Status: "active"},
-		{Name: "READ_KRITIK_SARAN", Description: "Read criticism and suggestion", GroupName: "KRITIK_SARAN", SystemID: 1, Status: "active"},
-		{Name: "UPDATE_KRITIK_SARAN", Description: "Update criticism and suggestion", GroupName: "KRITIK_SARAN", SystemID: 1, Status: "active"},
-		{Name: "DELETE_KRITIK_SARAN", Description: "Delete criticism and suggestion", GroupName: "KRITIK_SARAN", SystemID: 1, Status: "active"},
-
 		// Pertanyaan dan Pengaduan
-		{Name: "CREATE_PERTANYAAN_PENGADUAN", Description: "Create question and complaint", GroupName: "PERTANYAAN_PENGADUAN", SystemID: 1, Status: "active"},
-		{Name: "READ_PERTANYAAN_PENGADUAN", Description: "Read question and complaint", GroupName: "PERTANYAAN_PENGADUAN", SystemID: 1, Status: "active"},
-		{Name: "UPDATE_PERTANYAAN_PENGADUAN", Description: "Update question and complaint", GroupName: "PERTANYAAN_PENGADUAN", SystemID: 1, Status: "active"},
-		{Name: "DELETE_PERTANYAAN_PENGADUAN", Description: "Delete question and complaint", GroupName: "PERTANYAAN_PENGADUAN", SystemID: 1, Status: "active"},
+		{Name: "CREATE_LAYANAN_UMPAN_BALIK", Description: "Create question and complaint", GroupName: "LAYANAN_UMPAN_BALIK", SystemID: 1, Status: "active"},
+		{Name: "READ_LAYANAN_UMPAN_BALIK", Description: "Read question and complaint", GroupName: "LAYANAN_UMPAN_BALIK", SystemID: 1, Status: "active"},
+		{Name: "UPDATE_LAYANAN_UMPAN_BALIK", Description: "Update question and complaint", GroupName: "LAYANAN_UMPAN_BALIK", SystemID: 1, Status: "active"},
+		{Name: "DELETE_LAYANAN_UMPAN_BALIK", Description: "Delete question and complaint", GroupName: "LAYANAN_UMPAN_BALIK", SystemID: 1, Status: "active"},
 	}
 
 	// Check if permissions already exist
