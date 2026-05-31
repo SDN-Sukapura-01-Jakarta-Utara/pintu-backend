@@ -41,7 +41,12 @@ func main() {
 
 	// Setup CORS middleware
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:3001", "http://localhost:3000"}
+	corsConfig.AllowOrigins = []string{
+		"http://localhost:3001",
+		"http://localhost:3000",
+		"https://sdnsukapura01.sch.id",
+		"http://sdnsukapura01.sch.id",
+	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	corsConfig.AllowCredentials = true
