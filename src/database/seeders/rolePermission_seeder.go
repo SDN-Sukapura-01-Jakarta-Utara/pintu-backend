@@ -32,6 +32,8 @@ func (s *RolePermissionSeeder) Run() error {
 			RoleName: "Administrator (PINTU)",
 			PermissionNames: []string{
 				// Informasi Sekolah
+				"CREATE_MASTER_DATA", "READ_MASTER_DATA", "UPDATE_MASTER_DATA", "DELETE_MASTER_DATA",
+				// Informasi Sekolah
 				"CREATE_INFORMASI_SEKOLAH", "READ_INFORMASI_SEKOLAH", "UPDATE_INFORMASI_SEKOLAH", "DELETE_INFORMASI_SEKOLAH",
 				// Media Publikasi
 				"CREATE_MEDIA_PUBLIKASI", "READ_MEDIA_PUBLIKASI", "UPDATE_MEDIA_PUBLIKASI", "DELETE_MEDIA_PUBLIKASI",

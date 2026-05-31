@@ -31,6 +31,12 @@ func (s *PermissionSeeder) Run() error {
 	fmt.Println("Seeding permissions...")
 
 	permissions := []Permission{
+		// Master Data
+		{Name: "CREATE_MASTER_DATA", Description: "Create master data", GroupName: "MASTER_DATA", SystemID: 1, Status: "active"},
+		{Name: "READ_MASTER_DATA", Description: "Read master data", GroupName: "MASTER_DATA", SystemID: 1, Status: "active"},
+		{Name: "UPDATE_MASTER_DATA", Description: "Update master data", GroupName: "MASTER_DATA", SystemID: 1, Status: "active"},
+		{Name: "DELETE_MASTER_DATA", Description: "Delete master data", GroupName: "MASTER_DATA", SystemID: 1, Status: "active"},
+
 		// Informasi Sekolah
 		{Name: "CREATE_INFORMASI_SEKOLAH", Description: "Create school information", GroupName: "INFORMASI_SEKOLAH", SystemID: 1, Status: "active"},
 		{Name: "READ_INFORMASI_SEKOLAH", Description: "Read school information", GroupName: "INFORMASI_SEKOLAH", SystemID: 1, Status: "active"},
