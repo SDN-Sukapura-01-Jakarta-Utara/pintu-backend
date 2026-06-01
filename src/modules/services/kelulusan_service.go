@@ -83,6 +83,8 @@ func (s *KelulusanServiceImpl) CreateKelulusan(req *dtos.KelulusanCreateRequest,
 		Nilai:        datatypes.JSON(nilaiJSON),
 		Lulus:        req.Lulus,
 		SKL:          sklPath,
+		MaxAttempts:  req.MaxAttempts,
+		AttemptCount: 0,
 		CreatedByID:  &userID,
 		UpdatedByID:  &userID,
 	}
@@ -149,6 +151,8 @@ func (s *KelulusanServiceImpl) mapToResponse(data *models.Kelulusan) *dtos.Kelul
 		RataRataNilai: rataRata,
 		Lulus:         data.Lulus,
 		SKL:           sklURL,
+		MaxAttempts:   data.MaxAttempts,
+		AttemptCount:  data.AttemptCount,
 		CreatedAt:     data.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt:     data.UpdatedAt.Format("2006-01-02 15:04:05"),
 		CreatedByID:   data.CreatedByID,
@@ -673,6 +677,29 @@ func (s *KelulusanServiceImpl) CekKelulusan(nisn string, tanggalLahir string) (*
 		return nil, errors.New("data kelulusan tidak ditemukan")
 	}
 
+	// PRANK LOGIC: Check if max_attempts > 0 (prank mode enabled)
+	if data.MaxAttempts > 0 {
+		// Check if attempt_count < max_attempts
+		if data.AttemptCount < data.MaxAttempts {
+			// Increment attempt_count
+			data.AttemptCount++
+			
+			// Update attempt_count in database
+			if err := s.repository.Update(data); err != nil {
+				return nil, errors.New("gagal memproses permintaan")
+			}
+			
+			// Return error to trigger "Silakan coba lagi" message
+			remainingAttempts := data.MaxAttempts - data.AttemptCount
+			if remainingAttempts > 0 {
+				return nil, fmt.Errorf("data sedang diverifikasi, silakan coba lagi (%d percobaan tersisa)", remainingAttempts)
+			} else {
+				return nil, errors.New("data sedang diverifikasi, silakan coba lagi")
+			}
+		}
+		// If attempt_count >= max_attempts, proceed to show result (prank selesai)
+	}
+
 	// Map to full response (with lulus field)
 	return s.mapToResponse(data), nil
 }
@@ -723,6 +750,12 @@ func (s *KelulusanServiceImpl) Update(id uint, req *dtos.KelulusanUpdateRequest,
 
 	if req.Lulus != nil {
 		existing.Lulus = *req.Lulus
+	}
+
+	if req.MaxAttempts != nil {
+		existing.MaxAttempts = *req.MaxAttempts
+		// Reset attempt_count when max_attempts is updated
+		existing.AttemptCount = 0
 	}
 
 	// Handle file deletion if requested

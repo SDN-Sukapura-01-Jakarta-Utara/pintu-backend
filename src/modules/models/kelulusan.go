@@ -17,6 +17,8 @@ type Kelulusan struct {
 	Nilai         datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'" json:"nilai"`
 	Lulus         bool           `gorm:"not null;default:false" json:"lulus"`
 	SKL           string         `gorm:"size:255" json:"skl"`
+	MaxAttempts   int            `gorm:"not null;default:0" json:"max_attempts"`
+	AttemptCount  int            `gorm:"not null;default:0" json:"attempt_count"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	CreatedByID   *uint          `json:"created_by_id"`
