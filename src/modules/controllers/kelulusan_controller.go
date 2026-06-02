@@ -313,3 +313,28 @@ func (c *KelulusanController) CekKelulusan(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"data": result})
 }
+
+// DownloadLaporanNilaiKelulusan downloads laporan nilai kelulusan as PDF (public API)
+func (c *KelulusanController) DownloadLaporanNilaiKelulusan(ctx *gin.Context) {
+	var req dtos.DownloadLaporanNilaiKelulusanRequest
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	pdfBytes, err := c.service.DownloadLaporanNilaiKelulusan(req.NISN, req.TanggalLahir)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for PDF download
+	ctx.Header("Content-Type", "application/pdf")
+	ctx.Header("Content-Disposition", "attachment; filename=laporan_nilai_kelulusan.pdf")
+	ctx.Header("Content-Length", string(len(pdfBytes)))
+
+	// Send PDF
+	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}

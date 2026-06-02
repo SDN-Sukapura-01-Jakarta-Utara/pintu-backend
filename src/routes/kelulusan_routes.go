@@ -12,9 +12,11 @@ import (
 
 // RegisterKelulusanRoutes registers all Kelulusan routes
 func RegisterKelulusanRoutes(router *gin.Engine, db *gorm.DB) {
-	// Initialize repository, service, and controller
-	repository := repositories.NewKelulusanRepository(db)
-	service := services.NewKelulusanService(repository)
+	// Initialize repositories, service, and controller
+	kelulusanRepository := repositories.NewKelulusanRepository(db)
+	tahunPelajaranRepository := repositories.NewTahunPelajaranRepository(db)
+	pengumumanKelulusanRepository := repositories.NewPengumumanKelulusanRepository(db)
+	service := services.NewKelulusanService(kelulusanRepository, tahunPelajaranRepository, pengumumanKelulusanRepository)
 	controller := controllers.NewKelulusanController(service)
 
 	// Public routes (no authentication required)
@@ -25,6 +27,9 @@ func RegisterKelulusanRoutes(router *gin.Engine, db *gorm.DB) {
 		
 		// Cek kelulusan by NISN and tanggal lahir (with lulus info and SKL)
 		publicAPI.POST("/cek-kelulusan", controller.CekKelulusan)
+		
+		// Download laporan nilai kelulusan PDF
+		publicAPI.POST("/download-laporan-nilai-kelulusan", controller.DownloadLaporanNilaiKelulusan)
 	}
 
 	// Protected routes (require authentication)

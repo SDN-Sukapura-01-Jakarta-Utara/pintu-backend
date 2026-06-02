@@ -96,6 +96,12 @@ type CekKelulusanRequest struct {
 	TanggalLahir string `json:"tanggal_lahir" binding:"required"` // Format: YYYY-MM-DD
 }
 
+// DownloadLaporanNilaiKelulusanRequest represents the request for downloading laporan nilai kelulusan PDF
+type DownloadLaporanNilaiKelulusanRequest struct {
+	NISN         string `json:"nisn" binding:"required"`
+	TanggalLahir string `json:"tanggal_lahir" binding:"required"` // Format: YYYY-MM-DD
+}
+
 // CekNilaiKelulusanResponse represents the response for public kelulusan check (without informasi_lulus)
 type CekNilaiKelulusanResponse struct {
 	ID            uint            `json:"id"`

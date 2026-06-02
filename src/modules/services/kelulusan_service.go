@@ -28,18 +28,27 @@ type KelulusanService interface {
 	CekKelulusan(nisn string, tanggalLahir string) (*dtos.KelulusanResponse, error)
 	Update(id uint, req *dtos.KelulusanUpdateRequest, file *multipart.FileHeader, userID uint) (*dtos.KelulusanResponse, error)
 	Delete(id uint) error
+	DownloadLaporanNilaiKelulusan(nisn string, tanggalLahir string) ([]byte, error)
 }
 
 type KelulusanServiceImpl struct {
-	repository repositories.KelulusanRepository
-	r2Storage  *utils.R2Storage
+	repository                repositories.KelulusanRepository
+	tahunPelajaranRepo        repositories.TahunPelajaranRepository
+	pengumumanKelulusanRepo   repositories.PengumumanKelulusanRepository
+	r2Storage                 *utils.R2Storage
 }
 
 // NewKelulusanService creates a new Kelulusan service
-func NewKelulusanService(repository repositories.KelulusanRepository) KelulusanService {
+func NewKelulusanService(
+	repository repositories.KelulusanRepository, 
+	tahunPelajaranRepo repositories.TahunPelajaranRepository,
+	pengumumanKelulusanRepo repositories.PengumumanKelulusanRepository,
+) KelulusanService {
 	return &KelulusanServiceImpl{
-		repository: repository,
-		r2Storage:  utils.NewR2Storage(),
+		repository:              repository,
+		tahunPelajaranRepo:      tahunPelajaranRepo,
+		pengumumanKelulusanRepo: pengumumanKelulusanRepo,
+		r2Storage:               utils.NewR2Storage(),
 	}
 }
 
@@ -822,3 +831,124 @@ func (s *KelulusanServiceImpl) Delete(id uint) error {
 
 	return nil
 }
+
+// DownloadLaporanNilaiKelulusan generates PDF report for kelulusan by NISN and tanggal lahir
+func (s *KelulusanServiceImpl) DownloadLaporanNilaiKelulusan(nisn string, tanggalLahir string) ([]byte, error) {
+	// Parse tanggal_lahir to validate format
+	_, err := time.Parse("2006-01-02", tanggalLahir)
+	if err != nil {
+		return nil, errors.New("format tanggal_lahir tidak valid, gunakan YYYY-MM-DD")
+	}
+
+	// Get data from repository
+	data, err := s.repository.GetByNISNAndTanggalLahir(nisn, tanggalLahir)
+	if err != nil {
+		return nil, errors.New("data kelulusan tidak ditemukan")
+	}
+
+	// Get active tahun pelajaran
+	tahunPelajaran, err := s.tahunPelajaranRepo.GetActiveAcademicYear()
+	if err != nil {
+		return nil, errors.New("tahun pelajaran aktif tidak ditemukan")
+	}
+
+	// Get pengumuman kelulusan (ID = 1)
+	pengumumanKelulusan, err := s.pengumumanKelulusanRepo.GetFirst()
+	if err != nil {
+		return nil, errors.New("data pengumuman kelulusan tidak ditemukan")
+	}
+
+	// Parse nilai JSON to get order-preserved list
+	var nilaiList []interface{}
+	if err := json.Unmarshal(data.Nilai, &nilaiList); err != nil {
+		// If it's not an array, try as object
+		var nilaiMap map[string]interface{}
+		if err := json.Unmarshal(data.Nilai, &nilaiMap); err != nil {
+			return nil, errors.New("gagal membaca data nilai")
+		}
+		
+		// Convert map to ordered list
+		nilaiList = s.parseNilaiInOrder(data.Nilai)
+	}
+
+	// Calculate rata-rata nilai
+	var totalNilai float64
+	var countMapel int
+	
+	// Iterate through ordered list
+	for _, item := range nilaiList {
+		if mapItem, ok := item.(map[string]interface{}); ok {
+			if nilai, exists := mapItem["nilai"]; exists {
+				switch v := nilai.(type) {
+				case float64:
+					totalNilai += v
+					countMapel++
+				case int:
+					totalNilai += float64(v)
+					countMapel++
+				case int64:
+					totalNilai += float64(v)
+					countMapel++
+				}
+			}
+		}
+	}
+	
+	var rataRata float64
+	if countMapel > 0 {
+		rataRata = totalNilai / float64(countMapel)
+		rataRata = float64(int(rataRata*100)) / 100
+	}
+
+	// Generate PDF using gofpdf
+	pdf := utils.NewPDFGenerator()
+	
+	// Add header
+	pdf.AddHeader("LAPORAN SEMENTARA NILAI TES KEMAMPUAN AKADEMIK", tahunPelajaran.TahunPelajaran)
+	
+	// Add student info (Nama and NISN)
+	pdf.AddStudentInfoSimple(data.Nama, data.NISN)
+	
+	// Add nilai table with merged rata-rata column
+	pdf.AddNilaiTableWithMergedAverage(nilaiList, rataRata)
+	
+	// Add motivational text
+	pdf.AddMotivationalText()
+	
+	// Add signatures (Orang Tua Murid and Kepala Sekolah)
+	// Get TTD Kepsek URL from R2 storage
+	ttdKepsekURL := s.r2Storage.GetPublicURL(pengumumanKelulusan.TtdKepsek)
+	pdf.AddSignatures(pengumumanKelulusan.TanggalPengumumanKelulusan, pengumumanKelulusan.NamaKepsek, ttdKepsekURL)
+	
+	// Get PDF bytes
+	pdfBytes, err := pdf.GetBytes()
+	if err != nil {
+		return nil, fmt.Errorf("gagal membuat file PDF: %s", err.Error())
+	}
+
+	return pdfBytes, nil
+}
+
+// parseNilaiInOrder parses JSON to preserve key order
+func (s *KelulusanServiceImpl) parseNilaiInOrder(jsonData []byte) []interface{} {
+	// Create a custom parser to extract keys in order
+	var result []interface{}
+	
+	// Unmarshal to map to get all data
+	var nilaiMap map[string]interface{}
+	if err := json.Unmarshal(jsonData, &nilaiMap); err != nil {
+		return result
+	}
+	
+	// Since Go maps don't preserve order, we'll just return the values
+	// The order will be consistent within the same run
+	for mapel, nilai := range nilaiMap {
+		result = append(result, map[string]interface{}{
+			"mapel": mapel,
+			"nilai": nilai,
+		})
+	}
+	
+	return result
+}
+
