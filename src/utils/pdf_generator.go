@@ -77,8 +77,8 @@ func (p *PDFGenerator) AddHeader(title string, tahunPelajaran string) {
 	p.pdf.SetFont("Arial", "", 12)
 	p.pdf.CellFormat(0, 8, "TAHUN PELAJARAN "+tahunPelajaran, "", 1, "C", false, 0, "")
 	
-	// Add spacing
-	p.pdf.Ln(10)
+	// Add spacing (back to 5mm)
+	p.pdf.Ln(5)
 }
 
 // AddStudentInfoSimple adds student name and NISN with colon
