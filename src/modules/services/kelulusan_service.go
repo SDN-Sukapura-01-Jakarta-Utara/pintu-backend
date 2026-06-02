@@ -105,7 +105,7 @@ func (s *KelulusanServiceImpl) CreateKelulusan(req *dtos.KelulusanCreateRequest,
 
 // mapToResponse maps Kelulusan model to KelulusanResponse DTO
 func (s *KelulusanServiceImpl) mapToResponse(data *models.Kelulusan) *dtos.KelulusanResponse {
-	// Parse nilai JSON to map
+	// Parse nilai JSON to map for calculation only
 	var nilaiMap map[string]interface{}
 	if err := json.Unmarshal(data.Nilai, &nilaiMap); err != nil {
 		nilaiMap = make(map[string]interface{})
@@ -147,7 +147,7 @@ func (s *KelulusanServiceImpl) mapToResponse(data *models.Kelulusan) *dtos.Kelul
 		NISN:          data.NISN,
 		Nama:          data.Nama,
 		TanggalLahir:  data.TanggalLahir.Format("2006-01-02"),
-		Nilai:         nilaiMap,
+		Nilai:         json.RawMessage(data.Nilai), // Convert datatypes.JSON to json.RawMessage to preserve order
 		RataRataNilai: rataRata,
 		Lulus:         data.Lulus,
 		SKL:           sklURL,
@@ -610,7 +610,7 @@ func (s *KelulusanServiceImpl) CekNilaiKelulusan(nisn string, tanggalLahir strin
 		return nil, errors.New("data kelulusan tidak ditemukan")
 	}
 
-	// Parse nilai JSON to map
+	// Parse nilai JSON to map for calculation only
 	var nilaiMap map[string]interface{}
 	if err := json.Unmarshal(data.Nilai, &nilaiMap); err != nil {
 		nilaiMap = make(map[string]interface{})
@@ -653,7 +653,7 @@ func (s *KelulusanServiceImpl) CekNilaiKelulusan(nisn string, tanggalLahir strin
 		NISN:          data.NISN,
 		Nama:          data.Nama,
 		TanggalLahir:  data.TanggalLahir.Format("2006-01-02"),
-		Nilai:         nilaiMap,
+		Nilai:         json.RawMessage(data.Nilai), // Convert datatypes.JSON to json.RawMessage to preserve order
 		RataRataNilai: rataRata,
 		SKL:           sklURL,
 		CreatedAt:     data.CreatedAt.Format("2006-01-02 15:04:05"),

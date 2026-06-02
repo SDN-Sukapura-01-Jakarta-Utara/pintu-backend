@@ -1,5 +1,7 @@
 package dtos
 
+import "encoding/json"
+
 // KelulusanCreateRequest represents the request for creating kelulusan data
 type KelulusanCreateRequest struct {
 	NomorPeserta string                 `json:"nomor_peserta" binding:"required"`
@@ -13,21 +15,21 @@ type KelulusanCreateRequest struct {
 
 // KelulusanResponse represents the response for kelulusan data
 type KelulusanResponse struct {
-	ID            uint                   `json:"id"`
-	NomorPeserta  string                 `json:"nomor_peserta"`
-	NISN          string                 `json:"nisn"`
-	Nama          string                 `json:"nama"`
-	TanggalLahir  string                 `json:"tanggal_lahir"`
-	Nilai         map[string]interface{} `json:"nilai"`
-	RataRataNilai float64                `json:"rata_rata_nilai"` // Calculated average, 2 decimal places
-	Lulus         bool                   `json:"lulus"`
-	SKL           string                 `json:"skl,omitempty"`
-	MaxAttempts   int                    `json:"max_attempts"`
-	AttemptCount  int                    `json:"attempt_count"`
-	CreatedAt     string                 `json:"created_at"`
-	UpdatedAt     string                 `json:"updated_at"`
-	CreatedByID   *uint                  `json:"created_by_id,omitempty"`
-	UpdatedByID   *uint                  `json:"updated_by_id,omitempty"`
+	ID            uint            `json:"id"`
+	NomorPeserta  string          `json:"nomor_peserta"`
+	NISN          string          `json:"nisn"`
+	Nama          string          `json:"nama"`
+	TanggalLahir  string          `json:"tanggal_lahir"`
+	Nilai         json.RawMessage `json:"nilai"`
+	RataRataNilai float64         `json:"rata_rata_nilai"` // Calculated average, 2 decimal places
+	Lulus         bool            `json:"lulus"`
+	SKL           string          `json:"skl,omitempty"`
+	MaxAttempts   int             `json:"max_attempts"`
+	AttemptCount  int             `json:"attempt_count"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+	CreatedByID   *uint           `json:"created_by_id,omitempty"`
+	UpdatedByID   *uint           `json:"updated_by_id,omitempty"`
 }
 
 // KelulusanDownloadTemplateRequest represents the request for downloading template
@@ -96,14 +98,14 @@ type CekKelulusanRequest struct {
 
 // CekNilaiKelulusanResponse represents the response for public kelulusan check (without informasi_lulus)
 type CekNilaiKelulusanResponse struct {
-	ID            uint                   `json:"id"`
-	NomorPeserta  string                 `json:"nomor_peserta"`
-	NISN          string                 `json:"nisn"`
-	Nama          string                 `json:"nama"`
-	TanggalLahir  string                 `json:"tanggal_lahir"`
-	Nilai         map[string]interface{} `json:"nilai"`
-	RataRataNilai float64                `json:"rata_rata_nilai"`
-	SKL           string                 `json:"skl,omitempty"`
-	CreatedAt     string                 `json:"created_at"`
-	UpdatedAt     string                 `json:"updated_at"`
+	ID            uint            `json:"id"`
+	NomorPeserta  string          `json:"nomor_peserta"`
+	NISN          string          `json:"nisn"`
+	Nama          string          `json:"nama"`
+	TanggalLahir  string          `json:"tanggal_lahir"`
+	Nilai         json.RawMessage `json:"nilai"`
+	RataRataNilai float64         `json:"rata_rata_nilai"`
+	SKL           string          `json:"skl,omitempty"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
 }
