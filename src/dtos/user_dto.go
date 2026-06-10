@@ -97,11 +97,16 @@ type UserLoginRequest struct {
 
 // UserLoginResponse represents the response payload for user login
 type UserLoginResponse struct {
-	ID        uint            `json:"id"`
-	Nama      string          `json:"nama"`
-	Username  string          `json:"username"`
-	Roles     []RoleResponse  `json:"roles"`
-	Status    string          `json:"status"`
-	Token     string          `json:"token"`
-	CreatedAt time.Time       `json:"created_at"`
+	ID                    uint            `json:"id"`
+	Nama                  string          `json:"nama"`
+	Username              string          `json:"username"`
+	Roles                 []RoleResponse  `json:"roles"`
+	Status                string          `json:"status"`
+	Token                 string          `json:"token"`
+	CreatedAt             time.Time       `json:"created_at"`
+	// Kepegawaian fields (only populated for kepegawaian login)
+	Jabatan               *string         `json:"jabatan,omitempty"`
+	RombelGuruKelasID     *uint           `json:"rombel_guru_kelas_id,omitempty"`
+	BidangStudiID         *uint           `json:"bidang_studi_id,omitempty"`
+	RombelBidangStudi     interface{}     `json:"rombel_bidang_studi,omitempty"`
 }

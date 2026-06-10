@@ -109,17 +109,33 @@ func (s *LoginServiceImpl) Login(req *dtos.LoginRequest) (*dtos.LoginResponse, e
 			permissions = append(permissions, permName)
 		}
 
+		// Prepare rombel_bidang_studi (handle JSONB data)
+		var rombelBidangStudi interface{} = nil
+		if len(kepegawaian.RombelBidangStudi) > 0 {
+			rombelBidangStudi = kepegawaian.RombelBidangStudi
+		}
+
+		// Set jabatan to pointer
+		var jabatan *string = nil
+		if kepegawaian.Jabatan != "" {
+			jabatan = &kepegawaian.Jabatan
+		}
+
 		response := &dtos.LoginResponse{
 			Token:       token,
 			ExpiresAt:   time.Now().Add(24 * time.Hour),
 			Permissions: permissions,
 			User: dtos.UserLoginResponse{
-				ID:        kepegawaian.ID,
-				Nama:      kepegawaian.Nama,
-				Username:  kepegawaian.Username,
-				Status:    kepegawaian.Status,
-				Roles:     roles,
-				CreatedAt: kepegawaian.CreatedAt,
+				ID:                kepegawaian.ID,
+				Nama:              kepegawaian.Nama,
+				Username:          kepegawaian.Username,
+				Status:            kepegawaian.Status,
+				Roles:             roles,
+				CreatedAt:         kepegawaian.CreatedAt,
+				Jabatan:           jabatan,
+				RombelGuruKelasID: kepegawaian.RombelGuruKelasID,
+				BidangStudiID:     kepegawaian.BidangStudiID,
+				RombelBidangStudi: rombelBidangStudi,
 			},
 		}
 
