@@ -101,6 +101,7 @@ func main() {
 	routes.RegisterAbsensiRoutes(router, db)
 	routes.RegisterKelulusanRoutes(router, db)
 	routes.RegisterPengumumanKelulusanRoutes(router, db)
+	routes.RegisterLayananSPMBRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
