@@ -168,3 +168,30 @@ func (c *LayananSPMBController) DeleteLayananSPMB(ctx *gin.Context) {
 		"message": "Layanan SPMB berhasil dihapus",
 	})
 }
+
+// GetMonitoringPelayanan retrieves monitoring dashboard data (auth required)
+// @Summary Get Monitoring Pelayanan SPMB
+// @Description Retrieve monitoring data including statistics, trends, and detail layanan with filters
+// @Tags layanan-spmb
+// @Accept json
+// @Produce json
+// @Param body body dtos.MonitoringPelayananSPMBRequest true "Request body with filter_type (week/month/year) or custom date range"
+// @Success 200 {object} dtos.MonitoringPelayananSPMBResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Router /api/v1/spmb/monitoring-pelayanan-spmb [post]
+func (c *LayananSPMBController) GetMonitoringPelayanan(ctx *gin.Context) {
+	var req dtos.MonitoringPelayananSPMBRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetMonitoringPelayanan(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}

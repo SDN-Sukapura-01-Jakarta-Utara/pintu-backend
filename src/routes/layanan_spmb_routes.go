@@ -37,6 +37,7 @@ func RegisterLayananSPMBRoutes(router *gin.Engine, db *gorm.DB) {
 		protected.POST("/get-layanan-spmb-by-id", layananSPMBController.GetByID)
 		protected.POST("/set-status-selesai", layananSPMBController.UpdateStatus)
 		protected.POST("/delete-layanan-spmb", layananSPMBController.DeleteLayananSPMB)
+		protected.POST("/monitoring-pelayanan-spmb", layananSPMBController.GetMonitoringPelayanan)
 		protected.POST("/setting-layanan-spmb", settingLayananSPMBController.UpsertSetting)
 		protected.POST("/get-setting-layanan-spmb", settingLayananSPMBController.GetSetting)
 	}

@@ -75,3 +75,62 @@ type SettingLayananSPMBResponse struct {
 type GrupWASPMBResponse struct {
 	GrupWA *string `json:"grup_wa"`
 }
+
+// MonitoringPelayananSPMBRequest represents the request for monitoring dashboard
+type MonitoringPelayananSPMBRequest struct {
+	ViewType  string `json:"view_type"`  // "daily", "weekly", "monthly", "yearly" (default: "daily")
+	StartDate string `json:"start_date"` // YYYY-MM-DD (optional, for custom range)
+	EndDate   string `json:"end_date"`   // YYYY-MM-DD (optional, for custom range)
+}
+
+// MonitoringStatistik represents overview statistics
+type MonitoringStatistik struct {
+	TotalLayanan     int64                   `json:"total_layanan"`
+	LayananHariIni   int64                   `json:"layanan_hari_ini"`
+	LayananKemarin   int64                   `json:"layanan_kemarin"`
+	TrendPercentage  float64                 `json:"trend_percentage"`  // Percentage change hari ini vs kemarin
+	TrendDirection   string                  `json:"trend_direction"`   // "up", "down", "stable"
+	LayananMingguIni int64                   `json:"layanan_minggu_ini"`
+	LayananBulanIni  int64                   `json:"layanan_bulan_ini"`
+	ByStatus         []MonitoringStatusCount `json:"by_status"`
+}
+
+// MonitoringStatusCount represents count by status
+type MonitoringStatusCount struct {
+	Status string `json:"status"`
+	Count  int64  `json:"count"`
+}
+
+// MonitoringTrend represents trend data with view type context
+type MonitoringTrend struct {
+	ViewType string              `json:"view_type"` // "daily", "weekly", "monthly", "yearly"
+	Period   string              `json:"period"`    // Description of period
+	Data     []MonitoringTrendData `json:"data"`
+}
+
+// MonitoringTrendData represents individual trend data point
+type MonitoringTrendData struct {
+	Label     string `json:"label"`      // Display label (e.g., "1 Jun", "Week 1", "January")
+	Date      string `json:"date"`       // YYYY-MM-DD (for daily)
+	DateRange string `json:"date_range,omitempty"` // For weekly view (e.g., "1-7 Jun")
+	Month     string `json:"month,omitempty"`      // YYYY-MM (for monthly)
+	Year      string `json:"year,omitempty"`       // YYYY (for yearly)
+	Count     int64  `json:"count"`
+}
+
+// MonitoringDetailLayanan represents simplified layanan info for monitoring
+type MonitoringDetailLayanan struct {
+	ID               uint   `json:"id"`
+	NamaOrangTua     string `json:"nama_orang_tua"`
+	NamaLengkapMurid string `json:"nama_lengkap_murid"`
+	Keperluan        string `json:"keperluan"`
+	TanggalLaporan   string `json:"tanggal_laporan"`
+	Status           string `json:"status"`
+}
+
+// MonitoringPelayananSPMBResponse represents the complete monitoring response
+type MonitoringPelayananSPMBResponse struct {
+	Statistik     MonitoringStatistik       `json:"statistik"`
+	Trend         MonitoringTrend           `json:"trend"`
+	DetailLayanan []MonitoringDetailLayanan `json:"detail_layanan"`
+}
