@@ -10,8 +10,8 @@ import (
 
 // GetPrestasiFilter represents filter parameters for GetAllWithFilter
 type GetPrestasiFilter struct {
-	PesertaDidikID    *uint
-	NamaPesertaDidik  string
+	PesertaDidikRombelID *uint
+	NamaPesertaDidik     string
 	Jenis             string
 	NamaGrup          string
 	NamaPrestasi      string
@@ -68,18 +68,19 @@ func (r *PrestasiRepositoryImpl) Create(data *models.Prestasi) error {
 // GetByID retrieves Prestasi by ID with all relationships
 func (r *PrestasiRepositoryImpl) GetByID(id uint) (*models.Prestasi, error) {
 	var data models.Prestasi
-	if err := r.db.Preload("PesertaDidik").
-		Preload("PesertaDidik.Rombel").
-		Preload("PesertaDidik.Rombel.Kelas").
-		Preload("PesertaDidik.TahunPelajaran").
+	if err := r.db.Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
+		Preload("PesertaDidikRombel.Rombel").
+		Preload("PesertaDidikRombel.Rombel.Kelas").
+		Preload("PesertaDidikRombel.TahunPelajaran").
 		Preload("Ekstrakurikuler").
 		Preload("TahunPelajaran").
 		Preload("AnggotaTimPrestasi").
-		Preload("AnggotaTimPrestasi.PesertaDidik").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel.Kelas").
-		Preload("AnggotaTimPrestasi.PesertaDidik.TahunPelajaran").
-		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel.Kelas").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.TahunPelajaran").
 		First(&data, id).Error; err != nil {
 		return nil, err
 	}
@@ -97,18 +98,19 @@ func (r *PrestasiRepositoryImpl) GetAll(limit int, offset int) ([]models.Prestas
 	}
 
 	// Get paginated data with relationships
-	if err := r.db.Preload("PesertaDidik").
-		Preload("PesertaDidik.Rombel").
-		Preload("PesertaDidik.Rombel.Kelas").
-		Preload("PesertaDidik.TahunPelajaran").
+	if err := r.db.Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
+		Preload("PesertaDidikRombel.Rombel").
+		Preload("PesertaDidikRombel.Rombel.Kelas").
+		Preload("PesertaDidikRombel.TahunPelajaran").
 		Preload("Ekstrakurikuler").
 		Preload("TahunPelajaran").
 		Preload("AnggotaTimPrestasi").
-		Preload("AnggotaTimPrestasi.PesertaDidik").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel.Kelas").
-		Preload("AnggotaTimPrestasi.PesertaDidik.TahunPelajaran").
-		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel.Kelas").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.TahunPelajaran").
 		Limit(limit).Offset(offset).Order("created_at DESC").Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
@@ -124,12 +126,12 @@ func (r *PrestasiRepositoryImpl) GetAllWithFilter(params GetPrestasiParams) ([]m
 	query := r.db
 
 	// Apply filters
-	if params.Filter.PesertaDidikID != nil {
-		query = query.Where("(peserta_didik_id = ? OR id IN (SELECT prestasi_id FROM anggota_tim_prestasi WHERE peserta_didik_id = ? AND deleted_at IS NULL))", *params.Filter.PesertaDidikID, *params.Filter.PesertaDidikID)
+	if params.Filter.PesertaDidikRombelID != nil {
+		query = query.Where("peserta_didik_rombel_id = ?", *params.Filter.PesertaDidikRombelID)
 	}
 	if params.Filter.NamaPesertaDidik != "" {
 		nameLike := "%" + strings.ToLower(params.Filter.NamaPesertaDidik) + "%"
-		query = query.Where("(peserta_didik_id IN (SELECT id FROM peserta_didik WHERE LOWER(nama) LIKE ? AND deleted_at IS NULL) OR id IN (SELECT prestasi_id FROM anggota_tim_prestasi WHERE peserta_didik_id IN (SELECT id FROM peserta_didik WHERE LOWER(nama) LIKE ? AND deleted_at IS NULL) AND deleted_at IS NULL))", nameLike, nameLike)
+		query = query.Where("peserta_didik_rombel_id IN (SELECT id FROM peserta_didik_rombel WHERE peserta_didik_id IN (SELECT id FROM peserta_didik WHERE LOWER(nama) LIKE ? AND deleted_at IS NULL) AND deleted_at IS NULL)", nameLike)
 	}
 	if params.Filter.Jenis != "" {
 		query = query.Where("LOWER(jenis) LIKE ?", "%"+strings.ToLower(params.Filter.Jenis)+"%")
@@ -172,18 +174,19 @@ func (r *PrestasiRepositoryImpl) GetAllWithFilter(params GetPrestasiParams) ([]m
 	}
 
 	// Get paginated data with relationships
-	if err := query.Preload("PesertaDidik").
-		Preload("PesertaDidik.Rombel").
-		Preload("PesertaDidik.Rombel.Kelas").
-		Preload("PesertaDidik.TahunPelajaran").
+	if err := query.Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
+		Preload("PesertaDidikRombel.Rombel").
+		Preload("PesertaDidikRombel.Rombel.Kelas").
+		Preload("PesertaDidikRombel.TahunPelajaran").
 		Preload("Ekstrakurikuler").
 		Preload("TahunPelajaran").
 		Preload("AnggotaTimPrestasi").
-		Preload("AnggotaTimPrestasi.PesertaDidik").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel.Kelas").
-		Preload("AnggotaTimPrestasi.PesertaDidik.TahunPelajaran").
-		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel.Kelas").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.TahunPelajaran").
 		Order("created_at DESC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
@@ -209,11 +212,11 @@ func (r *PrestasiRepositoryImpl) CreateAnggotaTim(data *models.AnggotaTimPrestas
 // GetAnggotaTimByPrestasiID retrieves all anggota tim by prestasi ID
 func (r *PrestasiRepositoryImpl) GetAnggotaTimByPrestasiID(prestasiID uint) ([]models.AnggotaTimPrestasi, error) {
 	var data []models.AnggotaTimPrestasi
-	if err := r.db.Preload("PesertaDidik").
-		Preload("PesertaDidik.Rombel").
-		Preload("PesertaDidik.Rombel.Kelas").
-		Preload("PesertaDidik.TahunPelajaran").
-		Preload("TahunPelajaran").
+	if err := r.db.Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
+		Preload("PesertaDidikRombel.Rombel").
+		Preload("PesertaDidikRombel.Rombel.Kelas").
+		Preload("PesertaDidikRombel.TahunPelajaran").
 		Where("prestasi_id = ?", prestasiID).Find(&data).Error; err != nil {
 		return nil, err
 	}
@@ -239,10 +242,12 @@ func (r *PrestasiRepositoryImpl) DeleteAnggotaTimByPrestasiID(prestasiID uint) e
 func (r *PrestasiRepositoryImpl) GetPublicLatest() ([]models.Prestasi, error) {
 	var data []models.Prestasi
 	if err := r.db.Where("status = ?", "active").
-		Preload("PesertaDidik").
+		Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
 		Preload("AnggotaTimPrestasi").
-		Preload("AnggotaTimPrestasi.PesertaDidik").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel").
 		Order("tanggal_lomba DESC").
 		Limit(10).
 		Find(&data).Error; err != nil {
@@ -271,10 +276,12 @@ func (r *PrestasiRepositoryImpl) GetPublicList(sort string, offset int) ([]model
 	}
 
 	// Get paginated data (12 items per request)
-	if err := query.Preload("PesertaDidik").
+	if err := query.Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
 		Preload("AnggotaTimPrestasi").
-		Preload("AnggotaTimPrestasi.PesertaDidik").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel").
 		Order(orderBy).
 		Limit(12).
 		Offset(offset).
@@ -290,14 +297,15 @@ func (r *PrestasiRepositoryImpl) GetPublicList(sort string, offset int) ([]model
 func (r *PrestasiRepositoryImpl) GetPublicDetailByID(id uint) (*models.Prestasi, error) {
 	var data models.Prestasi
 	if err := r.db.Where("id = ? AND status = ?", id, "active").
-		Preload("PesertaDidik").
-		Preload("PesertaDidik.Rombel").
+		Preload("PesertaDidikRombel").
+		Preload("PesertaDidikRombel.PesertaDidik").
+		Preload("PesertaDidikRombel.Rombel").
 		Preload("Ekstrakurikuler").
 		Preload("TahunPelajaran").
 		Preload("AnggotaTimPrestasi").
-		Preload("AnggotaTimPrestasi.PesertaDidik").
-		Preload("AnggotaTimPrestasi.PesertaDidik.Rombel").
-		Preload("AnggotaTimPrestasi.TahunPelajaran").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.PesertaDidik").
+		Preload("AnggotaTimPrestasi.PesertaDidikRombel.Rombel").
 		First(&data).Error; err != nil {
 		return nil, err
 	}

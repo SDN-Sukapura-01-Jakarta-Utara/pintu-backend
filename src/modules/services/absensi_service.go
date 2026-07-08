@@ -11,10 +11,14 @@ import (
 	"pintu-backend/src/modules/models"
 	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/utils"
+
+	"github.com/xuri/excelize/v2"
+	"gorm.io/gorm"
 )
 
 type AbsensiService interface {
 	CreateAbsensiManual(req *dtos.AbsensiManualCreateRequest, files map[uint][]*multipart.FileHeader, userID uint) (*dtos.AbsensiManualCreateResponse, error)
+	CreateAbsensiManualByID(req *dtos.AbsensiManualCreateByIDRequest, file *multipart.FileHeader, userID uint) (*dtos.AbsensiResponse, error)
 	GetRekapAbsensi(req *dtos.AbsensiRekapRequest) (*dtos.AbsensiRekapResponse, error)
 	UpdateRekapAbsensi(id uint, req *dtos.AbsensiUpdateRequest, file *multipart.FileHeader, userID uint) (*dtos.AbsensiUpdateResponse, error)
 	GetDashboardSummary(req *dtos.DashboardSummaryRequest) (*dtos.DashboardSummaryResponse, error)
@@ -23,18 +27,23 @@ type AbsensiService interface {
 	GetPerbandinganRombel(req *dtos.PerbandinganRombelRequest) (*dtos.PerbandinganRombelResponse, error)
 	GetSiswaTerendah(req *dtos.SiswaTerendahRequest) (*dtos.SiswaTerendahResponse, error)
 	GetDashboardSiswa(req *dtos.DashboardSiswaRequest) (*dtos.DashboardSiswaResponse, error)
+	SynchronizeAbsensi(req *dtos.AbsensiSyncRequest, userID uint) (*dtos.AbsensiSyncResponse, error)
+	ExportAbsensiExcel(req *dtos.ExportAbsensiExcelRequest) (*excelize.File, error)
+	ExportAbsensiPDF(req *dtos.ExportAbsensiExcelRequest) ([]byte, error)
 }
 
 type AbsensiServiceImpl struct {
 	repository repositories.AbsensiRepository
 	r2Storage  *utils.R2Storage
+	db         *gorm.DB
 }
 
 // NewAbsensiService creates a new Absensi service
-func NewAbsensiService(repository repositories.AbsensiRepository) AbsensiService {
+func NewAbsensiService(repository repositories.AbsensiRepository, db *gorm.DB) AbsensiService {
 	return &AbsensiServiceImpl{
 		repository: repository,
 		r2Storage:  utils.NewR2Storage(),
+		db:         db,
 	}
 }
 
@@ -46,40 +55,33 @@ func (s *AbsensiServiceImpl) CreateAbsensiManual(req *dtos.AbsensiManualCreateRe
 		return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
 	}
 
-	// Validasi pertemuan_ke untuk guru mapel (bidang_studi_id NOT NULL)
+	// Validasi duplicate untuk guru kelas (bidang_studi_id = NULL)
+	if req.BidangStudiID == nil {
+		// Check if already exists for this rombel, tahun_pelajaran, semester, tanggal
+		existing, _ := s.repository.CheckDuplicateGuruKelas(req.RombelID, req.TahunPelajaranID, req.Semester, tanggal)
+		if existing != nil {
+			return nil, fmt.Errorf("Absensi untuk rombel ini di tanggal %s sudah ada", req.Tanggal)
+		}
+	}
+
+	// Validasi duplicate untuk guru mapel (bidang_studi_id NOT NULL)
 	if req.BidangStudiID != nil && req.PertemuanKe != nil {
 		// Extract bulan dan tahun dari tanggal
 		bulan := int(tanggal.Month())
 		tahun := tanggal.Year()
 		
-		// Check if pertemuan already exists in this month
-		existingAbsensi, err := s.repository.CheckPertemuanExists(
+		// Check if already exists for this rombel, tahun_pelajaran, semester, bidang_studi, pertemuan_ke in the same month
+		existing, _ := s.repository.CheckDuplicateGuruMapel(
 			req.RombelID,
-			*req.BidangStudiID,
 			req.TahunPelajaranID,
+			*req.BidangStudiID,
 			req.Semester,
+			*req.PertemuanKe,
 			bulan,
 			tahun,
-			*req.PertemuanKe,
 		)
-		
-		if err != nil {
-			return nil, errors.New("gagal memeriksa data pertemuan")
-		}
-		
-		if existingAbsensi != nil {
-			rombelNama := "rombel ini"
-			if existingAbsensi.Rombel != nil {
-				rombelNama = existingAbsensi.Rombel.Name
-			}
-			
-			mapelNama := "mata pelajaran ini"
-			if existingAbsensi.BidangStudi != nil {
-				mapelNama = existingAbsensi.BidangStudi.Name
-			}
-			
-			return nil, fmt.Errorf("pertemuan ke-%d untuk %s di %s sudah ada di bulan %d tahun %d", 
-				*req.PertemuanKe, mapelNama, rombelNama, bulan, tahun)
+		if existing != nil {
+			return nil, fmt.Errorf("Pertemuan ke-%d untuk mata pelajaran ini di bulan %d tahun %d sudah ada", *req.PertemuanKe, bulan, tahun)
 		}
 	}
 
@@ -100,83 +102,114 @@ func (s *AbsensiServiceImpl) CreateAbsensiManual(req *dtos.AbsensiManualCreateRe
 	totalSuccess := 0
 	totalFailed := 0
 	var errorItems []dtos.AbsensiCreateErrorItem
+	var uploadedFiles []string // Track uploaded files for cleanup
+
+	// Start database transaction
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return nil, errors.New("gagal memulai transaksi database")
+	}
+
+	// Defer rollback in case of panic
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			// Clean up uploaded files
+			for _, filePath := range uploadedFiles {
+				s.r2Storage.DeleteFile(filePath)
+			}
+		}
+	}()
 
 	// Process each student in the list
 	for _, item := range req.AbsensiList {
+		// Validate peserta_didik_rombel exists
+		_, err := s.repository.GetPesertaDidikRombelByID(item.PesertaDidikRombelID)
+		if err != nil {
+			tx.Rollback()
+			// Clean up uploaded files
+			for _, filePath := range uploadedFiles {
+				s.r2Storage.DeleteFile(filePath)
+			}
+			return nil, fmt.Errorf("data peserta didik rombel ID %d tidak ditemukan", item.PesertaDidikRombelID)
+		}
+
 		// Check if absensi already exists for this student on this date and mapel
-		existing, _ := s.repository.GetByPesertaDidikTanggalMapel(item.PesertaDidikID, tanggal, req.BidangStudiID)
+		existing, _ := s.repository.GetByPesertaDidikTanggalMapel(item.PesertaDidikRombelID, tanggal, req.BidangStudiID)
 		if existing != nil {
-			totalFailed++
+			tx.Rollback()
+			// Clean up uploaded files
+			for _, filePath := range uploadedFiles {
+				s.r2Storage.DeleteFile(filePath)
+			}
 			var errorMsg string
 			if req.BidangStudiID == nil {
 				errorMsg = "absensi untuk tanggal ini sudah ada"
 			} else {
 				errorMsg = "absensi untuk tanggal ini di mata pelajaran ini sudah ada"
 			}
-			errorItems = append(errorItems, dtos.AbsensiCreateErrorItem{
-				PesertaDidikID: item.PesertaDidikID,
-				Message:        errorMsg,
-			})
-			continue
+			return nil, fmt.Errorf("peserta didik rombel ID %d: %s", item.PesertaDidikRombelID, errorMsg)
 		}
 
 		// Handle file upload for this student (if any)
 		var fileSuratPath string
-		if fileHeaders, ok := files[item.PesertaDidikID]; ok && len(fileHeaders) > 0 {
+		if fileHeaders, ok := files[item.PesertaDidikRombelID]; ok && len(fileHeaders) > 0 {
 			// Only take the first file if multiple files uploaded
 			fileHeader := fileHeaders[0]
 			
 			// Upload to R2 in absensi-siswa folder
 			uploadedPath, err := s.r2Storage.UploadFile(fileHeader, "absensi-siswa")
 			if err != nil {
-				totalFailed++
-				errorItems = append(errorItems, dtos.AbsensiCreateErrorItem{
-					PesertaDidikID: item.PesertaDidikID,
-					Message:        fmt.Sprintf("gagal upload file: %s", err.Error()),
-				})
-				continue
+				tx.Rollback()
+				// Clean up uploaded files
+				for _, filePath := range uploadedFiles {
+					s.r2Storage.DeleteFile(filePath)
+				}
+				return nil, fmt.Errorf("gagal upload file untuk peserta didik rombel ID %d: %s", item.PesertaDidikRombelID, err.Error())
 			}
 			fileSuratPath = uploadedPath
+			uploadedFiles = append(uploadedFiles, uploadedPath) // Track for cleanup
 		}
 
-		// Create absensi record
-		absensi := &models.Absensi{
-			PesertaDidikID:   item.PesertaDidikID,
-			RombelID:         &req.RombelID,
-			TahunPelajaranID: req.TahunPelajaranID,
-			Semester:         req.Semester,
-			Tanggal:          tanggal,
-			BidangStudiID:    req.BidangStudiID, // NULL = guru kelas, NOT NULL = guru mapel
-			PertemuanKe:      req.PertemuanKe,   // NULL = guru kelas, NOT NULL = guru mapel
-			Status:           item.Status,
-			WaktuAbsen:       waktuAbsen,
-			MetodeInput:      "manual",
-			Keterangan:       item.Keterangan,
-			FileSurat:        fileSuratPath,
-			DicatatOlehID:    &userID,
+		// Create absensi record with peserta_didik_rombel_id using transaction
+		absensi := &models.RekapitulasiAbsensi{
+			PesertaDidikRombelID: item.PesertaDidikRombelID,
+			RombelID:             &req.RombelID,
+			TahunPelajaranID:     req.TahunPelajaranID,
+			Semester:             req.Semester,
+			Tanggal:              tanggal,
+			BidangStudiID:        req.BidangStudiID, // NULL = guru kelas, NOT NULL = guru mapel
+			PertemuanKe:          req.PertemuanKe,   // NULL = guru kelas, NOT NULL = guru mapel
+			Status:               item.Status,
+			WaktuAbsen:           waktuAbsen,
+			MetodeInput:          "manual",
+			Keterangan:           item.Keterangan,
+			FileSurat:            fileSuratPath,
+			DicatatOlehID:        &userID,
 		}
 
-		if err := s.repository.Create(absensi); err != nil {
-			totalFailed++
-			errorItems = append(errorItems, dtos.AbsensiCreateErrorItem{
-				PesertaDidikID: item.PesertaDidikID,
-				Message:        fmt.Sprintf("gagal menyimpan data: %s", err.Error()),
-			})
-			
-			// Delete uploaded file from R2 if save to DB failed
-			if fileSuratPath != "" {
-				s.r2Storage.DeleteFile(fileSuratPath)
+		if err := tx.Create(absensi).Error; err != nil {
+			tx.Rollback()
+			// Clean up uploaded files
+			for _, filePath := range uploadedFiles {
+				s.r2Storage.DeleteFile(filePath)
 			}
-			continue
+			return nil, fmt.Errorf("gagal menyimpan data untuk peserta didik rombel ID %d: %s", item.PesertaDidikRombelID, err.Error())
 		}
 
 		totalSuccess++
 	}
 
-	message := fmt.Sprintf("Berhasil menyimpan %d absensi", totalSuccess)
-	if totalFailed > 0 {
-		message += fmt.Sprintf(", %d gagal", totalFailed)
+	// Commit transaction if all succeeded
+	if err := tx.Commit().Error; err != nil {
+		// Clean up uploaded files if commit fails
+		for _, filePath := range uploadedFiles {
+			s.r2Storage.DeleteFile(filePath)
+		}
+		return nil, errors.New("gagal menyimpan transaksi ke database")
 	}
+
+	message := fmt.Sprintf("Berhasil menyimpan %d absensi", totalSuccess)
 
 	return &dtos.AbsensiManualCreateResponse{
 		TotalSuccess: totalSuccess,
@@ -184,6 +217,104 @@ func (s *AbsensiServiceImpl) CreateAbsensiManual(req *dtos.AbsensiManualCreateRe
 		Message:      message,
 		Errors:       errorItems,
 	}, nil
+}
+
+// CreateAbsensiManualByID creates a single absensi record by peserta didik rombel ID with auto semester detection
+func (s *AbsensiServiceImpl) CreateAbsensiManualByID(req *dtos.AbsensiManualCreateByIDRequest, file *multipart.FileHeader, userID uint) (*dtos.AbsensiResponse, error) {
+	// Parse tanggal (YYYY-MM-DD format)
+	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+	if err != nil {
+		return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
+	}
+
+	// Auto detect semester based on month
+	// July-December (7-12) = Semester 1
+	// January-June (1-6) = Semester 2
+	month := int(tanggal.Month())
+	semester := 2
+	if month >= 7 && month <= 12 {
+		semester = 1
+	}
+
+	// Parse waktu_absen if provided (YYYY-MM-DD HH:MM:SS format)
+	var waktuAbsen *time.Time
+	if req.WaktuAbsen != "" {
+		t, err := time.Parse("2006-01-02 15:04:05", req.WaktuAbsen)
+		if err != nil {
+			return nil, errors.New("format waktu_absen tidak valid, gunakan YYYY-MM-DD HH:MM:SS")
+		}
+		waktuAbsen = &t
+	} else {
+		// Default to current time if not provided
+		now := time.Now()
+		waktuAbsen = &now
+	}
+
+	// Validate peserta_didik_rombel exists
+	_, err = s.repository.GetPesertaDidikRombelByID(req.PesertaDidikRombelID)
+	if err != nil {
+		return nil, fmt.Errorf("data peserta didik rombel ID %d tidak ditemukan", req.PesertaDidikRombelID)
+	}
+
+	// Check if absensi already exists for this student on this date and mapel
+	existing, _ := s.repository.GetByPesertaDidikTanggalMapel(req.PesertaDidikRombelID, tanggal, req.BidangStudiID)
+	if existing != nil {
+		var errorMsg string
+		if req.BidangStudiID == nil {
+			errorMsg = "absensi untuk tanggal ini sudah ada"
+		} else {
+			errorMsg = "absensi untuk tanggal ini di mata pelajaran ini sudah ada"
+		}
+		return nil, fmt.Errorf("peserta didik rombel ID %d: %s", req.PesertaDidikRombelID, errorMsg)
+	}
+
+	// Handle file upload (if any)
+	var fileSuratPath string
+	if file != nil {
+		// Upload to R2 in absensi-siswa folder
+		uploadedPath, err := s.r2Storage.UploadFile(file, "absensi-siswa")
+		if err != nil {
+			return nil, fmt.Errorf("gagal upload file: %s", err.Error())
+		}
+		fileSuratPath = uploadedPath
+	}
+
+	// Create absensi record
+	absensi := &models.RekapitulasiAbsensi{
+		PesertaDidikRombelID: req.PesertaDidikRombelID,
+		RombelID:             &req.RombelID,
+		TahunPelajaranID:     req.TahunPelajaranID,
+		Semester:             semester, // Auto detected
+		Tanggal:              tanggal,
+		BidangStudiID:        req.BidangStudiID, // NULL = guru kelas, NOT NULL = guru mapel
+		PertemuanKe:          req.PertemuanKe,   // NULL = guru kelas, NOT NULL = guru mapel
+		Status:               req.Status,
+		WaktuAbsen:           waktuAbsen,
+		MetodeInput:          "manual",
+		Keterangan:           req.Keterangan,
+		FileSurat:            fileSuratPath,
+		DicatatOlehID:        &userID,
+	}
+
+	if err := s.db.Create(absensi).Error; err != nil {
+		// Clean up uploaded file if save fails
+		if fileSuratPath != "" {
+			s.r2Storage.DeleteFile(fileSuratPath)
+		}
+		return nil, fmt.Errorf("gagal menyimpan data absensi: %s", err.Error())
+	}
+
+	// Load relationships for response
+	s.db.Preload("PesertaDidikRombel.PesertaDidik").
+		Preload("Rombel").
+		Preload("BidangStudi").
+		Preload("DicatatOleh").
+		First(absensi, absensi.ID)
+
+	// Map to response
+	response := s.mapToResponse(absensi)
+
+	return response, nil
 }
 
 // GetRekapAbsensi retrieves attendance recap with summary per student
@@ -234,7 +365,7 @@ func (s *AbsensiServiceImpl) GetRekapAbsensi(req *dtos.AbsensiRekapRequest) (*dt
 		return nil, errors.New("gagal mengambil data absensi")
 	}
 
-	// Group absensi by peserta_didik_id
+	// Group absensi by peserta_didik_rombel_id
 	siswaMap := make(map[uint]*dtos.AbsensiRekapSiswa)
 	var rombelNama string
 	var bidangStudiNama string
@@ -250,13 +381,23 @@ func (s *AbsensiServiceImpl) GetRekapAbsensi(req *dtos.AbsensiRekapRequest) (*dt
 			bidangStudiNama = absensi.BidangStudi.Name
 		}
 
+		// Get peserta_didik_id from PesertaDidikRombel
+		pesertaDidikID := uint(0)
+		var nis, nama, jenisKelamin string
+		if absensi.PesertaDidikRombel != nil && absensi.PesertaDidikRombel.PesertaDidik != nil {
+			pesertaDidikID = absensi.PesertaDidikRombel.PesertaDidik.ID
+			nis = absensi.PesertaDidikRombel.PesertaDidik.NIS
+			nama = absensi.PesertaDidikRombel.PesertaDidik.Nama
+			jenisKelamin = absensi.PesertaDidikRombel.PesertaDidik.JenisKelamin
+		}
+
 		// Initialize siswa map if not exists
-		if _, exists := siswaMap[absensi.PesertaDidikID]; !exists {
-			siswaMap[absensi.PesertaDidikID] = &dtos.AbsensiRekapSiswa{
-				PesertaDidikID:   absensi.PesertaDidikID,
-				NIS:              absensi.PesertaDidik.NIS,
-				Nama:             absensi.PesertaDidik.Nama,
-				JenisKelamin:     absensi.PesertaDidik.JenisKelamin,
+		if _, exists := siswaMap[pesertaDidikID]; !exists {
+			siswaMap[pesertaDidikID] = &dtos.AbsensiRekapSiswa{
+				PesertaDidikID:   pesertaDidikID,
+				NIS:              nis,
+				Nama:             nama,
+				JenisKelamin:     jenisKelamin,
 				TotalHadir:       0,
 				TotalSakit:       0,
 				TotalIzin:        0,
@@ -268,7 +409,7 @@ func (s *AbsensiServiceImpl) GetRekapAbsensi(req *dtos.AbsensiRekapRequest) (*dt
 			}
 		}
 
-		siswa := siswaMap[absensi.PesertaDidikID]
+		siswa := siswaMap[pesertaDidikID]
 
 		// Count status
 		switch absensi.Status {
@@ -407,10 +548,18 @@ func (s *AbsensiServiceImpl) UpdateRekapAbsensi(id uint, req *dtos.AbsensiUpdate
 }
 
 // mapToResponse maps Absensi model to AbsensiResponse DTO
-func (s *AbsensiServiceImpl) mapToResponse(data *models.Absensi) *dtos.AbsensiResponse {
+func (s *AbsensiServiceImpl) mapToResponse(data *models.RekapitulasiAbsensi) *dtos.AbsensiResponse {
+	pesertaDidikID := uint(0)
+	pesertaDidikNama := ""
+	if data.PesertaDidikRombel != nil && data.PesertaDidikRombel.PesertaDidik != nil {
+		pesertaDidikID = data.PesertaDidikRombel.PesertaDidik.ID
+		pesertaDidikNama = data.PesertaDidikRombel.PesertaDidik.Nama
+	}
+
 	response := &dtos.AbsensiResponse{
 		ID:               data.ID,
-		PesertaDidikID:   data.PesertaDidikID,
+		PesertaDidikID:   pesertaDidikID,
+		PesertaDidikNama: pesertaDidikNama,
 		RombelID:         data.RombelID,
 		TahunPelajaranID: data.TahunPelajaranID,
 		Semester:         data.Semester,
@@ -428,10 +577,6 @@ func (s *AbsensiServiceImpl) mapToResponse(data *models.Absensi) *dtos.AbsensiRe
 
 	if data.WaktuAbsen != nil {
 		response.WaktuAbsen = data.WaktuAbsen.Format("2006-01-02 15:04:05")
-	}
-
-	if data.PesertaDidik != nil {
-		response.PesertaDidikNama = data.PesertaDidik.Nama
 	}
 
 	if data.Rombel != nil {
@@ -547,7 +692,7 @@ func (s *AbsensiServiceImpl) GetDashboardSummary(req *dtos.DashboardSummaryReque
 }
 
 // calculateTrendFromData calculates attendance trend from the last 2 dates in data
-func (s *AbsensiServiceImpl) calculateTrendFromData(absensiList []models.Absensi, dateMap map[string]bool) *dtos.TrendKehadiran {
+func (s *AbsensiServiceImpl) calculateTrendFromData(absensiList []models.RekapitulasiAbsensi, dateMap map[string]bool) *dtos.TrendKehadiran {
 	// Get all unique dates and sort them
 	var dates []time.Time
 	for dateStr := range dateMap {
@@ -698,7 +843,7 @@ func (s *AbsensiServiceImpl) GetGrafikKehadiran(req *dtos.GrafikKehadiranRequest
 }
 
 // groupByHarian groups attendance data by daily
-func (s *AbsensiServiceImpl) groupByHarian(absensiList []models.Absensi, tanggalMulai, tanggalSelesai time.Time) ([]string, []int, []int, []int, []int) {
+func (s *AbsensiServiceImpl) groupByHarian(absensiList []models.RekapitulasiAbsensi, tanggalMulai, tanggalSelesai time.Time) ([]string, []int, []int, []int, []int) {
 	// Create map to store data per date
 	dataMap := make(map[string]map[string]int)
 	
@@ -740,7 +885,7 @@ func (s *AbsensiServiceImpl) groupByHarian(absensiList []models.Absensi, tanggal
 }
 
 // groupByMingguan groups attendance data by weekly
-func (s *AbsensiServiceImpl) groupByMingguan(absensiList []models.Absensi, tanggalMulai, tanggalSelesai time.Time) ([]string, []int, []int, []int, []int) {
+func (s *AbsensiServiceImpl) groupByMingguan(absensiList []models.RekapitulasiAbsensi, tanggalMulai, tanggalSelesai time.Time) ([]string, []int, []int, []int, []int) {
 	// Create map to store data per week
 	dataMap := make(map[string]map[string]int)
 	weekLabels := make(map[string]string)
@@ -809,7 +954,7 @@ func (s *AbsensiServiceImpl) groupByMingguan(absensiList []models.Absensi, tangg
 }
 
 // groupByBulanan groups attendance data by monthly
-func (s *AbsensiServiceImpl) groupByBulanan(absensiList []models.Absensi, tanggalMulai, tanggalSelesai time.Time) ([]string, []int, []int, []int, []int) {
+func (s *AbsensiServiceImpl) groupByBulanan(absensiList []models.RekapitulasiAbsensi, tanggalMulai, tanggalSelesai time.Time) ([]string, []int, []int, []int, []int) {
 	// Create map to store data per month
 	dataMap := make(map[string]map[string]int)
 	
@@ -1032,7 +1177,9 @@ func (s *AbsensiServiceImpl) GetPerbandinganRombel(req *dtos.PerbandinganRombelR
 		}
 		
 		// Track unique students
-		siswaPerRombel[rombelID][absensi.PesertaDidikID] = true
+		if absensi.PesertaDidikRombel != nil && absensi.PesertaDidikRombel.PesertaDidik != nil {
+			siswaPerRombel[rombelID][absensi.PesertaDidikRombel.PesertaDidik.ID] = true
+		}
 		
 		// Count by status
 		rombel := rombelMap[rombelID]
@@ -1112,12 +1259,21 @@ func (s *AbsensiServiceImpl) GetSiswaTerendah(req *dtos.SiswaTerendahRequest) (*
 	siswaMap := make(map[uint]*dtos.SiswaKehadiran)
 	
 	for _, absensi := range absensiList {
+		// Get peserta_didik_id from PesertaDidikRombel
+		pesertaDidikID := uint(0)
+		var nis, nama string
+		if absensi.PesertaDidikRombel != nil && absensi.PesertaDidikRombel.PesertaDidik != nil {
+			pesertaDidikID = absensi.PesertaDidikRombel.PesertaDidik.ID
+			nis = absensi.PesertaDidikRombel.PesertaDidik.NIS
+			nama = absensi.PesertaDidikRombel.PesertaDidik.Nama
+		}
+
 		// Initialize siswa data if not exists
-		if _, exists := siswaMap[absensi.PesertaDidikID]; !exists {
-			siswaMap[absensi.PesertaDidikID] = &dtos.SiswaKehadiran{
-				PesertaDidikID:  absensi.PesertaDidikID,
-				NIS:             absensi.PesertaDidik.NIS,
-				Nama:            absensi.PesertaDidik.Nama,
+		if _, exists := siswaMap[pesertaDidikID]; !exists {
+			siswaMap[pesertaDidikID] = &dtos.SiswaKehadiran{
+				PesertaDidikID:  pesertaDidikID,
+				NIS:             nis,
+				Nama:            nama,
 				TotalHadir:      0,
 				TotalAbsen:      0,
 				TotalPertemuan:  0,
@@ -1125,7 +1281,7 @@ func (s *AbsensiServiceImpl) GetSiswaTerendah(req *dtos.SiswaTerendahRequest) (*
 			}
 		}
 		
-		siswa := siswaMap[absensi.PesertaDidikID]
+		siswa := siswaMap[pesertaDidikID]
 		siswa.TotalPertemuan++
 		
 		// Count by status
@@ -1189,7 +1345,7 @@ func (s *AbsensiServiceImpl) GetDashboardSiswa(req *dtos.DashboardSiswaRequest) 
 	
 	// Get all absensi records for this student
 	absensiList, err := s.repository.GetDashboardSiswa(
-		req.PesertaDidikID,
+		req.PesertaDidikRombelID,
 		req.TahunPelajaranID,
 		req.RombelID,
 		req.Semester,
@@ -1207,11 +1363,21 @@ func (s *AbsensiServiceImpl) GetDashboardSiswa(req *dtos.DashboardSiswaRequest) 
 	
 	// Get student info from first record
 	firstRecord := absensiList[0]
+	
+	pesertaDidikID := uint(0)
+	var nis, nama, jenisKelamin string
+	if firstRecord.PesertaDidikRombel != nil && firstRecord.PesertaDidikRombel.PesertaDidik != nil {
+		pesertaDidikID = firstRecord.PesertaDidikRombel.PesertaDidik.ID
+		nis = firstRecord.PesertaDidikRombel.PesertaDidik.NIS
+		nama = firstRecord.PesertaDidikRombel.PesertaDidik.Nama
+		jenisKelamin = firstRecord.PesertaDidikRombel.PesertaDidik.JenisKelamin
+	}
+	
 	siswa := dtos.InfoSiswa{
-		PesertaDidikID: firstRecord.PesertaDidikID,
-		NIS:            firstRecord.PesertaDidik.NIS,
-		Nama:           firstRecord.PesertaDidik.Nama,
-		JenisKelamin:   firstRecord.PesertaDidik.JenisKelamin,
+		PesertaDidikID: pesertaDidikID,
+		NIS:            nis,
+		Nama:           nama,
+		JenisKelamin:   jenisKelamin,
 		RombelNama:     "",
 		Foto:           "", // PesertaDidik model doesn't have Foto field yet
 	}
@@ -1289,9 +1455,24 @@ func (s *AbsensiServiceImpl) GetDashboardSiswa(req *dtos.DashboardSiswaRequest) 
 	
 	grafik := s.buildGrafikSiswa(absensiList, req.Periode, grafikTanggalMulai, grafikTanggalSelesai)
 	
-	// Build riwayat absensi
+	// Apply limit to riwayat (default 10, max 100)
+	limit := 10
+	if req.LimitRiwayat > 0 {
+		limit = req.LimitRiwayat
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	
+	// Build riwayat absensi (limited)
 	var riwayatAbsensi []dtos.RiwayatAbsensiSiswa
-	for _, absensi := range absensiList {
+	maxItems := len(absensiList)
+	if limit < maxItems {
+		maxItems = limit
+	}
+	
+	for i := 0; i < maxItems; i++ {
+		absensi := absensiList[i]
 		waktuAbsen := ""
 		if absensi.WaktuAbsen != nil {
 			waktuAbsen = absensi.WaktuAbsen.Format("15:04:05")
@@ -1323,7 +1504,7 @@ func (s *AbsensiServiceImpl) GetDashboardSiswa(req *dtos.DashboardSiswaRequest) 
 }
 
 // buildGrafikSiswa builds chart data for student dashboard based on periode
-func (s *AbsensiServiceImpl) buildGrafikSiswa(absensiList []models.Absensi, periode string, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
+func (s *AbsensiServiceImpl) buildGrafikSiswa(absensiList []models.RekapitulasiAbsensi, periode string, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
 	switch periode {
 	case "harian":
 		return s.buildGrafikHarianSiswa(absensiList, tanggalMulai, tanggalSelesai)
@@ -1337,7 +1518,7 @@ func (s *AbsensiServiceImpl) buildGrafikSiswa(absensiList []models.Absensi, peri
 }
 
 // buildGrafikHarianSiswa builds daily chart data with all dates in range
-func (s *AbsensiServiceImpl) buildGrafikHarianSiswa(absensiList []models.Absensi, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
+func (s *AbsensiServiceImpl) buildGrafikHarianSiswa(absensiList []models.RekapitulasiAbsensi, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
 	// Create map to store data per date
 	dateMap := make(map[string]map[string]int)
 	
@@ -1385,7 +1566,7 @@ func (s *AbsensiServiceImpl) buildGrafikHarianSiswa(absensiList []models.Absensi
 }
 
 // buildGrafikMingguanSiswa builds weekly chart data with all weeks in range
-func (s *AbsensiServiceImpl) buildGrafikMingguanSiswa(absensiList []models.Absensi, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
+func (s *AbsensiServiceImpl) buildGrafikMingguanSiswa(absensiList []models.RekapitulasiAbsensi, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
 	// Create map to store data per week
 	weekMap := make(map[string]map[string]int)
 	weekLabels := make(map[string]string)
@@ -1460,7 +1641,7 @@ func (s *AbsensiServiceImpl) buildGrafikMingguanSiswa(absensiList []models.Absen
 }
 
 // buildGrafikBulananSiswa builds monthly chart data with all months in range
-func (s *AbsensiServiceImpl) buildGrafikBulananSiswa(absensiList []models.Absensi, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
+func (s *AbsensiServiceImpl) buildGrafikBulananSiswa(absensiList []models.RekapitulasiAbsensi, tanggalMulai, tanggalSelesai time.Time) dtos.GrafikBulananSiswa {
 	// Create map to store data per month
 	monthMap := make(map[string]map[string]int)
 	
@@ -1512,4 +1693,235 @@ func (s *AbsensiServiceImpl) buildGrafikBulananSiswa(absensiList []models.Absens
 		Izin:   izin,
 		Alpa:   alpa,
 	}
+}
+
+// SynchronizeAbsensi synchronizes data from absensi (scan) to rekapitulasi_absensi
+func (s *AbsensiServiceImpl) SynchronizeAbsensi(req *dtos.AbsensiSyncRequest, userID uint) (*dtos.AbsensiSyncResponse, error) {
+	var absensiScanList []models.Absensi
+	var err error
+	
+	// Validate request based on tipe_sync and bidang_studi_id
+	if req.BidangStudiID != nil {
+		// Guru Bidang Studi: hanya support tipe_sync = tanggal
+		if req.TipeSync != "tanggal" {
+			return nil, errors.New("untuk guru bidang studi, hanya tipe_sync 'tanggal' yang diperbolehkan")
+		}
+		if req.PertemuanKe == nil {
+			return nil, errors.New("pertemuan_ke wajib diisi untuk guru bidang studi")
+		}
+		
+		// Parse tanggal untuk validasi
+		tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+		if err != nil {
+			return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
+		}
+		
+		// Validasi: Cek apakah pertemuan ini sudah ada di bulan yang sama
+		bulan := int(tanggal.Month())
+		tahun := tanggal.Year()
+		
+		existingTanggal, err := s.repository.GetPertemuanTanggal(
+			req.RombelID,
+			*req.BidangStudiID,
+			req.TahunPelajaranID,
+			bulan,
+			tahun,
+			*req.PertemuanKe,
+		)
+		
+		if err != nil {
+			return nil, fmt.Errorf("gagal memeriksa pertemuan: %s", err.Error())
+		}
+		
+		// Jika pertemuan sudah ada, validasi tanggalnya harus sama
+		if existingTanggal != nil {
+			existingTanggalStr := existingTanggal.Format("2006-01-02")
+			requestTanggalStr := tanggal.Format("2006-01-02")
+			
+			if existingTanggalStr != requestTanggalStr {
+				return nil, fmt.Errorf(
+					"pertemuan ke-%d untuk bulan %d tahun %d sudah ada dengan tanggal %s. Gunakan tanggal yang sama untuk sinkronisasi atau ubah nomor pertemuan",
+					*req.PertemuanKe,
+					bulan,
+					tahun,
+					existingTanggalStr,
+				)
+			}
+		}
+	} else {
+		// Guru Kelas: support tipe_sync = tanggal atau bulan
+		if req.TipeSync != "tanggal" && req.TipeSync != "bulan" {
+			return nil, errors.New("tipe_sync harus 'tanggal' atau 'bulan'")
+		}
+	}
+	
+	// Get absensi scan data based on tipe_sync
+	if req.TipeSync == "tanggal" {
+		// Parse tanggal
+		tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+		if err != nil {
+			return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
+		}
+		
+		absensiScanList, err = s.repository.GetAbsensiScanByDate(tanggal)
+		if err != nil {
+			return nil, errors.New("gagal mengambil data absensi scan")
+		}
+	} else {
+		// By bulan (guru kelas only)
+		absensiScanList, err = s.repository.GetAbsensiScanByMonth(req.Bulan, req.Tahun)
+		if err != nil {
+			return nil, errors.New("gagal mengambil data absensi scan")
+		}
+	}
+	
+	if len(absensiScanList) == 0 {
+		return nil, errors.New("tidak ada data absensi scan yang ditemukan")
+	}
+	
+	totalProcessed := 0
+	totalInserted := 0
+	totalUpdated := 0
+	totalSkipped := 0
+	var details []dtos.AbsensiSyncDetailItem
+	
+	// Process each absensi scan record
+	for _, absensiScan := range absensiScanList {
+		totalProcessed++
+		
+		// Skip if jam_datang is null (student didn't scan in)
+		if absensiScan.JamDatang == nil {
+			totalSkipped++
+			details = append(details, dtos.AbsensiSyncDetailItem{
+				PesertaDidikID: absensiScan.PesertaDidikID,
+				NIS:            absensiScan.PesertaDidik.NIS,
+				Nama:           absensiScan.PesertaDidik.Nama,
+				Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+				Action:         "skipped",
+				Reason:         "tidak ada jam datang",
+			})
+			continue
+		}
+		
+		// Find peserta_didik_rombel_id based on peserta_didik_id, rombel_id, and tahun_pelajaran_id
+		pesertaDidikRombelID, err := s.repository.GetPesertaDidikRombelID(absensiScan.PesertaDidikID, req.RombelID)
+		if err != nil {
+			totalSkipped++
+			details = append(details, dtos.AbsensiSyncDetailItem{
+				PesertaDidikID: absensiScan.PesertaDidikID,
+				NIS:            absensiScan.PesertaDidik.NIS,
+				Nama:           absensiScan.PesertaDidik.Nama,
+				Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+				Action:         "skipped",
+				Reason:         "tidak ditemukan di rombel",
+			})
+			continue
+		}
+		
+		// Determine semester based on month (Juli-Desember = 1, Januari-Juni = 2)
+		semester := 1
+		if absensiScan.Tanggal.Month() >= 1 && absensiScan.Tanggal.Month() <= 6 {
+			semester = 2
+		}
+		
+		// Combine tanggal and jam_datang to create waktu_absen (timestamp)
+		waktuAbsenStr := fmt.Sprintf("%s %s", absensiScan.Tanggal.Format("2006-01-02"), *absensiScan.JamDatang)
+		waktuAbsen, err := time.Parse("2006-01-02 15:04:05", waktuAbsenStr)
+		if err != nil {
+			totalSkipped++
+			details = append(details, dtos.AbsensiSyncDetailItem{
+				PesertaDidikID: absensiScan.PesertaDidikID,
+				NIS:            absensiScan.PesertaDidik.NIS,
+				Nama:           absensiScan.PesertaDidik.Nama,
+				Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+				Action:         "skipped",
+				Reason:         "format waktu tidak valid",
+			})
+			continue
+		}
+		
+		// Check if record already exists in rekapitulasi_absensi
+		existing, _ := s.repository.GetByPesertaDidikTanggalMapel(pesertaDidikRombelID, absensiScan.Tanggal, req.BidangStudiID)
+		
+		if existing != nil {
+			// UPDATE existing record
+			existing.Status = "hadir"
+			existing.WaktuAbsen = &waktuAbsen
+			existing.MetodeInput = "auto"
+			existing.DicatatOlehID = &userID
+			
+			if err := s.repository.Update(existing); err != nil {
+				totalSkipped++
+				details = append(details, dtos.AbsensiSyncDetailItem{
+					PesertaDidikID: absensiScan.PesertaDidikID,
+					NIS:            absensiScan.PesertaDidik.NIS,
+					Nama:           absensiScan.PesertaDidik.Nama,
+					Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+					Action:         "skipped",
+					Reason:         "gagal update: " + err.Error(),
+				})
+				continue
+			}
+			
+			totalUpdated++
+			details = append(details, dtos.AbsensiSyncDetailItem{
+				PesertaDidikID: absensiScan.PesertaDidikID,
+				NIS:            absensiScan.PesertaDidik.NIS,
+				Nama:           absensiScan.PesertaDidik.Nama,
+				Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+				Action:         "updated",
+			})
+		} else {
+			// INSERT new record
+			newRekap := &models.RekapitulasiAbsensi{
+				PesertaDidikRombelID: pesertaDidikRombelID,
+				RombelID:             &req.RombelID,
+				TahunPelajaranID:     req.TahunPelajaranID,
+				Semester:             semester,
+				Tanggal:              absensiScan.Tanggal,
+				BidangStudiID:        req.BidangStudiID,
+				PertemuanKe:          req.PertemuanKe,
+				Status:               "hadir",
+				WaktuAbsen:           &waktuAbsen,
+				MetodeInput:          "auto",
+				Keterangan:           "",
+				FileSurat:            "",
+				DicatatOlehID:        &userID,
+			}
+			
+			if err := s.repository.Create(newRekap); err != nil {
+				totalSkipped++
+				details = append(details, dtos.AbsensiSyncDetailItem{
+					PesertaDidikID: absensiScan.PesertaDidikID,
+					NIS:            absensiScan.PesertaDidik.NIS,
+					Nama:           absensiScan.PesertaDidik.Nama,
+					Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+					Action:         "skipped",
+					Reason:         "gagal insert: " + err.Error(),
+				})
+				continue
+			}
+			
+			totalInserted++
+			details = append(details, dtos.AbsensiSyncDetailItem{
+				PesertaDidikID: absensiScan.PesertaDidikID,
+				NIS:            absensiScan.PesertaDidik.NIS,
+				Nama:           absensiScan.PesertaDidik.Nama,
+				Tanggal:        absensiScan.Tanggal.Format("2006-01-02"),
+				Action:         "inserted",
+			})
+		}
+	}
+	
+	message := fmt.Sprintf("Sinkronisasi selesai: %d diproses, %d ditambahkan, %d diupdate, %d dilewati", 
+		totalProcessed, totalInserted, totalUpdated, totalSkipped)
+	
+	return &dtos.AbsensiSyncResponse{
+		TotalProcessed: totalProcessed,
+		TotalInserted:  totalInserted,
+		TotalUpdated:   totalUpdated,
+		TotalSkipped:   totalSkipped,
+		Message:        message,
+		Details:        details,
+	}, nil
 }

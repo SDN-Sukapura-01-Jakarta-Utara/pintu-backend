@@ -9,8 +9,6 @@ import (
 
 // GetPesertaDidikFilter represents filter parameters for GetAllWithFilter
 type GetPesertaDidikFilter struct {
-	TahunPelajaranID *uint
-	RombelID         *uint
 	Nama             string
 	NIS              string
 	JenisKelamin     string
@@ -32,18 +30,23 @@ type GetPesertaDidikParams struct {
 type PesertaDidikRepository interface {
 	Create(data *models.PesertaDidik) error
 	GetByID(id uint) (*models.PesertaDidik, error)
+	GetByIDs(ids []uint) ([]models.PesertaDidik, error)
 	GetByIDWithDetails(id uint) (*models.PesertaDidik, error)
 	GetByNIS(nis string) (*models.PesertaDidik, error)
+	GetByNISN(nisn string) (*models.PesertaDidik, error)
 	GetByNISAndTahunPelajaran(nis string, tahunPelajaranID *uint) (*models.PesertaDidik, error)
 	GetByUsername(username string) (*models.PesertaDidik, error)
 	GetByUsernameAndTahunPelajaran(username string, tahunPelajaranID *uint) (*models.PesertaDidik, error)
 	GetAll(limit int, offset int) ([]models.PesertaDidik, int64, error)
 	GetAllWithFilter(params GetPesertaDidikParams) ([]models.PesertaDidik, int64, error)
+	GetAllActive() ([]models.PesertaDidik, error)
 	Update(data *models.PesertaDidik) error
+	UpdateInTransaction(tx interface{}, data *models.PesertaDidik) error
 	Delete(id uint) error
 	AssignRoles(pesertaDidikID uint, roleIDs []uint) error
 	RemoveRoles(pesertaDidikID uint) error
 	GetRombelByName(name string) (*models.Rombel, error)
+	GetRombelByID(id uint) (*models.Rombel, error)
 	GetTahunPelajaranByName(name string) (*models.TahunPelajaran, error)
 	GetAllRombels() ([]models.Rombel, error)
 	GetAllTahunPelajaran() ([]models.TahunPelajaran, error)
@@ -51,7 +54,13 @@ type PesertaDidikRepository interface {
 	GetTotalSiswaByActiveTahunPelajaran() (int64, error)
 	GetPesertaDidikByTahunPelajaran(tahunPelajaranID uint) ([]models.PesertaDidik, error)
 	GetPesertaDidikByTahunPelajaranAndRombel(tahunPelajaranID uint, rombelID uint) ([]models.PesertaDidik, error)
+	GetPesertaDidikByRombelID(rombelID uint) ([]models.PesertaDidik, error)
+	GetPesertaDidikByRombelAndTahunPelajaran(rombelID uint, tahunPelajaranID uint) ([]models.PesertaDidik, error)
+	GetAllPesertaDidikActive() ([]models.PesertaDidik, error)
 	UpdateBarcode(pesertaDidikID uint, barcode string) error
+	UpdateWithTransaction(fn func(tx interface{}) error) error
+	GetKepalaSekolah() (*models.Kepegawaian, error)
+	GetVisiMisi() (*models.VisiMisi, error)
 }
 
 type PesertaDidikRepositoryImpl struct {
@@ -77,10 +86,19 @@ func (r *PesertaDidikRepositoryImpl) GetByID(id uint) (*models.PesertaDidik, err
 	return &data, nil
 }
 
-// GetByIDWithDetails retrieves PesertaDidik by ID with roles, rombel, and tahun_pelajaran preloaded
+// GetByIDs retrieves multiple PesertaDidik by IDs
+func (r *PesertaDidikRepositoryImpl) GetByIDs(ids []uint) ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	if err := r.db.Where("id IN ?", ids).Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetByIDWithDetails retrieves PesertaDidik by ID with roles preloaded
 func (r *PesertaDidikRepositoryImpl) GetByIDWithDetails(id uint) (*models.PesertaDidik, error) {
 	var data models.PesertaDidik
-	if err := r.db.Preload("Roles.System").Preload("Rombel.Kelas").Preload("TahunPelajaran").First(&data, id).Error; err != nil {
+	if err := r.db.Preload("Roles.System").First(&data, id).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -90,6 +108,15 @@ func (r *PesertaDidikRepositoryImpl) GetByIDWithDetails(id uint) (*models.Pesert
 func (r *PesertaDidikRepositoryImpl) GetByNIS(nis string) (*models.PesertaDidik, error) {
 	var data models.PesertaDidik
 	if err := r.db.Where("nis = ?", nis).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetByNISN retrieves PesertaDidik by NISN
+func (r *PesertaDidikRepositoryImpl) GetByNISN(nisn string) (*models.PesertaDidik, error) {
+	var data models.PesertaDidik
+	if err := r.db.Where("nisn = ?", nisn).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -144,9 +171,9 @@ func (r *PesertaDidikRepositoryImpl) GetAll(limit int, offset int) ([]models.Pes
 		return nil, 0, err
 	}
 
-	// Get paginated data with preloaded relations, ordered by rombel_id and nama
-	if err := r.db.Preload("Roles.System").Preload("Rombel.Kelas").Preload("TahunPelajaran").
-		Limit(limit).Offset(offset).Order("rombel_id ASC, nama ASC").Find(&data).Error; err != nil {
+	// Get paginated data with preloaded relations, ordered by nama
+	if err := r.db.Preload("Roles.System").
+		Limit(limit).Offset(offset).Order("nama ASC").Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -154,21 +181,15 @@ func (r *PesertaDidikRepositoryImpl) GetAll(limit int, offset int) ([]models.Pes
 }
 
 // GetAllWithFilter retrieves PesertaDidik records with filters and pagination
-// Filters: tahun_pelajaran_id, rombel_id, nama, nis, jenis_kelamin, nisn, tempat_lahir, nik, agama, status
-// Order by: rombel_id, nama
+// Filters: nama, nis, jenis_kelamin, nisn, tempat_lahir, nik, agama, status
+// Order by: nama
 func (r *PesertaDidikRepositoryImpl) GetAllWithFilter(params GetPesertaDidikParams) ([]models.PesertaDidik, int64, error) {
 	var data []models.PesertaDidik
 	var total int64
 
 	query := r.db
 
-	// Apply filters
-	if params.Filter.TahunPelajaranID != nil && *params.Filter.TahunPelajaranID != 0 {
-		query = query.Where("tahun_pelajaran_id = ?", *params.Filter.TahunPelajaranID)
-	}
-	if params.Filter.RombelID != nil && *params.Filter.RombelID != 0 {
-		query = query.Where("rombel_id = ?", *params.Filter.RombelID)
-	}
+	// Apply filters (hapus filter tahun_pelajaran_id dan rombel_id)
 	if params.Filter.Nama != "" {
 		query = query.Where("LOWER(nama) LIKE ?", "%"+strings.ToLower(params.Filter.Nama)+"%")
 	}
@@ -199,9 +220,9 @@ func (r *PesertaDidikRepositoryImpl) GetAllWithFilter(params GetPesertaDidikPara
 		return nil, 0, err
 	}
 
-	// Get paginated data with preloaded relations, ordered by rombel_id ASC, nama ASC
-	if err := query.Preload("Roles.System").Preload("Rombel.Kelas").Preload("TahunPelajaran").
-		Order("rombel_id ASC, nama ASC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
+	// Get paginated data with preloaded relations, ordered by nama
+	if err := query.Preload("Roles.System").
+		Order("nama ASC").Limit(params.Limit).Offset(params.Offset).Find(&data).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -265,6 +286,15 @@ func (r *PesertaDidikRepositoryImpl) GetRombelByName(name string) (*models.Rombe
 	return &data, nil
 }
 
+// GetRombelByID retrieves Rombel by ID
+func (r *PesertaDidikRepositoryImpl) GetRombelByID(id uint) (*models.Rombel, error) {
+	var data models.Rombel
+	if err := r.db.First(&data, id).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
 // GetTahunPelajaranByName retrieves TahunPelajaran by tahun_pelajaran value
 func (r *PesertaDidikRepositoryImpl) GetTahunPelajaranByName(name string) (*models.TahunPelajaran, error) {
 	var data models.TahunPelajaran
@@ -301,17 +331,13 @@ func (r *PesertaDidikRepositoryImpl) GetAllTahunPelajaranAll() ([]models.TahunPe
 	return data, nil
 }
 
-// GetTotalSiswaByActiveTahunPelajaran retrieves total count of peserta didik with active tahun pelajaran and active status
+// GetTotalSiswaByActiveTahunPelajaran retrieves total count of peserta didik with active status only
 func (r *PesertaDidikRepositoryImpl) GetTotalSiswaByActiveTahunPelajaran() (int64, error) {
 	var total int64
 	
-	// Join with tahun_pelajaran table and count peserta_didik where:
-	// - tahun_pelajaran.status = 'active'
-	// - peserta_didik.status = 'active'
+	// Count peserta_didik where status = 'active' only
 	err := r.db.Model(&models.PesertaDidik{}).
-		Joins("JOIN tahun_pelajaran ON peserta_didik.tahun_pelajaran_id = tahun_pelajaran.id").
-		Where("tahun_pelajaran.status = ?", "active").
-		Where("peserta_didik.status = ?", "active").
+		Where("status = ?", "active").
 		Count(&total).Error
 	
 	if err != nil {
@@ -324,7 +350,16 @@ func (r *PesertaDidikRepositoryImpl) GetTotalSiswaByActiveTahunPelajaran() (int6
 // GetPesertaDidikByTahunPelajaran retrieves all peserta didik by tahun pelajaran ID
 func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByTahunPelajaran(tahunPelajaranID uint) ([]models.PesertaDidik, error) {
 	var data []models.PesertaDidik
-	if err := r.db.Where("tahun_pelajaran_id = ?", tahunPelajaranID).Order("nis ASC").Find(&data).Error; err != nil {
+	err := r.db.
+		Distinct("peserta_didik.*").
+		Joins("JOIN peserta_didik_rombel ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id").
+		Where("peserta_didik_rombel.tahun_pelajaran_id = ?", tahunPelajaranID).
+		Where("peserta_didik_rombel.status = ?", "active").
+		Where("peserta_didik.status = ?", "active").
+		Order("peserta_didik.nis ASC").
+		Find(&data).Error
+	
+	if err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -333,7 +368,66 @@ func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByTahunPelajaran(tahunPelaja
 // GetPesertaDidikByTahunPelajaranAndRombel retrieves all peserta didik by tahun pelajaran ID and rombel ID
 func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByTahunPelajaranAndRombel(tahunPelajaranID uint, rombelID uint) ([]models.PesertaDidik, error) {
 	var data []models.PesertaDidik
-	if err := r.db.Where("tahun_pelajaran_id = ? AND rombel_id = ?", tahunPelajaranID, rombelID).Order("nis ASC").Find(&data).Error; err != nil {
+	err := r.db.
+		Distinct("peserta_didik.*").
+		Joins("JOIN peserta_didik_rombel ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id").
+		Where("peserta_didik_rombel.tahun_pelajaran_id = ? AND peserta_didik_rombel.rombel_id = ?", tahunPelajaranID, rombelID).
+		Where("peserta_didik_rombel.status = ?", "active").
+		Where("peserta_didik.status = ?", "active").
+		Order("peserta_didik.nis ASC").
+		Find(&data).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetPesertaDidikByRombelID retrieves all peserta didik by rombel ID from peserta_didik_rombel table
+func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByRombelID(rombelID uint) ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	err := r.db.
+		Distinct("peserta_didik.*").
+		Joins("JOIN peserta_didik_rombel ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id").
+		Where("peserta_didik_rombel.rombel_id = ? AND peserta_didik_rombel.status = ?", rombelID, "active").
+		Where("peserta_didik.status = ?", "active").
+		Order("peserta_didik.nis ASC").
+		Find(&data).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetPesertaDidikByRombelAndTahunPelajaran retrieves all peserta didik by rombel ID and tahun pelajaran ID from peserta_didik_rombel table
+func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByRombelAndTahunPelajaran(rombelID uint, tahunPelajaranID uint) ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	query := r.db.
+		Distinct("peserta_didik.*").
+		Joins("JOIN peserta_didik_rombel ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id").
+		Where("peserta_didik_rombel.status = ?", "active").
+		Where("peserta_didik.status = ?", "active")
+	
+	// Apply filters
+	if rombelID > 0 {
+		query = query.Where("peserta_didik_rombel.rombel_id = ?", rombelID)
+	}
+	if tahunPelajaranID > 0 {
+		query = query.Where("peserta_didik_rombel.tahun_pelajaran_id = ?", tahunPelajaranID)
+	}
+	
+	err := query.Order("peserta_didik.nis ASC").Find(&data).Error
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetAllPesertaDidikActive retrieves all active peserta didik
+func (r *PesertaDidikRepositoryImpl) GetAllPesertaDidikActive() ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	if err := r.db.Where("status = ?", "active").Order("nis ASC").Find(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -347,4 +441,47 @@ func (r *PesertaDidikRepositoryImpl) UpdateBarcode(pesertaDidikID uint, barcode 
 			"barcode":             barcode,
 			"barcode_generated_at": gorm.Expr("CURRENT_TIMESTAMP"),
 		}).Error
+}
+
+// UpdateWithTransaction executes a function within a database transaction
+func (r *PesertaDidikRepositoryImpl) UpdateWithTransaction(fn func(tx interface{}) error) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		return fn(tx)
+	})
+}
+
+// UpdateInTransaction updates a peserta didik record within a transaction
+func (r *PesertaDidikRepositoryImpl) UpdateInTransaction(tx interface{}, data *models.PesertaDidik) error {
+	txDB, ok := tx.(*gorm.DB)
+	if !ok {
+		return gorm.ErrInvalidTransaction
+	}
+	return txDB.Save(data).Error
+}
+
+// GetAllActive retrieves all peserta didik with status active
+func (r *PesertaDidikRepositoryImpl) GetAllActive() ([]models.PesertaDidik, error) {
+	var data []models.PesertaDidik
+	if err := r.db.Where("status = ?", "active").Order("nama ASC").Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// GetKepalaSekolah retrieves Kepala Sekolah from kepegawaian table
+func (r *PesertaDidikRepositoryImpl) GetKepalaSekolah() (*models.Kepegawaian, error) {
+	var kepalaSekolah models.Kepegawaian
+	if err := r.db.Where("jabatan = ?", "Kepala Sekolah").First(&kepalaSekolah).Error; err != nil {
+		return nil, err
+	}
+	return &kepalaSekolah, nil
+}
+
+// GetVisiMisi retrieves the first visi misi record
+func (r *PesertaDidikRepositoryImpl) GetVisiMisi() (*models.VisiMisi, error) {
+	var visiMisi models.VisiMisi
+	if err := r.db.First(&visiMisi).Error; err != nil {
+		return nil, err
+	}
+	return &visiMisi, nil
 }

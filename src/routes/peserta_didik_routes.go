@@ -5,6 +5,7 @@ import (
 	"pintu-backend/src/modules/controllers"
 	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
+	"pintu-backend/src/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -12,9 +13,12 @@ import (
 
 // RegisterPesertaDidikRoutes registers all PesertaDidik routes
 func RegisterPesertaDidikRoutes(router *gin.Engine, db *gorm.DB) {
+	// Initialize R2 storage
+	r2Storage := utils.NewR2Storage()
+
 	// Initialize repository, service, and controller
 	repository := repositories.NewPesertaDidikRepository(db)
-	service := services.NewPesertaDidikService(repository)
+	service := services.NewPesertaDidikService(repository, r2Storage)
 	controller := controllers.NewPesertaDidikController(service)
 
 	// Public routes (no authentication required)
@@ -44,12 +48,19 @@ func RegisterPesertaDidikRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Import Excel
 		api.POST("/import-excel", controller.ImportExcel)
+		api.POST("/import-siswa-lulus", controller.ImportSiswaLulus)
 
 		// Download Template
 		api.POST("/download-template", controller.DownloadTemplate)
+		api.POST("/download-template-siswa-lulus", controller.DownloadTemplateSiswaLulus)
+		api.POST("/export-data-induk-siswa-excel", controller.ExportDataIndukSiswaExcel)
+		api.POST("/export-data-induk-siswa-pdf", controller.ExportDataIndukSiswaPDF)
+		api.POST("/export-pemetaan-rombel-excel", controller.ExportPemetaanRombelExcel)
+		api.POST("/export-pemetaan-rombel-pdf", controller.ExportPemetaanRombelPDF)
+		api.POST("/download-kartu-pelajar", controller.DownloadKartuPelajar)
 
 		// Generate Barcode
-		api.POST("/generate-barcode-by-tahun-pelajaran", controller.GenerateBarcodeByTahunPelajaran)
-		api.POST("/generate-barcode-by-tahun-pelajaran-and-rombel", controller.GenerateBarcodeByTahunPelajaranAndRombel)
+		api.POST("/generate-barcode-all-peserta-didik", controller.GenerateBarcodeAllPesertaDidik)
+		api.POST("/generate-barcode-peserta-didik-by-id", controller.GenerateBarcodePesertaDidikByID)
 	}
 }

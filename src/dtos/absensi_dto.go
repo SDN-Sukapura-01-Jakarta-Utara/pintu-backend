@@ -2,9 +2,9 @@ package dtos
 
 // AbsensiSiswaItem represents a single student attendance item in bulk input
 type AbsensiSiswaItem struct {
-	PesertaDidikID uint   `json:"peserta_didik_id" binding:"required"`
-	Status         string `json:"status" binding:"required,oneof=hadir sakit izin alpa"`
-	Keterangan     string `json:"keterangan" binding:"omitempty"`
+	PesertaDidikRombelID uint   `json:"peserta_didik_rombel_id" binding:"required"`
+	Status               string `json:"status" binding:"required,oneof=hadir sakit izin alpa"`
+	Keterangan           string `json:"keterangan" binding:"omitempty"`
 }
 
 // AbsensiManualCreateRequest represents the request for bulk manual attendance input
@@ -27,10 +27,23 @@ type AbsensiManualCreateResponse struct {
 	Errors       []AbsensiCreateErrorItem  `json:"errors,omitempty"`
 }
 
+// AbsensiManualCreateByIDRequest represents the request for single manual attendance input by peserta didik rombel ID
+type AbsensiManualCreateByIDRequest struct {
+	PesertaDidikRombelID uint   `json:"peserta_didik_rombel_id" binding:"required"`
+	RombelID             uint   `json:"rombel_id" binding:"required"`
+	TahunPelajaranID     uint   `json:"tahun_pelajaran_id" binding:"required"`
+	Tanggal              string `json:"tanggal" binding:"required"` // Format: YYYY-MM-DD
+	BidangStudiID        *uint  `json:"bidang_studi_id"`            // NULL = guru kelas, NOT NULL = guru mapel
+	PertemuanKe          *int   `json:"pertemuan_ke"`               // NULL = guru kelas, NOT NULL = guru mapel
+	Status               string `json:"status" binding:"required,oneof=hadir sakit izin alpa"`
+	Keterangan           string `json:"keterangan" binding:"omitempty"`
+	WaktuAbsen           string `json:"waktu_absen" binding:"omitempty"` // Format: YYYY-MM-DD HH:MM:SS
+}
+
 // AbsensiCreateErrorItem represents an error for a specific student during bulk input
 type AbsensiCreateErrorItem struct {
-	PesertaDidikID uint   `json:"peserta_didik_id"`
-	Message        string `json:"message"`
+	PesertaDidikRombelID uint   `json:"peserta_didik_rombel_id"`
+	Message              string `json:"message"`
 }
 
 // AbsensiResponse represents the response for a single absensi record
@@ -265,14 +278,15 @@ type HariKehadiran struct {
 
 // DashboardSiswaRequest represents request for student dashboard
 type DashboardSiswaRequest struct {
-	PesertaDidikID   uint   `json:"peserta_didik_id" binding:"required"`
-	TahunPelajaranID uint   `json:"tahun_pelajaran_id" binding:"required"`
-	RombelID         uint   `json:"rombel_id" binding:"required"`
-	Semester         *int   `json:"semester" binding:"omitempty,oneof=1 2"`
-	BidangStudiID    *uint  `json:"bidang_studi_id" binding:"omitempty"`
-	Periode          string `json:"periode" binding:"required,oneof=harian mingguan bulanan"`
-	TanggalMulai     string `json:"tanggal_mulai" binding:"omitempty"`
-	TanggalSelesai   string `json:"tanggal_selesai" binding:"omitempty"`
+	PesertaDidikRombelID uint   `json:"peserta_didik_rombel_id" binding:"required"`
+	TahunPelajaranID     uint   `json:"tahun_pelajaran_id" binding:"required"`
+	RombelID             uint   `json:"rombel_id" binding:"required"`
+	Semester             *int   `json:"semester" binding:"omitempty,oneof=1 2"`
+	BidangStudiID        *uint  `json:"bidang_studi_id" binding:"omitempty"`
+	Periode              string `json:"periode" binding:"required,oneof=harian mingguan bulanan"`
+	TanggalMulai         string `json:"tanggal_mulai" binding:"omitempty"`
+	TanggalSelesai       string `json:"tanggal_selesai" binding:"omitempty"`
+	LimitRiwayat         int    `json:"limit_riwayat" binding:"omitempty,min=1,max=100"` // Default 10, max 100
 }
 
 // DashboardSiswaResponse represents response for student dashboard
@@ -385,6 +399,17 @@ type TrendDataSiswa struct {
 	PersentaseHadir float64 `json:"persentase_hadir"`
 	TotalHadir      int     `json:"total_hadir"`
 	TotalPertemuan  int     `json:"total_pertemuan"`
+}
+
+// ExportAbsensiExcelRequest represents request for exporting absensi to Excel
+type ExportAbsensiExcelRequest struct {
+	TahunPelajaranID uint   `json:"tahun_pelajaran_id" binding:"required"`
+	RombelID         uint   `json:"rombel_id" binding:"required"`
+	BidangStudiID    *uint  `json:"bidang_studi_id"` // NULL = guru kelas, NOT NULL = guru bidang studi
+	TipePeriode      string `json:"tipe_periode" binding:"required,oneof=bulan semester"` // bulan atau semester
+	Bulan            *int   `json:"bulan" binding:"omitempty,min=1,max=12"` // Required jika tipe_periode = bulan
+	Tahun            *int   `json:"tahun" binding:"omitempty,min=2020"` // Required jika tipe_periode = bulan
+	Semester         *int   `json:"semester" binding:"omitempty,oneof=1 2"` // Required jika tipe_periode = semester
 }
 
 // DaftarSiswaRequest represents request for student list

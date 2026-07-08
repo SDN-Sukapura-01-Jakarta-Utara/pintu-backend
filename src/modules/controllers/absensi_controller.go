@@ -2,9 +2,11 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"time"
 
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/services"
@@ -59,28 +61,87 @@ func (c *AbsensiController) CreateAbsensiManual(ctx *gin.Context) {
 	userIDUint := userID.(uint)
 
 	// Parse uploaded files
-	// Files are expected with field name pattern: file_surat_{peserta_didik_id}
-	// Example: file_surat_1, file_surat_2, etc.
-	files := make(map[uint][]*multipart.FileHeader)
+	// Files are expected with field name pattern: file_surat_{index}
+	// Example: file_surat_1, file_surat_2, file_surat_3 (matching index in absensi_list array, starting from 1)
+	filesMap := make(map[uint][]*multipart.FileHeader)
 	
 	form := ctx.Request.MultipartForm
 	if form != nil && form.File != nil {
 		for fieldName, fileHeaders := range form.File {
 			// Check if field name starts with "file_surat_"
 			if len(fieldName) > 11 && fieldName[:11] == "file_surat_" {
-				// Extract peserta_didik_id from field name
-				pesertaDidikIDStr := fieldName[11:]
-				pesertaDidikID, err := strconv.ParseUint(pesertaDidikIDStr, 10, 32)
+				// Extract index from field name (1-based index)
+				indexStr := fieldName[11:]
+				index, err := strconv.ParseUint(indexStr, 10, 32)
 				if err != nil {
 					continue // Skip invalid field names
 				}
-				files[uint(pesertaDidikID)] = fileHeaders
+				
+				// Convert 1-based index to 0-based array index
+				arrayIndex := int(index) - 1
+				
+				// Map index to peserta_didik_rombel_id from absensi_list
+				if arrayIndex >= 0 && arrayIndex < len(req.AbsensiList) {
+					pesertaDidikRombelID := req.AbsensiList[arrayIndex].PesertaDidikRombelID
+					filesMap[pesertaDidikRombelID] = fileHeaders
+				}
 			}
 		}
 	}
 
 	// Call service
-	result, err := c.service.CreateAbsensiManual(&req, files, userIDUint)
+	result, err := c.service.CreateAbsensiManual(&req, filesMap, userIDUint)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, gin.H{"data": result})
+}
+
+// CreateAbsensiManualByID creates a single absensi record by peserta didik rombel ID with auto semester detection
+func (c *AbsensiController) CreateAbsensiManualByID(ctx *gin.Context) {
+	// Parse multipart form
+	if err := ctx.Request.ParseMultipartForm(10 << 20); err != nil { // 10 MB max
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "gagal parse form data"})
+		return
+	}
+
+	// Get JSON data from form field
+	jsonData := ctx.PostForm("data")
+	if jsonData == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "field 'data' wajib diisi"})
+		return
+	}
+
+	// Parse JSON data
+	var req dtos.AbsensiManualCreateByIDRequest
+	if err := json.Unmarshal([]byte(jsonData), &req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "format JSON tidak valid"})
+		return
+	}
+
+	// Manual validation using validator
+	validate := validator.New()
+	if err := validate.Struct(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Get user ID from context (set by middleware)
+	userID, _ := ctx.Get("userID")
+	userIDUint := userID.(uint)
+
+	// Get file if uploaded
+	var file *multipart.FileHeader
+	fileHeader, err := ctx.FormFile("file_surat")
+	if err == nil {
+		file = fileHeader
+	}
+
+	// Call service
+	result, err := c.service.CreateAbsensiManualByID(&req, file, userIDUint)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -265,6 +326,87 @@ func (c *AbsensiController) GetDashboardSiswa(ctx *gin.Context) {
 
 	// Call service
 	result, err := c.service.GetDashboardSiswa(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+// ExportAbsensiExcel exports absensi data to Excel file
+func (c *AbsensiController) ExportAbsensiExcel(ctx *gin.Context) {
+	var req dtos.ExportAbsensiExcelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	file, err := c.service.ExportAbsensiExcel(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate filename
+	filename := fmt.Sprintf("Daftar_Kehadiran_%d.xlsx", time.Now().Unix())
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write file to response
+	if err := file.Write(ctx.Writer); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "gagal menulis file excel"})
+		return
+	}
+}
+
+// ExportAbsensiPDF exports absensi data to PDF file
+func (c *AbsensiController) ExportAbsensiPDF(ctx *gin.Context) {
+	var req dtos.ExportAbsensiExcelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	pdfBytes, err := c.service.ExportAbsensiPDF(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate filename
+	filename := fmt.Sprintf("Daftar_Kehadiran_%d.pdf", time.Now().Unix())
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/pdf")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write PDF to response
+	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}
+
+// SynchronizeAbsensi synchronizes data from absensi scan to rekapitulasi
+func (c *AbsensiController) SynchronizeAbsensi(ctx *gin.Context) {
+	var req dtos.AbsensiSyncRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get user ID from context (set by middleware)
+	userID, _ := ctx.Get("userID")
+	userIDUint := userID.(uint)
+
+	// Call service
+	result, err := c.service.SynchronizeAbsensi(&req, userIDUint)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

@@ -20,48 +20,46 @@ type FotoItem struct {
 
 // AnggotaTimPrestasi represents the anggota tim prestasi model
 type AnggotaTimPrestasi struct {
-	ID               uint           `gorm:"primaryKey" json:"id"`
-	PrestasiID       uint           `gorm:"not null" json:"prestasi_id"`
-	PesertaDidikID   uint           `gorm:"not null" json:"peserta_didik_id"`
-	TahunPelajaranID uint           `gorm:"not null;column:tahun_pelajaran_id" json:"tahun_pelajaran_id"`
-	CreatedAt        time.Time      `json:"created_at"`
-	UpdatedAt        time.Time      `json:"updated_at"`
-	DeletedAt        gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
-	CreatedByID      *uint          `json:"created_by_id"`
-	UpdatedByID      *uint          `json:"updated_by_id"`
+	ID                   uint           `gorm:"primaryKey" json:"id"`
+	PrestasiID           uint           `gorm:"not null" json:"prestasi_id"`
+	PesertaDidikRombelID uint           `gorm:"not null" json:"peserta_didik_rombel_id"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
+	DeletedAt            gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedByID          *uint          `json:"created_by_id"`
+	UpdatedByID          *uint          `json:"updated_by_id"`
 	// Foreign key relationships
-	Prestasi         *Prestasi      `gorm:"foreignKey:PrestasiID" json:"prestasi,omitempty"`
-	PesertaDidik     *PesertaDidik  `gorm:"foreignKey:PesertaDidikID" json:"peserta_didik,omitempty"`
-	TahunPelajaran   *TahunPelajaran `gorm:"foreignKey:TahunPelajaranID" json:"tahun_pelajaran,omitempty"`
+	Prestasi             *Prestasi            `gorm:"foreignKey:PrestasiID" json:"prestasi,omitempty"`
+	PesertaDidikRombel   *PesertaDidikRombel  `gorm:"foreignKey:PesertaDidikRombelID" json:"peserta_didik_rombel,omitempty"`
 }
 
 // Prestasi represents the Prestasi model
 type Prestasi struct {
-	ID                 uint                 `gorm:"primaryKey" json:"id"`
-	PesertaDidikID     *uint                `gorm:"column:peserta_didik_id" json:"peserta_didik_id"`
-	Jenis              string               `gorm:"not null" json:"jenis"`
-	NamaGrup           string               `json:"nama_grup"`
-	NamaPrestasi       string               `gorm:"not null" json:"nama_prestasi"`
-	TingkatPrestasi    string               `json:"tingkat_prestasi"`
-	Penyelenggara      string               `json:"penyelenggara"`
-	TanggalLomba       time.Time            `gorm:"not null" json:"tanggal_lomba"`
-	Juara              string               `gorm:"not null" json:"juara"`
-	Keterangan         string               `gorm:"type:text" json:"keterangan"`
-	Foto               datatypes.JSON       `gorm:"type:jsonb;default:'[]'" json:"foto"`
-	EkstrakurikulerID  *uint                `gorm:"column:ekstrakurikuler_id" json:"ekstrakurikuler_id"`
-	TahunPelajaranID   uint                 `gorm:"not null;column:tahun_pelajaran_id" json:"tahun_pelajaran_id"`
-	Status             string               `gorm:"default:active" json:"status"`
-	CreatedAt          time.Time            `json:"created_at"`
-	UpdatedAt          time.Time            `json:"updated_at"`
-	DeletedAt          gorm.DeletedAt       `gorm:"index" json:"deleted_at,omitempty"`
-	CreatedByID        *uint                `json:"created_by_id"`
-	UpdatedByID        *uint                `json:"updated_by_id"`
+	ID                    uint                 `gorm:"primaryKey" json:"id"`
+	PesertaDidikRombelID  *uint                `gorm:"column:peserta_didik_rombel_id" json:"peserta_didik_rombel_id"`
+	Jenis                 string               `gorm:"not null" json:"jenis"`
+	NamaGrup              string               `json:"nama_grup"`
+	NamaPrestasi          string               `gorm:"not null" json:"nama_prestasi"`
+	TingkatPrestasi       string               `json:"tingkat_prestasi"`
+	Penyelenggara         string               `json:"penyelenggara"`
+	TanggalLomba          time.Time            `gorm:"not null" json:"tanggal_lomba"`
+	Juara                 string               `gorm:"not null" json:"juara"`
+	Keterangan            string               `gorm:"type:text" json:"keterangan"`
+	Foto                  datatypes.JSON       `gorm:"type:jsonb;default:'[]'" json:"foto"`
+	EkstrakurikulerID     *uint                `gorm:"column:ekstrakurikuler_id" json:"ekstrakurikuler_id"`
+	TahunPelajaranID      uint                 `gorm:"not null;column:tahun_pelajaran_id" json:"tahun_pelajaran_id"`
+	Status                string               `gorm:"default:active" json:"status"`
+	CreatedAt             time.Time            `json:"created_at"`
+	UpdatedAt             time.Time            `json:"updated_at"`
+	DeletedAt             gorm.DeletedAt       `gorm:"index" json:"deleted_at,omitempty"`
+	CreatedByID           *uint                `json:"created_by_id"`
+	UpdatedByID           *uint                `json:"updated_by_id"`
 	// Foreign key relationships
-	PesertaDidik       *PesertaDidik        `gorm:"foreignKey:PesertaDidikID" json:"peserta_didik,omitempty"`
-	Ekstrakurikuler    *Ekstrakurikuler     `gorm:"foreignKey:EkstrakurikulerID" json:"ekstrakurikuler,omitempty"`
-	TahunPelajaran     *TahunPelajaran      `gorm:"foreignKey:TahunPelajaranID" json:"tahun_pelajaran,omitempty"`
+	PesertaDidikRombel    *PesertaDidikRombel  `gorm:"foreignKey:PesertaDidikRombelID" json:"peserta_didik_rombel,omitempty"`
+	Ekstrakurikuler       *Ekstrakurikuler     `gorm:"foreignKey:EkstrakurikulerID" json:"ekstrakurikuler,omitempty"`
+	TahunPelajaran        *TahunPelajaran      `gorm:"foreignKey:TahunPelajaranID" json:"tahun_pelajaran,omitempty"`
 	// One-to-many relationship
-	AnggotaTimPrestasi []AnggotaTimPrestasi `gorm:"foreignKey:PrestasiID" json:"anggota_tim_prestasi,omitempty"`
+	AnggotaTimPrestasi    []AnggotaTimPrestasi `gorm:"foreignKey:PrestasiID" json:"anggota_tim_prestasi,omitempty"`
 }
 
 // TableName specifies the table name for Prestasi

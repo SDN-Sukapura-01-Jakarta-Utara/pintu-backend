@@ -18,9 +18,7 @@ type PesertaDidikCreateRequest struct {
 	KodePos            string `json:"kode_pos" binding:"omitempty"`
 	NamaAyah           string `json:"nama_ayah" binding:"omitempty"`
 	NamaIbu            string `json:"nama_ibu" binding:"omitempty"`
-	RombelID           *uint  `json:"rombel_id" binding:"omitempty"`
-	TahunPelajaranID   *uint  `json:"tahun_pelajaran_id" binding:"omitempty"`
-	Status             string `json:"status" binding:"omitempty,oneof=active inactive"`
+	Status             string `json:"status" binding:"omitempty"`
 	Username           string `json:"username" binding:"omitempty"`
 	Password           string `json:"password" binding:"omitempty,min=3"`
 	RoleIDs            []uint `json:"role_ids" binding:"omitempty"`
@@ -28,29 +26,27 @@ type PesertaDidikCreateRequest struct {
 
 // PesertaDidikUpdateRequest represents the request payload for updating PesertaDidik
 type PesertaDidikUpdateRequest struct {
-	ID                 uint   `json:"id" binding:"required"`
-	Nama               string `json:"nama" binding:"omitempty"`
-	NIS                string `json:"nis" binding:"omitempty"`
-	JenisKelamin       string `json:"jenis_kelamin" binding:"omitempty"`
-	NISN               string `json:"nisn" binding:"omitempty"`
-	TempatLahir        string `json:"tempat_lahir" binding:"omitempty"`
-	TanggalLahir       string `json:"tanggal_lahir" binding:"omitempty"` // Format: YYYY-MM-DD
-	NIK                string `json:"nik" binding:"omitempty"`
-	Agama              string `json:"agama" binding:"omitempty"`
-	Alamat             string `json:"alamat" binding:"omitempty"`
-	RT                 string `json:"rt" binding:"omitempty"`
-	RW                 string `json:"rw" binding:"omitempty"`
-	Kelurahan          string `json:"kelurahan" binding:"omitempty"`
-	Kecamatan          string `json:"kecamatan" binding:"omitempty"`
-	KodePos            string `json:"kode_pos" binding:"omitempty"`
-	NamaAyah           string `json:"nama_ayah" binding:"omitempty"`
-	NamaIbu            string `json:"nama_ibu" binding:"omitempty"`
-	RombelID           *uint  `json:"rombel_id" binding:"omitempty"`
-	TahunPelajaranID   *uint  `json:"tahun_pelajaran_id" binding:"omitempty"`
-	Status             string `json:"status" binding:"omitempty,oneof=active inactive"`
-	Username           string `json:"username" binding:"omitempty"`
-	Password           string `json:"password" binding:"omitempty,min=3"`
-	RoleIDs            []uint `json:"role_ids" binding:"omitempty"`
+	ID                 uint     `json:"id" binding:"required"`
+	Nama               string   `json:"nama" binding:"omitempty"`
+	NIS                string   `json:"nis" binding:"omitempty"`
+	JenisKelamin       string   `json:"jenis_kelamin" binding:"omitempty"`
+	NISN               string   `json:"nisn" binding:"omitempty"`
+	TempatLahir        string   `json:"tempat_lahir" binding:"omitempty"`
+	TanggalLahir       string   `json:"tanggal_lahir" binding:"omitempty"` // Format: YYYY-MM-DD
+	NIK                string   `json:"nik" binding:"omitempty"`
+	Agama              string   `json:"agama" binding:"omitempty"`
+	Alamat             string   `json:"alamat" binding:"omitempty"`
+	RT                 string   `json:"rt" binding:"omitempty"`
+	RW                 string   `json:"rw" binding:"omitempty"`
+	Kelurahan          string   `json:"kelurahan" binding:"omitempty"`
+	Kecamatan          string   `json:"kecamatan" binding:"omitempty"`
+	KodePos            string   `json:"kode_pos" binding:"omitempty"`
+	NamaAyah           string   `json:"nama_ayah" binding:"omitempty"`
+	NamaIbu            string   `json:"nama_ibu" binding:"omitempty"`
+	Status             string   `json:"status" binding:"omitempty"`
+	Username           string   `json:"username" binding:"omitempty"`
+	Password           string   `json:"password" binding:"omitempty,min=3"`
+	RoleIDs            *[]uint  `json:"role_ids" binding:"omitempty"`
 }
 
 // KelasDetailResponse represents kelas details in response
@@ -103,12 +99,9 @@ type PesertaDidikResponse struct {
 	KodePos          string                        `json:"kode_pos"`
 	NamaAyah         string                        `json:"nama_ayah"`
 	NamaIbu          string                        `json:"nama_ibu"`
-	RombelID         *uint                         `json:"rombel_id"`
-	Rombel           *RombelDetailResponse         `json:"rombel"`
-	TahunPelajaranID *uint                         `json:"tahun_pelajaran_id"`
-	TahunPelajaran   *TahunPelajaranDetailResponse `json:"tahun_pelajaran"`
 	Status           string                        `json:"status"`
 	Username         string                        `json:"username"`
+	Photo            string                        `json:"photo,omitempty"`
 	Barcode          string                        `json:"barcode,omitempty"`
 	BarcodeGeneratedAt string                      `json:"barcode_generated_at,omitempty"`
 	Roles            []RoleResponse                `json:"roles"`
@@ -135,8 +128,6 @@ type PesertaDidikListWithPaginationResponse struct {
 // PesertaDidikGetAllRequest represents the request payload for getting all PesertaDidik with filters
 type PesertaDidikGetAllRequest struct {
 	Search struct {
-		TahunPelajaranID *uint  `json:"tahun_pelajaran_id" binding:"omitempty"`
-		RombelID         *uint  `json:"rombel_id" binding:"omitempty"`
 		Nama             string `json:"nama" binding:"omitempty"`
 		NIS              string `json:"nis" binding:"omitempty"`
 		JenisKelamin     string `json:"jenis_kelamin" binding:"omitempty"`
@@ -181,9 +172,30 @@ type GenerateBarcodeByTahunPelajaranAndRombelRequest struct {
 	RombelID         uint `json:"rombel_id" binding:"required"`
 }
 
+// GenerateBarcodeByIDRequest represents the request for generating barcode by ID
+type GenerateBarcodeByIDRequest struct {
+	ID uint `json:"id" binding:"required"`
+}
+
 // GenerateBarcodeResponse represents the response for barcode generation
 type GenerateBarcodeResponse struct {
 	TotalGenerated int      `json:"total_generated"`
 	Message        string   `json:"message"`
 	Errors         []string `json:"errors,omitempty"`
+}
+
+// DownloadKartuPelajarRequest represents the request payload for downloading kartu pelajar
+type DownloadKartuPelajarRequest struct {
+	PesertaDidikIDs []uint `json:"peserta_didik_ids" binding:"omitempty"` // Optional, jika kosong download semua
+}
+
+// ExportDataIndukSiswaRequest represents the request payload for exporting data induk siswa
+type ExportDataIndukSiswaRequest struct {
+	Status string `json:"status" binding:"omitempty"` // Optional filter by status
+}
+
+// ExportPemetaanRombelRequest represents the request payload for exporting pemetaan rombel
+type ExportPemetaanRombelRequest struct {
+	RombelID         uint `json:"rombel_id" binding:"omitempty"`          // Optional filter by rombel_id
+	TahunPelajaranID uint `json:"tahun_pelajaran_id" binding:"omitempty"` // Optional filter by tahun_pelajaran_id
 }

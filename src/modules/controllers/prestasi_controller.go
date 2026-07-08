@@ -30,7 +30,7 @@ func NewPrestasiController(service services.PrestasiService) *PrestasiController
 // @Tags prestasi
 // @Accept multipart/form-data
 // @Produce json
-// @Param peserta_didik_id formData uint false "Peserta Didik ID"
+// @Param peserta_didik_rombel_id formData uint false "Peserta Didik Rombel ID"
 // @Param nama formData string true "Prestasi name"
 // @Param jenis formData string true "Prestasi type"
 // @Param nama_prestasi formData string true "Achievement name"
@@ -91,11 +91,11 @@ func (c *PrestasiController) Create(ctx *gin.Context) {
 	}
 
 	// Get optional fields
-	var pesertaDidikID *uint
-	if pesertaDidikIDStr := ctx.PostForm("peserta_didik_id"); pesertaDidikIDStr != "" {
-		if id, err := strconv.ParseUint(pesertaDidikIDStr, 10, 32); err == nil {
-			pesertaDidikIDUint := uint(id)
-			pesertaDidikID = &pesertaDidikIDUint
+	var pesertaDidikRombelID *uint
+	if pesertaDidikRombelIDStr := ctx.PostForm("peserta_didik_rombel_id"); pesertaDidikRombelIDStr != "" {
+		if id, err := strconv.ParseUint(pesertaDidikRombelIDStr, 10, 32); err == nil {
+			pesertaDidikRombelIDUint := uint(id)
+			pesertaDidikRombelID = &pesertaDidikRombelIDUint
 		}
 	}
 
@@ -142,8 +142,8 @@ func (c *PrestasiController) Create(ctx *gin.Context) {
 
 	// Create request DTO
 	req := &dtos.PrestasiCreateRequest{
-		PesertaDidikID:    pesertaDidikID,
-		Jenis:             jenis,
+		PesertaDidikRombelID: pesertaDidikRombelID,
+		Jenis:                jenis,
 		NamaGrup:          namaGrup,
 		NamaPrestasi:      namaPrestasi,
 		TingkatPrestasi:   tingkatPrestasi,
@@ -219,8 +219,8 @@ func (c *PrestasiController) GetAll(ctx *gin.Context) {
 	// Call service with filters
 	data, err := c.service.GetAllWithFilter(repositories.GetPrestasiParams{
 		Filter: repositories.GetPrestasiFilter{
-			PesertaDidikID:    req.Search.PesertaDidikID,
-			NamaPesertaDidik:  req.Search.NamaPesertaDidik,
+			PesertaDidikRombelID: req.Search.PesertaDidikRombelID,
+			NamaPesertaDidik:     req.Search.NamaPesertaDidik,
 			Jenis:             req.Search.Jenis,
 			NamaGrup:          req.Search.NamaGrup,
 			NamaPrestasi:      req.Search.NamaPrestasi,
@@ -288,7 +288,7 @@ func (c *PrestasiController) GetByID(ctx *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param id formData uint true "Prestasi ID"
-// @Param peserta_didik_id formData uint false "Peserta Didik ID"
+// @Param peserta_didik_rombel_id formData uint false "Peserta Didik Rombel ID"
 // @Param nama formData string false "Prestasi name"
 // @Param jenis formData string false "Prestasi type"
 // @Param nama_prestasi formData string false "Achievement name"
@@ -327,11 +327,11 @@ func (c *PrestasiController) Update(ctx *gin.Context) {
 	}
 
 	// Get optional fields
-	var pesertaDidikID *uint
-	if pesertaDidikIDStr := ctx.PostForm("peserta_didik_id"); pesertaDidikIDStr != "" {
-		if parsedID, err := strconv.ParseUint(pesertaDidikIDStr, 10, 32); err == nil {
-			pesertaDidikIDUint := uint(parsedID)
-			pesertaDidikID = &pesertaDidikIDUint
+	var pesertaDidikRombelID *uint
+	if pesertaDidikRombelIDStr := ctx.PostForm("peserta_didik_rombel_id"); pesertaDidikRombelIDStr != "" {
+		if parsedID, err := strconv.ParseUint(pesertaDidikRombelIDStr, 10, 32); err == nil {
+			pesertaDidikRombelIDUint := uint(parsedID)
+			pesertaDidikRombelID = &pesertaDidikRombelIDUint
 		}
 	}
 
@@ -395,9 +395,9 @@ func (c *PrestasiController) Update(ctx *gin.Context) {
 
 	// Create request DTO
 	req := &dtos.PrestasiUpdateRequest{
-		ID:                uint(id),
-		PesertaDidikID:    pesertaDidikID,
-		Jenis:             jenis,
+		ID:                   uint(id),
+		PesertaDidikRombelID: pesertaDidikRombelID,
+		Jenis:                jenis,
 		NamaGrup:          namaGrup,
 		NamaPrestasi:      namaPrestasi,
 		TingkatPrestasi:   tingkatPrestasi,

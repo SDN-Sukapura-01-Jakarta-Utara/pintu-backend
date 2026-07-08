@@ -110,13 +110,13 @@ func (s *PrestasiServiceImpl) Create(foto []*multipart.FileHeader, fotoThumbnail
 
 	// Create prestasi record
 	data := &models.Prestasi{
-		PesertaDidikID:    req.PesertaDidikID,
-		Jenis:             req.Jenis,
-		NamaGrup:          req.NamaGrup,
-		NamaPrestasi:      req.NamaPrestasi,
-		TingkatPrestasi:   req.TingkatPrestasi,
-		Penyelenggara:     req.Penyelenggara,
-		TanggalLomba:      tanggalLomba,
+		PesertaDidikRombelID: req.PesertaDidikRombelID,
+		Jenis:                req.Jenis,
+		NamaGrup:             req.NamaGrup,
+		NamaPrestasi:         req.NamaPrestasi,
+		TingkatPrestasi:      req.TingkatPrestasi,
+		Penyelenggara:        req.Penyelenggara,
+		TanggalLomba:         tanggalLomba,
 		Juara:             req.Juara,
 		Keterangan:        req.Keterangan,
 		Foto:              fotoJSON,
@@ -137,15 +137,10 @@ func (s *PrestasiServiceImpl) Create(foto []*multipart.FileHeader, fotoThumbnail
 	// Create anggota tim if provided
 	if len(req.AnggotaTim) > 0 {
 		for _, anggota := range req.AnggotaTim {
-			tahunPelajaranID := anggota.TahunPelajaranID
-			if tahunPelajaranID == 0 {
-				tahunPelajaranID = data.TahunPelajaranID
-			}
 			anggotaData := &models.AnggotaTimPrestasi{
-				PrestasiID:       data.ID,
-				PesertaDidikID:   anggota.PesertaDidikID,
-				TahunPelajaranID: tahunPelajaranID,
-				CreatedByID:      &userID,
+				PrestasiID:           data.ID,
+				PesertaDidikRombelID: anggota.PesertaDidikRombelID,
+				CreatedByID:          &userID,
 			}
 			if err := s.repository.CreateAnggotaTim(anggotaData); err != nil {
 				return nil, fmt.Errorf("failed to create anggota tim: %w", err)
@@ -250,14 +245,14 @@ func (s *PrestasiServiceImpl) Update(id uint, foto []*multipart.FileHeader, foto
 	}
 
 	// Clear preloaded associations to prevent GORM from overriding FK values on Save
-	existing.PesertaDidik = nil
+	existing.PesertaDidikRombel = nil
 	existing.Ekstrakurikuler = nil
 	existing.TahunPelajaran = nil
 	existing.AnggotaTimPrestasi = nil
 
 	// Update basic fields if provided
-	if req.PesertaDidikID != nil {
-		existing.PesertaDidikID = req.PesertaDidikID
+	if req.PesertaDidikRombelID != nil {
+		existing.PesertaDidikRombelID = req.PesertaDidikRombelID
 	}
 	if req.Jenis != "" {
 		existing.Jenis = req.Jenis
@@ -393,15 +388,10 @@ func (s *PrestasiServiceImpl) Update(id uint, foto []*multipart.FileHeader, foto
 
 		// Create new anggota tim
 		for _, anggota := range req.AnggotaTim {
-			tahunPelajaranID := anggota.TahunPelajaranID
-			if tahunPelajaranID == 0 {
-				tahunPelajaranID = existing.TahunPelajaranID
-			}
 			anggotaData := &models.AnggotaTimPrestasi{
-				PrestasiID:       id,
-				PesertaDidikID:   anggota.PesertaDidikID,
-				TahunPelajaranID: tahunPelajaranID,
-				CreatedByID:      &userID,
+				PrestasiID:           id,
+				PesertaDidikRombelID: anggota.PesertaDidikRombelID,
+				CreatedByID:          &userID,
 			}
 			if err := s.repository.CreateAnggotaTim(anggotaData); err != nil {
 				return nil, fmt.Errorf("failed to create anggota tim: %w", err)
@@ -464,10 +454,10 @@ func (s *PrestasiServiceImpl) mapToResponse(data *models.Prestasi) *dtos.Prestas
 		}
 	}
 
-	// Map peserta didik
-	var pesertaDidik *dtos.PesertaDidikResponse
-	if data.PesertaDidik != nil {
-		pesertaDidik = s.mapPesertaDidikToResponse(data.PesertaDidik)
+	// Map peserta didik rombel
+	var pesertaDidikRombel *dtos.PesertaDidikRombelResponse
+	if data.PesertaDidikRombel != nil {
+		pesertaDidikRombel = s.mapPesertaDidikRombelToResponse(data.PesertaDidikRombel)
 	}
 
 	// Map tahun pelajaran
@@ -498,41 +488,26 @@ func (s *PrestasiServiceImpl) mapToResponse(data *models.Prestasi) *dtos.Prestas
 	// Map anggota tim prestasi
 	anggotaTimPrestasi := make([]dtos.AnggotaTimPrestasiDTO, 0)
 	for _, anggota := range data.AnggotaTimPrestasi {
-		var anggotaPesertaDidik *dtos.PesertaDidikResponse
-		if anggota.PesertaDidik != nil {
-			anggotaPesertaDidik = s.mapPesertaDidikToResponse(anggota.PesertaDidik)
-		}
-
-		var anggotaTahunPelajaran *dtos.TahunPelajaranDetailResponse
-		if anggota.TahunPelajaran != nil {
-			anggotaTahunPelajaran = &dtos.TahunPelajaranDetailResponse{
-				ID:             anggota.TahunPelajaran.ID,
-				TahunPelajaran: anggota.TahunPelajaran.TahunPelajaran,
-				Status:         anggota.TahunPelajaran.Status,
-				CreatedAt:      anggota.TahunPelajaran.CreatedAt.Format("2006-01-02 15:04:05"),
-				UpdatedAt:      anggota.TahunPelajaran.UpdatedAt.Format("2006-01-02 15:04:05"),
-				CreatedByID:    anggota.TahunPelajaran.CreatedByID,
-				UpdatedByID:    anggota.TahunPelajaran.UpdatedByID,
-			}
+		var anggotaPesertaDidikRombel *dtos.PesertaDidikRombelResponse
+		if anggota.PesertaDidikRombel != nil {
+			anggotaPesertaDidikRombel = s.mapPesertaDidikRombelToResponse(anggota.PesertaDidikRombel)
 		}
 
 		anggotaTimPrestasi = append(anggotaTimPrestasi, dtos.AnggotaTimPrestasiDTO{
-			ID:               anggota.ID,
-			PrestasiID:       anggota.PrestasiID,
-			PesertaDidikID:   anggota.PesertaDidikID,
-			TahunPelajaranID: anggota.TahunPelajaranID,
-			PesertaDidik:     anggotaPesertaDidik,
-			TahunPelajaran:   anggotaTahunPelajaran,
-			CreatedAt:        anggota.CreatedAt,
-			UpdatedAt:        anggota.UpdatedAt,
+			ID:                   anggota.ID,
+			PrestasiID:           anggota.PrestasiID,
+			PesertaDidikRombelID: anggota.PesertaDidikRombelID,
+			PesertaDidikRombel:   anggotaPesertaDidikRombel,
+			CreatedAt:            anggota.CreatedAt,
+			UpdatedAt:            anggota.UpdatedAt,
 		})
 	}
 
 	return &dtos.PrestasiResponse{
-		ID:                 data.ID,
-		PesertaDidikID:     data.PesertaDidikID,
-		PesertaDidik:       pesertaDidik,
-		Jenis:              data.Jenis,
+		ID:                   data.ID,
+		PesertaDidikRombelID: data.PesertaDidikRombelID,
+		PesertaDidikRombel:   pesertaDidikRombel,
+		Jenis:                data.Jenis,
 		NamaGrup:           data.NamaGrup,
 		NamaPrestasi:       data.NamaPrestasi,
 		TingkatPrestasi:    data.TingkatPrestasi,
@@ -561,71 +536,71 @@ func (s *PrestasiServiceImpl) mapPesertaDidikToResponse(data *models.PesertaDidi
 		tanggalLahir = data.TanggalLahir.Format("2006-01-02")
 	}
 
-	// Map rombel
+	return &dtos.PesertaDidikResponse{
+		ID:           data.ID,
+		Nama:         data.Nama,
+		NIS:          data.NIS,
+		JenisKelamin: data.JenisKelamin,
+		NISN:         data.NISN,
+		TempatLahir:  data.TempatLahir,
+		TanggalLahir: tanggalLahir,
+		NIK:          data.NIK,
+		Agama:        data.Agama,
+		Alamat:       data.Alamat,
+		RT:           data.RT,
+		RW:           data.RW,
+		Kelurahan:    data.Kelurahan,
+		Kecamatan:    data.Kecamatan,
+		KodePos:      data.KodePos,
+		NamaAyah:     data.NamaAyah,
+		NamaIbu:      data.NamaIbu,
+		Status:       data.Status,
+		Username:     data.Username,
+		CreatedAt:    data.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:    data.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		CreatedByID:  data.CreatedByID,
+		UpdatedByID:  data.UpdatedByID,
+	}
+}
+
+// mapPesertaDidikRombelToResponse maps PesertaDidikRombel model to response DTO
+func (s *PrestasiServiceImpl) mapPesertaDidikRombelToResponse(data *models.PesertaDidikRombel) *dtos.PesertaDidikRombelResponse {
+	var pesertaDidik *dtos.PesertaDidikResponse
+	if data.PesertaDidik != nil {
+		pesertaDidik = s.mapPesertaDidikToResponse(data.PesertaDidik)
+	}
+
 	var rombel *dtos.RombelDetailResponse
 	if data.Rombel != nil {
-		var kelas *dtos.KelasDetailResponse
-		if data.Rombel.Kelas != nil {
-			kelas = &dtos.KelasDetailResponse{
-				ID:        data.Rombel.Kelas.ID,
-				Name:      data.Rombel.Kelas.Name,
-				Status:    data.Rombel.Kelas.Status,
-				CreatedAt: data.Rombel.Kelas.CreatedAt.Format("2006-01-02 15:04:05"),
-				UpdatedAt: data.Rombel.Kelas.UpdatedAt.Format("2006-01-02 15:04:05"),
-			}
-		}
-
 		rombel = &dtos.RombelDetailResponse{
 			ID:        data.Rombel.ID,
 			Name:      data.Rombel.Name,
-			Status:    data.Rombel.Status,
 			KelasID:   data.Rombel.KelasID,
-			Kelas:     kelas,
-			CreatedAt: data.Rombel.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt: data.Rombel.UpdatedAt.Format("2006-01-02 15:04:05"),
+			Status:    data.Rombel.Status,
+			CreatedAt: data.Rombel.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			UpdatedAt: data.Rombel.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+		}
+		if data.Rombel.Kelas != nil {
+			rombel.Kelas = &dtos.KelasDetailResponse{
+				ID:        data.Rombel.Kelas.ID,
+				Name:      data.Rombel.Kelas.Name,
+				Status:    data.Rombel.Kelas.Status,
+				CreatedAt: data.Rombel.Kelas.CreatedAt.Format("2006-01-02T15:04:05Z"),
+				UpdatedAt: data.Rombel.Kelas.UpdatedAt.Format("2006-01-02T15:04:05Z"),
+			}
 		}
 	}
 
-	// Map tahun pelajaran
-	var tahunPelajaran *dtos.TahunPelajaranDetailResponse
-	if data.TahunPelajaran != nil {
-		tahunPelajaran = &dtos.TahunPelajaranDetailResponse{
-			ID:             data.TahunPelajaran.ID,
-			TahunPelajaran: data.TahunPelajaran.TahunPelajaran,
-			Status:         data.TahunPelajaran.Status,
-			CreatedAt:      data.TahunPelajaran.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt:      data.TahunPelajaran.UpdatedAt.Format("2006-01-02 15:04:05"),
-			CreatedByID:    data.TahunPelajaran.CreatedByID,
-			UpdatedByID:    data.TahunPelajaran.UpdatedByID,
-		}
-	}
-
-	return &dtos.PesertaDidikResponse{
+	return &dtos.PesertaDidikRombelResponse{
 		ID:               data.ID,
-		Nama:             data.Nama,
-		NIS:              data.NIS,
-		JenisKelamin:     data.JenisKelamin,
-		NISN:             data.NISN,
-		TempatLahir:      data.TempatLahir,
-		TanggalLahir:     tanggalLahir,
-		NIK:              data.NIK,
-		Agama:            data.Agama,
-		Alamat:           data.Alamat,
-		RT:               data.RT,
-		RW:               data.RW,
-		Kelurahan:        data.Kelurahan,
-		Kecamatan:        data.Kecamatan,
-		KodePos:          data.KodePos,
-		NamaAyah:         data.NamaAyah,
-		NamaIbu:          data.NamaIbu,
+		PesertaDidikID:   data.PesertaDidikID,
 		RombelID:         data.RombelID,
-		Rombel:           rombel,
 		TahunPelajaranID: data.TahunPelajaranID,
-		TahunPelajaran:   tahunPelajaran,
 		Status:           data.Status,
-		Username:         data.Username,
-		CreatedAt:        data.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:        data.UpdatedAt.Format("2006-01-02 15:04:05"),
+		PesertaDidik:     pesertaDidik,
+		Rombel:           rombel,
+		CreatedAt:        data.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		UpdatedAt:        data.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 		CreatedByID:      data.CreatedByID,
 		UpdatedByID:      data.UpdatedByID,
 	}
@@ -666,22 +641,18 @@ func (s *PrestasiServiceImpl) GetPublicLatest() (*dtos.PrestasiPublicListRespons
 		// Set nama based on jenis
 		jenisLower := strings.ToLower(item.Jenis)
 		if jenisLower == "individu" {
-			if item.PesertaDidik != nil {
-				publicResponse.NamaPesertaDidik = item.PesertaDidik.Nama
+			if item.PesertaDidikRombel != nil && item.PesertaDidikRombel.PesertaDidik != nil {
+				publicResponse.NamaPesertaDidik = item.PesertaDidikRombel.PesertaDidik.Nama
 			}
 		} else if jenisLower == "grup" || jenisLower == "tim" {
 			publicResponse.NamaGrup = item.NamaGrup
 			// Get anggota tim details
 			anggotaDetails := make([]dtos.AnggotaTimPublicDetail, 0)
 			for _, anggota := range item.AnggotaTimPrestasi {
-				if anggota.PesertaDidik != nil {
+				if anggota.PesertaDidikRombel != nil && anggota.PesertaDidikRombel.PesertaDidik != nil {
 					detail := dtos.AnggotaTimPublicDetail{
-						Nama: anggota.PesertaDidik.Nama,
-						NIS:  anggota.PesertaDidik.NIS,
-					}
-					// Get rombel name
-					if anggota.PesertaDidik.Rombel != nil {
-						detail.Rombel = anggota.PesertaDidik.Rombel.Name
+						Nama: anggota.PesertaDidikRombel.PesertaDidik.Nama,
+						NIS:  anggota.PesertaDidikRombel.PesertaDidik.NIS,
 					}
 					anggotaDetails = append(anggotaDetails, detail)
 				}
@@ -740,22 +711,18 @@ func (s *PrestasiServiceImpl) GetPublicList(req *dtos.PrestasiPublicListRequest)
 		// Set nama based on jenis
 		jenisLower := strings.ToLower(item.Jenis)
 		if jenisLower == "individu" {
-			if item.PesertaDidik != nil {
-				publicResponse.NamaPesertaDidik = item.PesertaDidik.Nama
+			if item.PesertaDidikRombel != nil && item.PesertaDidikRombel.PesertaDidik != nil {
+				publicResponse.NamaPesertaDidik = item.PesertaDidikRombel.PesertaDidik.Nama
 			}
 		} else if jenisLower == "grup" || jenisLower == "tim" {
 			publicResponse.NamaGrup = item.NamaGrup
 			// Get anggota tim details
 			anggotaDetails := make([]dtos.AnggotaTimPublicDetail, 0)
 			for _, anggota := range item.AnggotaTimPrestasi {
-				if anggota.PesertaDidik != nil {
+				if anggota.PesertaDidikRombel != nil && anggota.PesertaDidikRombel.PesertaDidik != nil {
 					detail := dtos.AnggotaTimPublicDetail{
-						Nama: anggota.PesertaDidik.Nama,
-						NIS:  anggota.PesertaDidik.NIS,
-					}
-					// Get rombel name
-					if anggota.PesertaDidik.Rombel != nil {
-						detail.Rombel = anggota.PesertaDidik.Rombel.Name
+						Nama: anggota.PesertaDidikRombel.PesertaDidik.Nama,
+						NIS:  anggota.PesertaDidikRombel.PesertaDidik.NIS,
 					}
 					anggotaDetails = append(anggotaDetails, detail)
 				}

@@ -15,14 +15,12 @@ type FotoItemDTO struct {
 
 // AnggotaTimPrestasiDTO represents anggota tim prestasi details
 type AnggotaTimPrestasiDTO struct {
-	ID               uint                          `json:"id"`
-	PrestasiID       uint                          `json:"prestasi_id"`
-	PesertaDidikID   uint                          `json:"peserta_didik_id"`
-	TahunPelajaranID uint                          `json:"tahun_pelajaran_id"`
-	PesertaDidik     *PesertaDidikResponse         `json:"peserta_didik"`
-	TahunPelajaran   *TahunPelajaranDetailResponse `json:"tahun_pelajaran"`
-	CreatedAt        time.Time                     `json:"created_at"`
-	UpdatedAt        time.Time                     `json:"updated_at"`
+	ID                   uint                       `json:"id"`
+	PrestasiID           uint                       `json:"prestasi_id"`
+	PesertaDidikRombelID uint                       `json:"peserta_didik_rombel_id"`
+	PesertaDidikRombel   *PesertaDidikRombelResponse `json:"peserta_didik_rombel"`
+	CreatedAt            time.Time                  `json:"created_at"`
+	UpdatedAt            time.Time                  `json:"updated_at"`
 }
 
 // EkstrakurikulerDetailDTO represents ekstrakurikuler details
@@ -35,8 +33,8 @@ type EkstrakurikulerDetailDTO struct {
 
 // PrestasiCreateRequest represents the request payload for creating Prestasi
 type PrestasiCreateRequest struct {
-	PesertaDidikID    *uint  `json:"peserta_didik_id" binding:"omitempty"`
-	Jenis             string `json:"jenis" binding:"required"`
+	PesertaDidikRombelID *uint  `json:"peserta_didik_rombel_id" binding:"omitempty"`
+	Jenis                string `json:"jenis" binding:"required"`
 	NamaGrup          string `json:"nama_grup" binding:"omitempty"`
 	NamaPrestasi      string `json:"nama_prestasi" binding:"required"`
 	TingkatPrestasi   string `json:"tingkat_prestasi" binding:"omitempty"`
@@ -53,15 +51,14 @@ type PrestasiCreateRequest struct {
 
 // AnggotaTimCreateRequest represents anggota tim data for creating
 type AnggotaTimCreateRequest struct {
-	PesertaDidikID   uint `json:"peserta_didik_id" binding:"required"`
-	TahunPelajaranID uint `json:"tahun_pelajaran_id" binding:"required"`
+	PesertaDidikRombelID uint `json:"peserta_didik_rombel_id" binding:"required"`
 }
 
 // PrestasiUpdateRequest represents the request payload for updating Prestasi
 type PrestasiUpdateRequest struct {
-	ID                uint                      `json:"id" binding:"required"`
-	PesertaDidikID    *uint                     `json:"peserta_didik_id" binding:"omitempty"`
-	Jenis             string                    `json:"jenis" binding:"omitempty"`
+	ID                   uint                      `json:"id" binding:"required"`
+	PesertaDidikRombelID *uint                     `json:"peserta_didik_rombel_id" binding:"omitempty"`
+	Jenis                string                    `json:"jenis" binding:"omitempty"`
 	NamaGrup          string                    `json:"nama_grup" binding:"omitempty"`
 	NamaPrestasi      string                    `json:"nama_prestasi" binding:"omitempty"`
 	TingkatPrestasi   string                    `json:"tingkat_prestasi" binding:"omitempty"`
@@ -79,17 +76,16 @@ type PrestasiUpdateRequest struct {
 
 // AnggotaTimUpdateRequest represents anggota tim data for updating
 type AnggotaTimUpdateRequest struct {
-	ID               *uint  `json:"id" binding:"omitempty"` // If ID exists, update; if not, create new
-	PesertaDidikID   uint   `json:"peserta_didik_id" binding:"required"`
-	TahunPelajaranID uint   `json:"tahun_pelajaran_id" binding:"required"`
+	ID                   *uint `json:"id" binding:"omitempty"` // If ID exists, update; if not, create new
+	PesertaDidikRombelID uint  `json:"peserta_didik_rombel_id" binding:"required"`
 }
 
 // PrestasiResponse represents the response payload for Prestasi
 type PrestasiResponse struct {
-	ID                 uint                        `json:"id"`
-	PesertaDidikID     *uint                       `json:"peserta_didik_id"`
-	PesertaDidik       *PesertaDidikResponse       `json:"peserta_didik"`
-	Jenis              string                      `json:"jenis"`
+	ID                   uint                          `json:"id"`
+	PesertaDidikRombelID *uint                         `json:"peserta_didik_rombel_id"`
+	PesertaDidikRombel   *PesertaDidikRombelResponse   `json:"peserta_didik_rombel"`
+	Jenis                string                        `json:"jenis"`
 	NamaGrup           string                      `json:"nama_grup"`
 	NamaPrestasi       string                      `json:"nama_prestasi"`
 	TingkatPrestasi    string                      `json:"tingkat_prestasi"`
@@ -121,8 +117,8 @@ type PrestasiListResponse struct {
 // PrestasiGetAllRequest represents the request payload for getting all prestasi with filters
 type PrestasiGetAllRequest struct {
 	Search struct {
-		PesertaDidikID    *uint  `json:"peserta_didik_id"`
-		NamaPesertaDidik  string `json:"nama_peserta_didik"`
+		PesertaDidikRombelID *uint  `json:"peserta_didik_rombel_id"`
+		NamaPesertaDidik     string `json:"nama_peserta_didik"`
 		Jenis             string `json:"jenis"`
 		NamaGrup          string `json:"nama_grup"`
 		NamaPrestasi      string `json:"nama_prestasi"`
@@ -165,7 +161,6 @@ type PrestasiPublicResponse struct {
 type AnggotaTimPublicDetail struct {
 	Nama   string `json:"nama"`
 	NIS    string `json:"nis"`
-	Rombel string `json:"rombel"`
 }
 
 // PrestasiPublicListResponse represents the public list response
