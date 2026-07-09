@@ -21,6 +21,8 @@ type MutasiSiswaService interface {
 	Update(req *dtos.MutasiSiswaUpdateRequest, files map[string]*multipart.FileHeader) (*dtos.MutasiSiswaResponse, error)
 	ExportFormulirPDF(id uint) ([]byte, error)
 	Delete(id uint) error
+	ExportExcel(req *dtos.MutasiSiswaExportExcelRequest) ([]byte, error)
+	ExportListPDF(req *dtos.MutasiSiswaExportExcelRequest) ([]byte, error)
 }
 
 type MutasiSiswaServiceImpl struct {
@@ -474,12 +476,12 @@ func (s *MutasiSiswaServiceImpl) Update(req *dtos.MutasiSiswaUpdateRequest, file
 			return nil, fmt.Errorf("gagal upload rapor: %w", err)
 		}
 
-		// Delete old rapor if exists
+		existing.Rapor = &path
+		
+		// Delete old rapor if exists (after successful upload)
 		if oldRapor != nil && *oldRapor != "" {
 			_ = s.r2Storage.DeleteFile(*oldRapor)
 		}
-
-		existing.Rapor = &path
 	}
 
 	// Update Akte Kelahiran if provided
@@ -490,12 +492,12 @@ func (s *MutasiSiswaServiceImpl) Update(req *dtos.MutasiSiswaUpdateRequest, file
 			return nil, fmt.Errorf("gagal upload akte kelahiran: %w", err)
 		}
 
-		// Delete old akte if exists
+		existing.AkteKelahiran = &path
+		
+		// Delete old akte if exists (after successful upload)
 		if oldAkte != nil && *oldAkte != "" {
 			_ = s.r2Storage.DeleteFile(*oldAkte)
 		}
-
-		existing.AkteKelahiran = &path
 	}
 
 	// Update Kartu Keluarga if provided
@@ -506,12 +508,12 @@ func (s *MutasiSiswaServiceImpl) Update(req *dtos.MutasiSiswaUpdateRequest, file
 			return nil, fmt.Errorf("gagal upload kartu keluarga: %w", err)
 		}
 
-		// Delete old KK if exists
+		existing.KartuKeluarga = &path
+		
+		// Delete old KK if exists (after successful upload)
 		if oldKK != nil && *oldKK != "" {
 			_ = s.r2Storage.DeleteFile(*oldKK)
 		}
-
-		existing.KartuKeluarga = &path
 	}
 
 	// Update SPTJM if provided
@@ -522,12 +524,12 @@ func (s *MutasiSiswaServiceImpl) Update(req *dtos.MutasiSiswaUpdateRequest, file
 			return nil, fmt.Errorf("gagal upload SPTJM: %w", err)
 		}
 
-		// Delete old SPTJM if exists
+		existing.SPTJM = &path
+		
+		// Delete old SPTJM if exists (after successful upload)
 		if oldSPTJM != nil && *oldSPTJM != "" {
 			_ = s.r2Storage.DeleteFile(*oldSPTJM)
 		}
-
-		existing.SPTJM = &path
 	}
 
 	// Save to database

@@ -15,6 +15,7 @@ type MutasiSiswaRepository interface {
 	GetByID(id uint) (*models.MutasiSiswa, error)
 	Update(data *models.MutasiSiswa) error
 	Delete(id uint) error
+	GetByTahunPelajaranAndSemester(tahunPelajaranID, semester int) ([]models.MutasiSiswa, error)
 }
 
 // GetMutasiSiswaFilter represents filter parameters
@@ -150,4 +151,15 @@ func (r *MutasiSiswaRepositoryImpl) Delete(id uint) error {
 // GetDB returns the database instance (helper for internal use)
 func (r *MutasiSiswaRepositoryImpl) GetDB() *gorm.DB {
 	return r.db
+}
+
+// GetByTahunPelajaranAndSemester retrieves all Mutasi Siswa by tahun pelajaran and semester
+func (r *MutasiSiswaRepositoryImpl) GetByTahunPelajaranAndSemester(tahunPelajaranID, semester int) ([]models.MutasiSiswa, error) {
+	var data []models.MutasiSiswa
+	if err := r.db.Where("tahun_pelajaran_id = ? AND semester = ?", tahunPelajaranID, semester).
+		Order("nomor_pendaftaran ASC").
+		Find(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
 }

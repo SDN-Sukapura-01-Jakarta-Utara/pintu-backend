@@ -45,6 +45,12 @@ func RegisterMutasiSiswaRoutes(router *gin.Engine, db *gorm.DB) {
 		// Export formulir pendaftaran PDF (admin)
 		protected.POST("/export-pdf-formulir-mutasi-siswa", mutasiSiswaController.ExportFormulirPDFAuth)
 
+		// Export Excel data mutasi siswa
+		protected.POST("/export-excel-mutasi-siswa", mutasiSiswaController.ExportExcel)
+
+		// Export PDF list mutasi siswa
+		protected.POST("/export-pdf-mutasi-siswa", mutasiSiswaController.ExportListPDF)
+
 		// Setting konfigurasi mutasi siswa (upsert)
 		protected.POST("/setting-konfigurasi-mutasi-siswa", konfigurasiController.UpsertSetting)
 

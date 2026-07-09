@@ -349,3 +349,69 @@ func (c *MutasiSiswaController) ExportFormulirPDFAuth(ctx *gin.Context) {
 	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=formulir_pendaftaran_%d.pdf", req.ID))
 	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
+
+
+// ExportExcel exports mutasi siswa data to Excel (auth required)
+// @Summary Export Data Mutasi Siswa to Excel
+// @Description Export mutasi siswa data to Excel file by tahun pelajaran and semester
+// @Tags mutasi-siswa
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Param body body dtos.MutasiSiswaExportExcelRequest true "Request body with tahun_pelajaran_id and semester"
+// @Success 200 {file} binary "Excel file"
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/spmb-mutasi/export-excel-mutasi-siswa [post]
+func (c *MutasiSiswaController) ExportExcel(ctx *gin.Context) {
+	var req dtos.MutasiSiswaExportExcelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	excelBytes, err := c.service.ExportExcel(&req)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for Excel download
+	filename := fmt.Sprintf("data_calon_murid_baru_semester_%d.xlsx", req.Semester)
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelBytes)
+}
+
+
+// ExportListPDF exports mutasi siswa list to PDF (auth required)
+// @Summary Export Data Mutasi Siswa List to PDF
+// @Description Export mutasi siswa list to PDF file by tahun pelajaran and semester
+// @Tags mutasi-siswa
+// @Accept json
+// @Produce application/pdf
+// @Param body body dtos.MutasiSiswaExportExcelRequest true "Request body with tahun_pelajaran_id and semester"
+// @Success 200 {file} binary "PDF file"
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Failure 404 {object} gin.H{error=string}
+// @Router /api/v1/spmb-mutasi/export-pdf-mutasi-siswa [post]
+func (c *MutasiSiswaController) ExportListPDF(ctx *gin.Context) {
+	var req dtos.MutasiSiswaExportExcelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	pdfBytes, err := c.service.ExportListPDF(&req)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for PDF download
+	filename := fmt.Sprintf("data_calon_murid_baru_semester_%d.pdf", req.Semester)
+	ctx.Header("Content-Type", "application/pdf")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}

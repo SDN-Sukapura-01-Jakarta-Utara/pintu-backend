@@ -189,3 +189,9 @@ type KonfigurasiMutasiSiswaResponse struct {
 	CreatedAt               string  `json:"created_at"`
 	UpdatedAt               string  `json:"updated_at"`
 }
+
+// MutasiSiswaExportExcelRequest represents request for exporting mutasi siswa to Excel
+type MutasiSiswaExportExcelRequest struct {
+	TahunPelajaranID int `json:"tahun_pelajaran_id" binding:"required"`
+	Semester         int `json:"semester" binding:"required"`
+}
