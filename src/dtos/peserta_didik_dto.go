@@ -196,6 +196,7 @@ type ExportDataIndukSiswaRequest struct {
 
 // ExportPemetaanRombelRequest represents the request payload for exporting pemetaan rombel
 type ExportPemetaanRombelRequest struct {
-	RombelID         uint `json:"rombel_id" binding:"omitempty"`          // Optional filter by rombel_id
-	TahunPelajaranID uint `json:"tahun_pelajaran_id" binding:"omitempty"` // Optional filter by tahun_pelajaran_id
+	RombelID         uint   `json:"rombel_id" binding:"omitempty"`          // Optional filter by rombel_id
+	TahunPelajaranID uint   `json:"tahun_pelajaran_id" binding:"omitempty"` // Optional filter by tahun_pelajaran_id
+	Status           string `json:"status" binding:"omitempty"`             // Optional filter by status peserta_didik_rombel
 }

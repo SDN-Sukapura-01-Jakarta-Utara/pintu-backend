@@ -262,6 +262,49 @@ func (s *AbsensiServiceImpl) exportPDFGuruKelas(req *dtos.ExportAbsensiExcelRequ
 		pdf.CellFormat(jumlahWidth, 6, fmt.Sprintf("%d", totalJumlah), "1", 1, "C", false, 0, "")
 	}
 
+	// Add signature section at the bottom right
+	pdf.Ln(10) // Space before signature
+	
+	// Get Kepala Sekolah info from konfigurasi_absensi
+	var konfigAbsensi models.KonfigurasiAbsensi
+	namaKepsek := "___________________"
+	nipKepsek := "___________________"
+	if err := s.db.First(&konfigAbsensi).Error; err == nil {
+		if konfigAbsensi.NamaKepsek != nil && *konfigAbsensi.NamaKepsek != "" {
+			namaKepsek = *konfigAbsensi.NamaKepsek
+		}
+		if konfigAbsensi.NIPKepsek != nil && *konfigAbsensi.NIPKepsek != "" {
+			nipKepsek = *konfigAbsensi.NIPKepsek
+		}
+	}
+
+	// Position signature on the right side (approximately 200mm from left)
+	signatureX := 200.0
+	pdf.SetX(signatureX)
+	
+	// Reset font and color for signature
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 10)
+	
+	// Mengetahui,
+	pdf.CellFormat(60, 6, "Mengetahui,", "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// Kepala SDN Sukapura 01
+	pdf.CellFormat(60, 6, "Kepala SDN Sukapura 01", "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// Empty space for signature (3 lines)
+	pdf.Ln(18)
+	pdf.SetX(signatureX)
+	
+	// Nama Kepsek
+	pdf.CellFormat(60, 6, namaKepsek, "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// NIP
+	pdf.CellFormat(60, 6, fmt.Sprintf("NIP. %s", nipKepsek), "", 1, "C", false, 0, "")
+
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)
 	if err != nil {
@@ -453,6 +496,49 @@ func (s *AbsensiServiceImpl) exportPDFGuruBidangStudiBulan(req *dtos.ExportAbsen
 		pdf.CellFormat(siaWidth, 6, fmt.Sprintf("%d", totalAlpa), "1", 0, "C", false, 0, "")
 		pdf.CellFormat(jumlahWidth, 6, fmt.Sprintf("%d", totalJumlah), "1", 1, "C", false, 0, "")
 	}
+
+	// Add signature section at the bottom right
+	pdf.Ln(10) // Space before signature
+	
+	// Get Kepala Sekolah info from konfigurasi_absensi
+	var konfigAbsensi models.KonfigurasiAbsensi
+	namaKepsek := "___________________"
+	nipKepsek := "___________________"
+	if err := s.db.First(&konfigAbsensi).Error; err == nil {
+		if konfigAbsensi.NamaKepsek != nil && *konfigAbsensi.NamaKepsek != "" {
+			namaKepsek = *konfigAbsensi.NamaKepsek
+		}
+		if konfigAbsensi.NIPKepsek != nil && *konfigAbsensi.NIPKepsek != "" {
+			nipKepsek = *konfigAbsensi.NIPKepsek
+		}
+	}
+
+	// Position signature on the right side (approximately 200mm from left)
+	signatureX := 200.0
+	pdf.SetX(signatureX)
+	
+	// Reset font and color for signature
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 10)
+	
+	// Mengetahui,
+	pdf.CellFormat(60, 6, "Mengetahui,", "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// Kepala SDN Sukapura 01
+	pdf.CellFormat(60, 6, "Kepala SDN Sukapura 01", "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// Empty space for signature (3 lines)
+	pdf.Ln(18)
+	pdf.SetX(signatureX)
+	
+	// Nama Kepsek
+	pdf.CellFormat(60, 6, namaKepsek, "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// NIP
+	pdf.CellFormat(60, 6, fmt.Sprintf("NIP. %s", nipKepsek), "", 1, "C", false, 0, "")
 
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)
@@ -661,6 +747,49 @@ func (s *AbsensiServiceImpl) exportPDFGuruBidangStudiSemester(req *dtos.ExportAb
 		pdf.CellFormat(siaWidth, 6, fmt.Sprintf("%d", totalAlpa), "1", 0, "C", false, 0, "")
 		pdf.CellFormat(jumlahWidth, 6, fmt.Sprintf("%d", totalJumlah), "1", 1, "C", false, 0, "")
 	}
+
+	// Add signature section at the bottom right
+	pdf.Ln(10) // Space before signature
+	
+	// Get Kepala Sekolah info from konfigurasi_absensi
+	var konfigAbsensi models.KonfigurasiAbsensi
+	namaKepsek := "___________________"
+	nipKepsek := "___________________"
+	if err := s.db.First(&konfigAbsensi).Error; err == nil {
+		if konfigAbsensi.NamaKepsek != nil && *konfigAbsensi.NamaKepsek != "" {
+			namaKepsek = *konfigAbsensi.NamaKepsek
+		}
+		if konfigAbsensi.NIPKepsek != nil && *konfigAbsensi.NIPKepsek != "" {
+			nipKepsek = *konfigAbsensi.NIPKepsek
+		}
+	}
+
+	// Position signature on the right side (approximately 200mm from left)
+	signatureX := 200.0
+	pdf.SetX(signatureX)
+	
+	// Reset font and color for signature
+	pdf.SetTextColor(0, 0, 0)
+	pdf.SetFont("Arial", "", 10)
+	
+	// Mengetahui,
+	pdf.CellFormat(60, 6, "Mengetahui,", "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// Kepala SDN Sukapura 01
+	pdf.CellFormat(60, 6, "Kepala SDN Sukapura 01", "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// Empty space for signature (3 lines)
+	pdf.Ln(18)
+	pdf.SetX(signatureX)
+	
+	// Nama Kepsek
+	pdf.CellFormat(60, 6, namaKepsek, "", 1, "C", false, 0, "")
+	pdf.SetX(signatureX)
+	
+	// NIP
+	pdf.CellFormat(60, 6, fmt.Sprintf("NIP. %s", nipKepsek), "", 1, "C", false, 0, "")
 
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)

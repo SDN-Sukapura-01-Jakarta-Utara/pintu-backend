@@ -8,6 +8,7 @@ import (
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
 	"pintu-backend/src/modules/repositories"
+	"pintu-backend/src/utils"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -25,16 +26,19 @@ type PesertaDidikRombelService interface {
 type PesertaDidikRombelServiceImpl struct {
 	repository               repositories.PesertaDidikRombelRepository
 	pesertaDidikRepository   repositories.PesertaDidikRepository
+	r2Storage                *utils.R2Storage
 }
 
 // NewPesertaDidikRombelService creates a new PesertaDidikRombel service
 func NewPesertaDidikRombelService(
 	repository repositories.PesertaDidikRombelRepository,
 	pesertaDidikRepository repositories.PesertaDidikRepository,
+	r2Storage *utils.R2Storage,
 ) PesertaDidikRombelService {
 	return &PesertaDidikRombelServiceImpl{
 		repository:             repository,
 		pesertaDidikRepository: pesertaDidikRepository,
+		r2Storage:              r2Storage,
 	}
 }
 
@@ -173,6 +177,12 @@ func (s *PesertaDidikRombelServiceImpl) mapToResponse(data *models.PesertaDidikR
 			barcodeGeneratedAt = data.PesertaDidik.BarcodeGeneratedAt.Format("2006-01-02T15:04:05Z")
 		}
 
+		// Generate public URL for photo if exists
+		photoURL := ""
+		if data.PesertaDidik.Photo != "" {
+			photoURL = s.r2Storage.GetPublicURL(data.PesertaDidik.Photo)
+		}
+
 		response.PesertaDidik = &dtos.PesertaDidikResponse{
 			ID:                 data.PesertaDidik.ID,
 			Nama:               data.PesertaDidik.Nama,
@@ -193,6 +203,7 @@ func (s *PesertaDidikRombelServiceImpl) mapToResponse(data *models.PesertaDidikR
 			NamaIbu:            data.PesertaDidik.NamaIbu,
 			Status:             data.PesertaDidik.Status,
 			Username:           data.PesertaDidik.Username,
+			Photo:              photoURL,
 			Barcode:            data.PesertaDidik.Barcode,
 			BarcodeGeneratedAt: barcodeGeneratedAt,
 			Roles:              []dtos.RoleResponse{}, // Empty roles for performance

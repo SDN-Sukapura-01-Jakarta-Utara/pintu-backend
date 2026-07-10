@@ -55,7 +55,7 @@ type PesertaDidikRepository interface {
 	GetPesertaDidikByTahunPelajaran(tahunPelajaranID uint) ([]models.PesertaDidik, error)
 	GetPesertaDidikByTahunPelajaranAndRombel(tahunPelajaranID uint, rombelID uint) ([]models.PesertaDidik, error)
 	GetPesertaDidikByRombelID(rombelID uint) ([]models.PesertaDidik, error)
-	GetPesertaDidikByRombelAndTahunPelajaran(rombelID uint, tahunPelajaranID uint) ([]models.PesertaDidik, error)
+	GetPesertaDidikByRombelAndTahunPelajaran(rombelID uint, tahunPelajaranID uint, status string) ([]models.PesertaDidik, error)
 	GetAllPesertaDidikActive() ([]models.PesertaDidik, error)
 	UpdateBarcode(pesertaDidikID uint, barcode string) error
 	UpdateWithTransaction(fn func(tx interface{}) error) error
@@ -401,13 +401,11 @@ func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByRombelID(rombelID uint) ([
 }
 
 // GetPesertaDidikByRombelAndTahunPelajaran retrieves all peserta didik by rombel ID and tahun pelajaran ID from peserta_didik_rombel table
-func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByRombelAndTahunPelajaran(rombelID uint, tahunPelajaranID uint) ([]models.PesertaDidik, error) {
+func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByRombelAndTahunPelajaran(rombelID uint, tahunPelajaranID uint, status string) ([]models.PesertaDidik, error) {
 	var data []models.PesertaDidik
 	query := r.db.
 		Distinct("peserta_didik.*").
-		Joins("JOIN peserta_didik_rombel ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id").
-		Where("peserta_didik_rombel.status = ?", "active").
-		Where("peserta_didik.status = ?", "active")
+		Joins("JOIN peserta_didik_rombel ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id")
 	
 	// Apply filters
 	if rombelID > 0 {
@@ -415,6 +413,12 @@ func (r *PesertaDidikRepositoryImpl) GetPesertaDidikByRombelAndTahunPelajaran(ro
 	}
 	if tahunPelajaranID > 0 {
 		query = query.Where("peserta_didik_rombel.tahun_pelajaran_id = ?", tahunPelajaranID)
+	}
+	if status != "" {
+		query = query.Where("peserta_didik_rombel.status = ?", status)
+	} else {
+		// Default to active if no status specified
+		query = query.Where("peserta_didik_rombel.status = ?", "active")
 	}
 	
 	err := query.Order("peserta_didik.nis ASC").Find(&data).Error

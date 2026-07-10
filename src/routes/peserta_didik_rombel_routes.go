@@ -5,6 +5,7 @@ import (
 	"pintu-backend/src/modules/controllers"
 	"pintu-backend/src/modules/repositories"
 	"pintu-backend/src/modules/services"
+	"pintu-backend/src/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -16,8 +17,11 @@ func RegisterPesertaDidikRombelRoutes(router *gin.Engine, db *gorm.DB) {
 	pesertaDidikRombelRepo := repositories.NewPesertaDidikRombelRepository(db)
 	pesertaDidikRepo := repositories.NewPesertaDidikRepository(db)
 
+	// Initialize R2 storage
+	r2Storage := utils.NewR2Storage()
+
 	// Initialize service
-	service := services.NewPesertaDidikRombelService(pesertaDidikRombelRepo, pesertaDidikRepo)
+	service := services.NewPesertaDidikRombelService(pesertaDidikRombelRepo, pesertaDidikRepo, r2Storage)
 
 	// Initialize controller
 	controller := controllers.NewPesertaDidikRombelController(service)

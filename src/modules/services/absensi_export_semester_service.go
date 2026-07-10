@@ -356,5 +356,56 @@ func (s *AbsensiServiceImpl) exportGuruBidangStudiSemester(req *dtos.ExportAbsen
 	jumlahColName, _ := excelize.ColumnNumberToName(jumlahCol)
 	f.SetColWidth(sheetName, jumlahColName, jumlahColName, 8)
 
+	// Add signature section at the bottom right
+	signatureStartRow := dataStartRow + len(pesertaDidikRombels) + 2 // 2 rows after last data
+	
+	// Get Kepala Sekolah info from konfigurasi_absensi
+	var konfigAbsensi models.KonfigurasiAbsensi
+	namaKepsek := "___________________"
+	nipKepsek := "___________________"
+	if err := s.db.First(&konfigAbsensi).Error; err == nil {
+		if konfigAbsensi.NamaKepsek != nil && *konfigAbsensi.NamaKepsek != "" {
+			namaKepsek = *konfigAbsensi.NamaKepsek
+		}
+		if konfigAbsensi.NIPKepsek != nil && *konfigAbsensi.NIPKepsek != "" {
+			nipKepsek = *konfigAbsensi.NIPKepsek
+		}
+	}
+
+	// Calculate column for signature (right side, around 2-3 columns before last)
+	signatureCol := jumlahCol - 5
+	if signatureCol < jumlahAbsenStartCol {
+		signatureCol = jumlahAbsenStartCol
+	}
+	signatureColName, _ := excelize.ColumnNumberToName(signatureCol)
+
+	// Create center alignment style for signature
+	signatureStyle, _ := f.NewStyle(&excelize.Style{
+		Alignment: &excelize.Alignment{Horizontal: "center", Vertical: "center"},
+	})
+
+	// Row 1: "Mengetahui,"
+	mengetahuiCell := fmt.Sprintf("%s%d", signatureColName, signatureStartRow)
+	f.SetCellValue(sheetName, mengetahuiCell, "Mengetahui,")
+	f.SetCellStyle(sheetName, mengetahuiCell, mengetahuiCell, signatureStyle)
+
+	// Row 2: "Kepala SDN Sukapura 01"
+	kepsekTitleCell := fmt.Sprintf("%s%d", signatureColName, signatureStartRow+1)
+	f.SetCellValue(sheetName, kepsekTitleCell, "Kepala SDN Sukapura 01")
+	f.SetCellStyle(sheetName, kepsekTitleCell, kepsekTitleCell, signatureStyle)
+
+	// Row 3-5: Empty space for signature (3 rows)
+	// Just leave them empty
+
+	// Row 6: Nama Kepsek
+	namaKepsekCell := fmt.Sprintf("%s%d", signatureColName, signatureStartRow+5)
+	f.SetCellValue(sheetName, namaKepsekCell, namaKepsek)
+	f.SetCellStyle(sheetName, namaKepsekCell, namaKepsekCell, signatureStyle)
+
+	// Row 7: NIP
+	nipCell := fmt.Sprintf("%s%d", signatureColName, signatureStartRow+6)
+	f.SetCellValue(sheetName, nipCell, fmt.Sprintf("NIP. %s", nipKepsek))
+	f.SetCellStyle(sheetName, nipCell, nipCell, signatureStyle)
+
 	return f, nil
 }

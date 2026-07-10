@@ -383,9 +383,10 @@ func (c *PesertaDidikController) ExportPemetaanRombelExcel(ctx *gin.Context) {
 		// If error parsing, use 0 (get all)
 		req.RombelID = 0
 		req.TahunPelajaranID = 0
+		req.Status = ""
 	}
 	
-	f, err := c.service.ExportPemetaanRombelExcel(req.RombelID, req.TahunPelajaranID)
+	f, err := c.service.ExportPemetaanRombelExcel(req.RombelID, req.TahunPelajaranID, req.Status)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -418,9 +419,10 @@ func (c *PesertaDidikController) ExportPemetaanRombelPDF(ctx *gin.Context) {
 		// If error parsing, use 0 (get all)
 		req.RombelID = 0
 		req.TahunPelajaranID = 0
+		req.Status = ""
 	}
 	
-	pdfBytes, err := c.service.ExportPemetaanRombelPDF(req.RombelID, req.TahunPelajaranID)
+	pdfBytes, err := c.service.ExportPemetaanRombelPDF(req.RombelID, req.TahunPelajaranID, req.Status)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -34,8 +34,8 @@ type PesertaDidikService interface {
 	DownloadTemplateSiswaLulus() (*excelize.File, error)
 	ExportDataIndukSiswaExcel(status string) (*excelize.File, error)
 	ExportDataIndukSiswaPDF(status string) ([]byte, error)
-	ExportPemetaanRombelExcel(rombelID uint, tahunPelajaranID uint) (*excelize.File, error)
-	ExportPemetaanRombelPDF(rombelID uint, tahunPelajaranID uint) ([]byte, error)
+	ExportPemetaanRombelExcel(rombelID uint, tahunPelajaranID uint, status string) (*excelize.File, error)
+	ExportPemetaanRombelPDF(rombelID uint, tahunPelajaranID uint, status string) ([]byte, error)
 	DownloadKartuPelajar(pesertaDidikIDs []uint) ([]byte, error)
 	GetTotalSiswa() (*dtos.TotalSiswaResponse, error)
 	GenerateBarcodeAllPesertaDidik() (*dtos.GenerateBarcodeResponse, error)
@@ -1206,14 +1206,89 @@ func (s *PesertaDidikServiceImpl) ExportDataIndukSiswaPDF(status string) ([]byte
 }
 
 // ExportPemetaanRombelExcel exports pemetaan rombel to Excel file
-func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahunPelajaranID uint) (*excelize.File, error) {
+func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahunPelajaranID uint, status string) (*excelize.File, error) {
 	f := excelize.NewFile()
 	sheetName := "Pemetaan Rombel"
 	
 	// Rename default sheet
 	f.SetSheetName("Sheet1", sheetName)
 
-	// Headers - sama dengan data induk siswa
+	// Get rombel name if rombelID is provided
+	rombelName := ""
+	if rombelID > 0 {
+		rombel, err := s.repository.GetRombelByID(rombelID)
+		if err == nil && rombel != nil {
+			rombelName = rombel.Name
+		}
+	}
+	
+	// Get tahun pelajaran from request parameter
+	tahunPelajaranStr := ""
+	if tahunPelajaranID > 0 {
+		tahunPelajaranList, err := s.repository.GetAllTahunPelajaranAll()
+		if err == nil {
+			for _, tp := range tahunPelajaranList {
+				if tp.ID == tahunPelajaranID {
+					tahunPelajaranStr = tp.TahunPelajaran
+					break
+				}
+			}
+		}
+	}
+
+	// Create title style (for row 1 and 2)
+	titleStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 14,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
+	if err != nil {
+		return nil, errors.New("gagal membuat style title")
+	}
+
+	subtitle2Style, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Bold: true,
+			Size: 12,
+		},
+		Alignment: &excelize.Alignment{
+			Horizontal: "center",
+			Vertical:   "center",
+		},
+	})
+	if err != nil {
+		return nil, errors.New("gagal membuat style subtitle")
+	}
+
+	// Set title - Row 1
+	f.SetCellValue(sheetName, "A1", "DAFTAR SISWA SDN SUKAPURA 01")
+	f.MergeCell(sheetName, "A1", "O1") // Merge across all columns
+	f.SetCellStyle(sheetName, "A1", "O1", titleStyle)
+	f.SetRowHeight(sheetName, 1, 25)
+
+	// Set title - Row 2
+	title2 := ""
+	if rombelName != "" && tahunPelajaranStr != "" {
+		title2 = fmt.Sprintf("KELAS %s TAHUN AJARAN %s", rombelName, tahunPelajaranStr)
+	} else if rombelName != "" {
+		title2 = fmt.Sprintf("KELAS %s", rombelName)
+	} else if tahunPelajaranStr != "" {
+		title2 = fmt.Sprintf("TAHUN AJARAN %s", tahunPelajaranStr)
+	}
+	
+	if title2 != "" {
+		f.SetCellValue(sheetName, "A2", title2)
+		f.MergeCell(sheetName, "A2", "O2")
+		f.SetCellStyle(sheetName, "A2", "O2", subtitle2Style)
+		f.SetRowHeight(sheetName, 2, 22)
+	}
+
+	// Headers - mulai dari row 4 (skip row 3 untuk spacing)
 	headers := []string{
 		"NAMA", "NIS", "JENIS KELAMIN", "NISN", "TEMPAT LAHIR", "TANGGAL LAHIR",
 		"NIK", "AGAMA", "ALAMAT", "RT", "RW", "KELURAHAN", "KODE POS",
@@ -1241,9 +1316,10 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahun
 		return nil, errors.New("gagal membuat style header")
 	}
 
-	// Set headers
+	// Set headers di row 4
+	headerRow := 4
 	for i, header := range headers {
-		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		cell, _ := excelize.CoordinatesToCellName(i+1, headerRow)
 		f.SetCellValue(sheetName, cell, header)
 		f.SetCellStyle(sheetName, cell, cell, headerStyle)
 	}
@@ -1270,13 +1346,13 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahun
 		f.SetColWidth(sheetName, col, col, width)
 	}
 
-	// Get data from repository by rombel_id and/or tahun_pelajaran_id
+	// Get data from repository by rombel_id, tahun_pelajaran_id, and status
 	var siswaList []models.PesertaDidik
 	var err2 error
 	
-	if rombelID > 0 || tahunPelajaranID > 0 {
-		// Filter by rombel_id and/or tahun_pelajaran_id
-		siswaList, err2 = s.repository.GetPesertaDidikByRombelAndTahunPelajaran(rombelID, tahunPelajaranID)
+	if rombelID > 0 || tahunPelajaranID > 0 || status != "" {
+		// Filter by rombel_id, tahun_pelajaran_id, and/or status
+		siswaList, err2 = s.repository.GetPesertaDidikByRombelAndTahunPelajaran(rombelID, tahunPelajaranID, status)
 		if err2 != nil {
 			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err2.Error())
 		}
@@ -1299,9 +1375,9 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahun
 		return nil, errors.New("gagal membuat style data")
 	}
 
-	// Fill data starting from row 2
+	// Fill data starting from row 5 (after header at row 4)
 	for idx, siswa := range siswaList {
-		row := idx + 2
+		row := idx + 5
 		
 		// Format tanggal lahir
 		tanggalLahir := ""
@@ -1342,12 +1418,12 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahun
 		}
 	}
 
-	// Freeze first row (header)
+	// Freeze title and header rows (rows 1-4)
 	f.SetPanes(sheetName, &excelize.Panes{
 		Freeze:      true,
 		XSplit:      0,
-		YSplit:      1,
-		TopLeftCell: "A2",
+		YSplit:      4,
+		TopLeftCell: "A5",
 		ActivePane:  "bottomLeft",
 	})
 
@@ -1355,7 +1431,7 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelExcel(rombelID uint, tahun
 }
 
 // ExportPemetaanRombelPDF exports pemetaan rombel to PDF file
-func (s *PesertaDidikServiceImpl) ExportPemetaanRombelPDF(rombelID uint, tahunPelajaranID uint) ([]byte, error) {
+func (s *PesertaDidikServiceImpl) ExportPemetaanRombelPDF(rombelID uint, tahunPelajaranID uint, status string) ([]byte, error) {
 	// Get rombel name if rombelID is provided
 	rombelName := ""
 	if rombelID > 0 {
@@ -1365,21 +1441,35 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelPDF(rombelID uint, tahunPe
 		}
 	}
 	
-	// Get data from repository by rombel_id and/or tahun_pelajaran_id
-	var siswaList []models.PesertaDidik
-	var err error
+	// Get tahun pelajaran from request parameter
+	tahunPelajaranStr := ""
+	if tahunPelajaranID > 0 {
+		tahunPelajaranList, err := s.repository.GetAllTahunPelajaranAll()
+		if err == nil {
+			for _, tp := range tahunPelajaranList {
+				if tp.ID == tahunPelajaranID {
+					tahunPelajaranStr = tp.TahunPelajaran
+					break
+				}
+			}
+		}
+	}
 	
-	if rombelID > 0 || tahunPelajaranID > 0 {
-		// Filter by rombel_id and/or tahun_pelajaran_id
-		siswaList, err = s.repository.GetPesertaDidikByRombelAndTahunPelajaran(rombelID, tahunPelajaranID)
-		if err != nil {
-			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
+	// Get data from repository by rombel_id, tahun_pelajaran_id, and status
+	var siswaList []models.PesertaDidik
+	var err2 error
+	
+	if rombelID > 0 || tahunPelajaranID > 0 || status != "" {
+		// Filter by rombel_id, tahun_pelajaran_id, and/or status
+		siswaList, err2 = s.repository.GetPesertaDidikByRombelAndTahunPelajaran(rombelID, tahunPelajaranID, status)
+		if err2 != nil {
+			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err2.Error())
 		}
 	} else {
 		// Get all
-		siswaList, _, err = s.repository.GetAll(10000, 0)
-		if err != nil {
-			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
+		siswaList, _, err2 = s.repository.GetAll(10000, 0)
+		if err2 != nil {
+			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err2.Error())
 		}
 	}
 
@@ -1389,19 +1479,29 @@ func (s *PesertaDidikServiceImpl) ExportPemetaanRombelPDF(rombelID uint, tahunPe
 	pdf.SetAutoPageBreak(true, 10)
 	pdf.AddPage()
 	
-	// Title dengan nama rombel
-	pdf.SetFont("Arial", "B", 16)
-	title := "DAFTAR SISWA"
-	if rombelName != "" {
-		title = fmt.Sprintf("DAFTAR SISWA KELAS %s", rombelName)
+	// Title - Baris pertama
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(0, 6, "DAFTAR SISWA SDN SUKAPURA 01", "", 1, "C", false, 0, "")
+	
+	// Title - Baris kedua
+	pdf.SetFont("Arial", "B", 11)
+	title2 := ""
+	if rombelName != "" && tahunPelajaranStr != "" {
+		title2 = fmt.Sprintf("KELAS %s TAHUN AJARAN %s", rombelName, tahunPelajaranStr)
+	} else if rombelName != "" {
+		title2 = fmt.Sprintf("KELAS %s", rombelName)
+	} else if tahunPelajaranStr != "" {
+		title2 = fmt.Sprintf("TAHUN AJARAN %s", tahunPelajaranStr)
 	}
-	pdf.CellFormat(0, 10, title, "", 1, "C", false, 0, "")
+	if title2 != "" {
+		pdf.CellFormat(0, 6, title2, "", 1, "C", false, 0, "")
+	}
 	pdf.Ln(3)
 	
 	// Table headers
 	headers := []string{
 		"NO", "NAMA", "NIS", "JENIS KELAMIN", "NISN", "TEMPAT LAHIR", 
-		"TANGGAL LAHIR", "NIK", "AGAMA", "ALAMAT", "RT", "RW", 
+		"TGL LAHIR", "NIK", "AGAMA", "ALAMAT", "RT", "RW", 
 		"KELURAHAN", "KODE POS", "NAMA AYAH", "NAMA IBU",
 	}
 	
