@@ -44,6 +44,7 @@ type KepegawaianRepository interface {
 	GetTotalPendidik() (int64, error)
 	GetTotalTendik() (int64, error)
 	GetRombelByID(id uint) (*models.Rombel, error)
+	GetRombelsByIDs(ids []uint) ([]models.Rombel, error)
 	GetPublicPendidikData() ([]models.Kepegawaian, error)
 	GetPublicTendikData() ([]models.Kepegawaian, error)
 }
@@ -271,6 +272,19 @@ func (r *KepegawaianRepositoryImpl) GetRombelByID(id uint) (*models.Rombel, erro
 		return nil, err
 	}
 	return &rombel, nil
+}
+
+// GetRombelsByIDs retrieves multiple Rombel by their IDs
+func (r *KepegawaianRepositoryImpl) GetRombelsByIDs(ids []uint) ([]models.Rombel, error) {
+	var rombels []models.Rombel
+	if len(ids) == 0 {
+		return rombels, nil
+	}
+	
+	if err := r.db.Where("id IN ?", ids).Find(&rombels).Error; err != nil {
+		return nil, err
+	}
+	return rombels, nil
 }
 
 // GetPublicPendidikData retrieves public pendidik data (nama, nip, nkki, jabatan, foto) with kategori "Pendidik" and status "active"

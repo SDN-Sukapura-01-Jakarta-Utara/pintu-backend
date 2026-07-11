@@ -70,7 +70,7 @@ type KepegawaianResponse struct {
 	BidangStudi         *BidangStudiSimpleResponse `json:"bidang_studi"`
 	RombelGuruKelasID   *uint                      `json:"rombel_guru_kelas_id"`
 	RombelGuruKelas     *RombelSimpleResponse      `json:"rombel_guru_kelas"`
-	RombelBidangStudi   []uint                     `json:"rombel_bidang_studi"`
+	RombelBidangStudi   []RombelSimpleResponse     `json:"rombel_bidang_studi"`
 	KK                    *string        `json:"kk"`
 	AktaLahir             *string        `json:"akta_lahir"`
 	KTP                   *string        `json:"ktp"`

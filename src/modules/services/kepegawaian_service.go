@@ -594,9 +594,33 @@ func (s *KepegawaianServiceImpl) deleteDocumentsFromJSONB(jsonbField *datatypes.
 
 // mapToResponse maps model to DTO response
 func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.KepegawaianResponse {
-	// Map rombel_bidang_studi
-	var rombelBidangStudi []uint
-	json.Unmarshal(data.RombelBidangStudi, &rombelBidangStudi)
+	// Map rombel_bidang_studi IDs
+	var rombelBidangStudiIDs []uint
+	json.Unmarshal(data.RombelBidangStudi, &rombelBidangStudiIDs)
+
+	// Fetch rombel bidang studi details
+	var rombelBidangStudiDetails []dtos.RombelSimpleResponse
+	if len(rombelBidangStudiIDs) > 0 {
+		rombels, err := s.repository.GetRombelsByIDs(rombelBidangStudiIDs)
+		if err == nil {
+			// Create a map for quick lookup and preserve order
+			rombelMap := make(map[uint]*models.Rombel)
+			for i := range rombels {
+				rombelMap[rombels[i].ID] = &rombels[i]
+			}
+			
+			// Map in the same order as IDs
+			for _, id := range rombelBidangStudiIDs {
+				if rombel, exists := rombelMap[id]; exists {
+					rombelBidangStudiDetails = append(rombelBidangStudiDetails, dtos.RombelSimpleResponse{
+						ID:     rombel.ID,
+						Name:   rombel.Name,
+						Status: rombel.Status,
+					})
+				}
+			}
+		}
+	}
 
 	// Map sertifikat_lainnya
 	var sertifikatLainnya []string
@@ -645,7 +669,7 @@ func (s *KepegawaianServiceImpl) mapToResponse(data *models.Kepegawaian) *dtos.K
 		BidangStudi:           s.mapBidangStudi(data.BidangStudi),
 		RombelGuruKelasID:     data.RombelGuruKelasID,
 		RombelGuruKelas:       s.mapRombel(data.RombelGuruKelas),
-		RombelBidangStudi:     rombelBidangStudi,
+		RombelBidangStudi:     rombelBidangStudiDetails,
 		KK:                    s.stringOrNil(s.r2Storage.GetPublicURL(data.KK)),
 		AktaLahir:             s.stringOrNil(s.r2Storage.GetPublicURL(data.AktaLahir)),
 		KTP:                   s.stringOrNil(s.r2Storage.GetPublicURL(data.KTP)),

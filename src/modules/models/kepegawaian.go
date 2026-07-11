@@ -43,6 +43,7 @@ type Kepegawaian struct {
 	// Foreign key relationships
 	BidangStudi           *BidangStudi   `gorm:"foreignKey:BidangStudiID" json:"bidang_studi,omitempty"`
 	RombelGuruKelas       *Rombel        `gorm:"foreignKey:RombelGuruKelasID" json:"rombel_guru_kelas,omitempty"`
+	RombelBidangStudiDetails []Rombel    `gorm:"-" json:"rombel_bidang_studi_details,omitempty"`
 	// Many-to-many relationship
 	Roles                 []Role         `gorm:"many2many:kepegawaian_roles" json:"roles,omitempty"`
 }
