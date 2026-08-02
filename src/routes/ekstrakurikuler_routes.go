@@ -18,6 +18,12 @@ func RegisterEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB) {
 	ekstrakurikulerService := services.NewEkstrakurikulerService(ekstrakurikulerRepo, kelasRepo)
 	ekstrakurikulerController := controllers.NewEkstrakurikulerController(ekstrakurikulerService)
 
+	// Initialize peserta didik ekstrakurikuler (registration)
+	pesertaDidikEkskulRepo := repositories.NewPesertaDidikEkstrakurikulerRepository(db)
+	pesertaDidikRombelRepo := repositories.NewPesertaDidikRombelRepository(db)
+	pesertaDidikEkskulService := services.NewPesertaDidikEkstrakurikulerService(pesertaDidikEkskulRepo, pesertaDidikRombelRepo, ekstrakurikulerRepo)
+	pesertaDidikEkskulController := controllers.NewPesertaDidikEkstrakurikulerController(pesertaDidikEkskulService)
+
 	// Public routes (no authentication required)
 	public := router.Group("/api/v1/public")
 	{
@@ -43,5 +49,20 @@ func RegisterEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Delete ekstrakurikuler
 		protected.POST("/delete-ekstrakurikuler", ekstrakurikulerController.Delete)
+
+		// Register/update student ekstrakurikuler
+		protected.POST("/register-ekskul-peserta-didik", pesertaDidikEkskulController.RegisterOrUpdateEkstrakurikuler)
+
+		// Get student's ekstrakurikuler
+		protected.POST("/get-ekskul-peserta-didik", pesertaDidikEkskulController.GetEkstrakurikulerByPesertaDidik)
+
+		// Get all students' ekstrakurikuler by rombel
+		protected.POST("/get-all-ekstrakurikuler-siswa", pesertaDidikEkskulController.GetAllEkstrakurikulerSiswa)
+
+		// Bulk register/update ekstrakurikuler for multiple students
+		protected.POST("/register-all-ekstrakurikuler-siswa", pesertaDidikEkskulController.RegisterAllEkstrakurikulerSiswa)
+
+		// Get comprehensive statistics for monitoring
+		protected.POST("/get-all-statistic-ekstrakurikuler-siswa", pesertaDidikEkskulController.GetStatistikEkstrakurikuler)
 	}
 }
