@@ -455,3 +455,57 @@ type AbsenTerakhir struct {
 	Status     string `json:"status"`
 	Keterangan string `json:"keterangan"`
 }
+
+// GetRekapAbsensiByPesertaDidikRequest represents request for individual student attendance recap
+type GetRekapAbsensiByPesertaDidikRequest struct {
+	TahunPelajaranID     uint `json:"tahun_pelajaran_id" binding:"required"`
+	RombelID             uint `json:"rombel_id" binding:"required"`
+	Bulan                int  `json:"bulan" binding:"required,min=1,max=12"`
+	Tahun                int  `json:"tahun" binding:"required,min=2020"`
+	Semester             int  `json:"semester" binding:"required,oneof=1 2"`
+	PesertaDidikID       uint `json:"peserta_didik_id" binding:"required"`
+	PesertaDidikRombelID uint `json:"peserta_didik_rombel_id" binding:"required"`
+}
+
+// GetRekapAbsensiByPesertaDidikResponse represents response for individual student attendance recap
+type GetRekapAbsensiByPesertaDidikResponse struct {
+	PesertaDidikID   uint                             `json:"peserta_didik_id"`
+	NIS              string                           `json:"nis"`
+	Nama             string                           `json:"nama"`
+	RombelNama       string                           `json:"rombel_nama"`
+	Bulan            int                              `json:"bulan"`
+	Tahun            int                              `json:"tahun"`
+	Semester         int                              `json:"semester"`
+	TahunPelajaranID uint                             `json:"tahun_pelajaran_id"`
+	Summary          SummaryAbsensiSiswa              `json:"summary"`
+	HariIni          AbsensiHariIni                   `json:"hari_ini"`
+	DetailAbsensi    []DetailAbsensiHarian            `json:"detail_absensi"`
+}
+
+// SummaryAbsensiSiswa represents summary of student attendance in a month
+type SummaryAbsensiSiswa struct {
+	TotalTepatWaktu int `json:"total_tepat_waktu"`
+	TotalTerlambat  int `json:"total_terlambat"`
+	TotalHadir      int `json:"total_hadir"`
+	TotalSakit      int `json:"total_sakit"`
+	TotalIzin       int `json:"total_izin"`
+	TotalAlpa       int `json:"total_alpa"`
+}
+
+// AbsensiHariIni represents today's attendance
+type AbsensiHariIni struct {
+	JamDatang *string `json:"jam_datang"`
+	JamPulang *string `json:"jam_pulang"`
+}
+
+// DetailAbsensiHarian represents daily attendance detail
+type DetailAbsensiHarian struct {
+	Tanggal          string  `json:"tanggal"`
+	JamKedatangan    *string `json:"jam_kedatangan"`    // from absensi table (jam_datang)
+	JamKepulangan    *string `json:"jam_kepulangan"`    // from absensi table (jam_pulang)
+	StatusKedatangan *string `json:"status_kedatangan"` // from absensi table (tepat waktu / terlambat)
+	StatusKehadiran  string  `json:"status_kehadiran"`  // hadir (from absensi) or sakit/izin/alpa (from rekapitulasi_absensi)
+	Keterangan       string  `json:"keterangan"`        // from rekapitulasi_absensi
+	FileSurat        string  `json:"file_surat"`        // from rekapitulasi_absensi
+	MetodeInput      string  `json:"metode_input"`      // from rekapitulasi_absensi (auto/manual)
+}

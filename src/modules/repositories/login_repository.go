@@ -10,6 +10,8 @@ import (
 type LoginRepository interface {
 	GetByUsername(username string) (*models.User, error)
 	GetKepegawaianByUsername(username string) (*models.Kepegawaian, error)
+	GetPesertaDidikByUsername(username string) (*models.PesertaDidik, error)
+	GetPesertaDidikRombelByStudentID(studentID uint) ([]models.PesertaDidikRombel, error)
 }
 
 type LoginRepositoryImpl struct {
@@ -37,4 +39,22 @@ func (r *LoginRepositoryImpl) GetKepegawaianByUsername(username string) (*models
 		return nil, err
 	}
 	return &kepegawaian, nil
+}
+
+// GetPesertaDidikByUsername retrieves peserta didik by username
+func (r *LoginRepositoryImpl) GetPesertaDidikByUsername(username string) (*models.PesertaDidik, error) {
+	var pesertaDidik models.PesertaDidik
+	if err := r.db.Preload("Roles.System").Preload("Roles.Permissions").Where("username = ?", username).First(&pesertaDidik).Error; err != nil {
+		return nil, err
+	}
+	return &pesertaDidik, nil
+}
+
+// GetPesertaDidikRombelByStudentID retrieves all rombel for a student
+func (r *LoginRepositoryImpl) GetPesertaDidikRombelByStudentID(studentID uint) ([]models.PesertaDidikRombel, error) {
+	var rombelData []models.PesertaDidikRombel
+	if err := r.db.Preload("Rombel.Kelas").Preload("TahunPelajaran").Where("peserta_didik_id = ?", studentID).Find(&rombelData).Error; err != nil {
+		return nil, err
+	}
+	return rombelData, nil
 }

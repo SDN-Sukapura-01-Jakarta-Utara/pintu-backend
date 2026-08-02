@@ -15,6 +15,7 @@ import (
 // LoginService handles business logic for authentication
 type LoginService interface {
 	Login(req *dtos.LoginRequest) (*dtos.LoginResponse, error)
+	LoginStudent(req *dtos.LoginRequest) (*dtos.StudentLoginResponse, error)
 }
 
 type LoginServiceImpl struct {
@@ -225,6 +226,152 @@ func (s *LoginServiceImpl) Login(req *dtos.LoginRequest) (*dtos.LoginResponse, e
 			Status:    user.Status,
 			Roles:     roles,
 			CreatedAt: user.CreatedAt,
+		},
+	}
+
+	return response, nil
+}
+
+// LoginStudent authenticates student and returns JWT token
+func (s *LoginServiceImpl) LoginStudent(req *dtos.LoginRequest) (*dtos.StudentLoginResponse, error) {
+	// Get student from peserta_didik table
+	student, err := s.repository.GetPesertaDidikByUsername(req.Username)
+	if err != nil {
+		return nil, errors.New("username atau password salah")
+	}
+
+	// Verify password
+	if err := bcrypt.CompareHashAndPassword([]byte(student.Password), []byte(req.Password)); err != nil {
+		return nil, errors.New("username atau password salah")
+	}
+
+	// Check if student is active
+	if student.Status != "active" {
+		return nil, errors.New("akun siswa tidak aktif")
+	}
+
+	// Filter roles that have system_id = 1 (PINTU)
+	var pintuRoles []models.Role
+	for _, role := range student.Roles {
+		if role.SystemID != nil && *role.SystemID == 1 {
+			pintuRoles = append(pintuRoles, role)
+		}
+	}
+
+	// Check if student has at least one PINTU role
+	if len(pintuRoles) == 0 {
+		return nil, errors.New("anda tidak memiliki akses ke sistem PINTU")
+	}
+
+	// Use first PINTU role for token
+	roleID := pintuRoles[0].ID
+
+	// Generate JWT token for student
+	token, err := utils.GenerateToken(student.ID, student.Username, student.Nama, &roleID, student.Status)
+	if err != nil {
+		return nil, errors.New("gagal membuat token")
+	}
+
+	// Map PINTU roles and extract permissions
+	roles := make([]dtos.RoleResponse, len(pintuRoles))
+	permissionMap := make(map[string]bool)
+	
+	for i, role := range pintuRoles {
+		var system *dtos.SystemResponse
+		if role.System != nil {
+			system = &dtos.SystemResponse{
+				ID:          role.System.ID,
+				Nama:        role.System.Nama,
+				Description: role.System.Description,
+			}
+		}
+
+		roles[i] = dtos.RoleResponse{
+			ID:          role.ID,
+			Name:        role.Name,
+			Description: role.Description,
+			SystemID:    role.SystemID,
+			System:      system,
+			Status:      role.Status,
+			CreatedAt:   role.CreatedAt,
+			UpdatedAt:   role.UpdatedAt,
+			CreatedByID: role.CreatedByID,
+			UpdatedByID: role.UpdatedByID,
+		}
+
+		// Collect unique permissions from PINTU roles
+		for _, permission := range role.Permissions {
+			permissionMap[permission.Name] = true
+		}
+	}
+
+	// Convert permission map to slice
+	permissions := make([]string, 0, len(permissionMap))
+	for permName := range permissionMap {
+		permissions = append(permissions, permName)
+	}
+
+	// Get student's rombel data
+	rombelData, err := s.repository.GetPesertaDidikRombelByStudentID(student.ID)
+	if err != nil {
+		// If error getting rombel, just return empty array
+		rombelData = []models.PesertaDidikRombel{}
+	}
+
+	// Map rombel data
+	rombelResponse := make([]dtos.StudentRombelLoginResponse, len(rombelData))
+	for i, rombel := range rombelData {
+		kelasID := uint(0)
+		kelasName := ""
+		if rombel.Rombel != nil {
+			if rombel.Rombel.Kelas != nil {
+				kelasID = rombel.Rombel.Kelas.ID
+				kelasName = rombel.Rombel.Kelas.Name
+			}
+		}
+
+		tahunPelajaran := ""
+		if rombel.TahunPelajaran != nil {
+			tahunPelajaran = rombel.TahunPelajaran.TahunPelajaran
+		}
+
+		rombelName := ""
+		rombelIDValue := uint(0)
+		if rombel.Rombel != nil {
+			rombelName = rombel.Rombel.Name
+			rombelIDValue = rombel.Rombel.ID
+		}
+
+		rombelResponse[i] = dtos.StudentRombelLoginResponse{
+			ID:               rombel.ID,
+			RombelID:         rombelIDValue,
+			RombelName:       rombelName,
+			KelasID:          kelasID,
+			KelasName:        kelasName,
+			TahunPelajaranID: rombel.TahunPelajaranID,
+			TahunPelajaran:   tahunPelajaran,
+			Status:           rombel.Status,
+		}
+	}
+
+	response := &dtos.StudentLoginResponse{
+		Token:       token,
+		ExpiresAt:   time.Now().Add(24 * time.Hour),
+		Permissions: permissions,
+		Student: dtos.StudentDetailLoginResponse{
+			ID:           student.ID,
+			Nama:         student.Nama,
+			NIS:          student.NIS,
+			NISN:         student.NISN,
+			JenisKelamin: student.JenisKelamin,
+			TempatLahir:  student.TempatLahir,
+			TanggalLahir: student.TanggalLahir,
+			Username:     student.Username,
+			Status:       student.Status,
+			Photo:        student.Photo,
+			Roles:        roles,
+			Rombel:       rombelResponse,
+			CreatedAt:    student.CreatedAt,
 		},
 	}
 

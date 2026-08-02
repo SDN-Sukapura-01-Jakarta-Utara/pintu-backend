@@ -29,6 +29,7 @@ type AbsensiRepository interface {
 	GetAbsensiScanByDate(tanggal time.Time) ([]models.Absensi, error)
 	GetAbsensiScanByMonth(bulan, tahun int) ([]models.Absensi, error)
 	GetRekapByRombelTanggalBidangStudi(rombelID, tahunPelajaranID uint, tanggal time.Time, bidangStudiID *uint) ([]models.RekapitulasiAbsensi, error)
+	GetRekapAbsensiByPesertaDidik(tahunPelajaranID, rombelID, pesertaDidikID, pesertaDidikRombelID uint, bulan, tahun, semester int) ([]models.Absensi, []models.RekapitulasiAbsensi, error)
 }
 
 type AbsensiRepositoryImpl struct {
@@ -452,4 +453,30 @@ func (r *AbsensiRepositoryImpl) GetRekapByRombelTanggalBidangStudi(rombelID, tah
 	}
 	
 	return data, nil
+}
+
+// GetRekapAbsensiByPesertaDidik retrieves attendance data for individual student by month
+func (r *AbsensiRepositoryImpl) GetRekapAbsensiByPesertaDidik(tahunPelajaranID, rombelID, pesertaDidikID, pesertaDidikRombelID uint, bulan, tahun, semester int) ([]models.Absensi, []models.RekapitulasiAbsensi, error) {
+	// Get start and end date for the month
+	startDate := time.Date(tahun, time.Month(bulan), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
+	
+	// Get absensi scan data
+	var absensiData []models.Absensi
+	if err := r.db.Where("peserta_didik_id = ? AND tanggal BETWEEN ? AND ?", pesertaDidikID, startDate, endDate).
+		Order("tanggal ASC").
+		Find(&absensiData).Error; err != nil {
+		return nil, nil, err
+	}
+	
+	// Get rekapitulasi absensi data
+	var rekapData []models.RekapitulasiAbsensi
+	if err := r.db.Where("peserta_didik_rombel_id = ? AND tahun_pelajaran_id = ? AND semester = ? AND tanggal BETWEEN ? AND ? AND bidang_studi_id IS NULL", 
+		pesertaDidikRombelID, tahunPelajaranID, semester, startDate, endDate).
+		Order("tanggal ASC").
+		Find(&rekapData).Error; err != nil {
+		return nil, nil, err
+	}
+	
+	return absensiData, rekapData, nil
 }

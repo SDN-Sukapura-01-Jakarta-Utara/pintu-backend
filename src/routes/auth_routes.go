@@ -20,13 +20,15 @@ func RegisterAuthRoutes(router *gin.Engine, db *gorm.DB) {
 	// Public routes (no auth required)
 	public := router.Group("/api/v1/auth")
 	{
-		public.POST("/login", loginController.Login) // Login endpoint
+		public.POST("/login", loginController.Login)                   // Login endpoint
+		public.POST("/login/student", loginController.LoginStudent)    // Student login endpoint
 	}
 
 	// Protected routes (auth required)
 	protected := router.Group("/api/v1/auth")
 	protected.Use(middleware.AuthMiddleware())
 	{
-		protected.POST("/logout", loginController.Logout) // Logout endpoint
+		protected.POST("/logout", loginController.Logout)                   // Logout endpoint
+		protected.POST("/logout/student", loginController.LogoutStudent)    // Student logout endpoint
 	}
 }

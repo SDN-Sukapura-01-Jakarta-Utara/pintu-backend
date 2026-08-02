@@ -414,3 +414,22 @@ func (c *AbsensiController) SynchronizeAbsensi(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"data": result})
 }
+
+// GetRekapAbsensiByPesertaDidik retrieves attendance recap for individual student by month
+func (c *AbsensiController) GetRekapAbsensiByPesertaDidik(ctx *gin.Context) {
+	var req dtos.GetRekapAbsensiByPesertaDidikRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetRekapAbsensiByPesertaDidik(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}

@@ -30,6 +30,7 @@ type AbsensiService interface {
 	SynchronizeAbsensi(req *dtos.AbsensiSyncRequest, userID uint) (*dtos.AbsensiSyncResponse, error)
 	ExportAbsensiExcel(req *dtos.ExportAbsensiExcelRequest) (*excelize.File, error)
 	ExportAbsensiPDF(req *dtos.ExportAbsensiExcelRequest) ([]byte, error)
+	GetRekapAbsensiByPesertaDidik(req *dtos.GetRekapAbsensiByPesertaDidikRequest) (*dtos.GetRekapAbsensiByPesertaDidikResponse, error)
 }
 
 type AbsensiServiceImpl struct {
@@ -1923,5 +1924,168 @@ func (s *AbsensiServiceImpl) SynchronizeAbsensi(req *dtos.AbsensiSyncRequest, us
 		TotalSkipped:   totalSkipped,
 		Message:        message,
 		Details:        details,
+	}, nil
+}
+
+// GetRekapAbsensiByPesertaDidik retrieves attendance recap for individual student by month
+func (s *AbsensiServiceImpl) GetRekapAbsensiByPesertaDidik(req *dtos.GetRekapAbsensiByPesertaDidikRequest) (*dtos.GetRekapAbsensiByPesertaDidikResponse, error) {
+	// Get konfigurasi absensi untuk jam maksimal datang
+	var konfigAbsensi models.KonfigurasiAbsensi
+	if err := s.db.First(&konfigAbsensi).Error; err != nil {
+		return nil, errors.New("konfigurasi absensi tidak ditemukan")
+	}
+	
+	// Get peserta didik data
+	var pesertaDidik models.PesertaDidik
+	if err := s.db.First(&pesertaDidik, req.PesertaDidikID).Error; err != nil {
+		return nil, errors.New("data peserta didik tidak ditemukan")
+	}
+	
+	// Get rombel name
+	var rombel models.Rombel
+	rombelNama := ""
+	if err := s.db.First(&rombel, req.RombelID).Error; err == nil {
+		rombelNama = rombel.Name
+	}
+	
+	// Get absensi and rekapitulasi data
+	absensiData, rekapData, err := s.repository.GetRekapAbsensiByPesertaDidik(
+		req.TahunPelajaranID,
+		req.RombelID,
+		req.PesertaDidikID,
+		req.PesertaDidikRombelID,
+		req.Bulan,
+		req.Tahun,
+		req.Semester,
+	)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data absensi")
+	}
+	
+	// Create maps for quick lookup
+	absensiMap := make(map[string]*models.Absensi)
+	for i := range absensiData {
+		dateKey := absensiData[i].Tanggal.Format("2006-01-02")
+		absensiMap[dateKey] = &absensiData[i]
+	}
+	
+	rekapMap := make(map[string]*models.RekapitulasiAbsensi)
+	for i := range rekapData {
+		dateKey := rekapData[i].Tanggal.Format("2006-01-02")
+		rekapMap[dateKey] = &rekapData[i]
+	}
+	
+	// Generate all dates in the month
+	startDate := time.Date(req.Tahun, time.Month(req.Bulan), 1, 0, 0, 0, 0, time.UTC)
+	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
+	
+	var detailAbsensi []dtos.DetailAbsensiHarian
+	
+	// Initialize counters for summary
+	totalTepatWaktu := 0
+	totalTerlambat := 0
+	totalHadir := 0
+	totalSakit := 0
+	totalIzin := 0
+	totalAlpa := 0
+	
+	// Get today's date for jam datang/pulang hari ini
+	today := time.Now().Format("2006-01-02")
+	var jamDatangHariIni *string
+	var jamPulangHariIni *string
+	
+	for d := startDate; !d.After(endDate); d = d.AddDate(0, 0, 1) {
+		dateKey := d.Format("2006-01-02")
+		
+		detail := dtos.DetailAbsensiHarian{
+			Tanggal:          dateKey,
+			JamKedatangan:    nil,
+			JamKepulangan:    nil,
+			StatusKedatangan: nil,
+			StatusKehadiran:  "",
+			Keterangan:       "",
+			FileSurat:        "",
+			MetodeInput:      "",
+		}
+		
+		// Check if there's absensi scan data
+		if absensi, exists := absensiMap[dateKey]; exists {
+			// Set jam kedatangan dan kepulangan
+			detail.JamKedatangan = absensi.JamDatang
+			detail.JamKepulangan = absensi.JamPulang
+			
+			// Determine status kedatangan (tepat waktu / terlambat)
+			if absensi.JamDatang != nil {
+				statusKedatangan := "Tepat Waktu"
+				if *absensi.JamDatang > konfigAbsensi.JamMaxDatang {
+					statusKedatangan = "Terlambat"
+					totalTerlambat++
+				} else {
+					totalTepatWaktu++
+				}
+				detail.StatusKedatangan = &statusKedatangan
+			}
+			
+			// Set status kehadiran as "hadir" if absensi data exists
+			detail.StatusKehadiran = "hadir"
+			totalHadir++
+			
+			// Check if this is today's attendance
+			if dateKey == today {
+				jamDatangHariIni = absensi.JamDatang
+				jamPulangHariIni = absensi.JamPulang
+			}
+		}
+		
+		// Check if there's rekapitulasi data
+		if rekap, exists := rekapMap[dateKey]; exists {
+			// If no absensi scan data, get status from rekapitulasi
+			if detail.StatusKehadiran == "" {
+				detail.StatusKehadiran = rekap.Status
+				
+				// Count status
+				switch rekap.Status {
+				case "sakit":
+					totalSakit++
+				case "izin":
+					totalIzin++
+				case "alpa":
+					totalAlpa++
+				case "hadir":
+					totalHadir++
+				}
+			}
+			
+			// Get keterangan, file_surat, and metode_input from rekapitulasi
+			detail.Keterangan = rekap.Keterangan
+			detail.FileSurat = s.r2Storage.GetPublicURL(rekap.FileSurat)
+			detail.MetodeInput = rekap.MetodeInput
+		}
+		
+		detailAbsensi = append(detailAbsensi, detail)
+	}
+	
+	return &dtos.GetRekapAbsensiByPesertaDidikResponse{
+		PesertaDidikID:   req.PesertaDidikID,
+		NIS:              pesertaDidik.NIS,
+		Nama:             pesertaDidik.Nama,
+		RombelNama:       rombelNama,
+		Bulan:            req.Bulan,
+		Tahun:            req.Tahun,
+		Semester:         req.Semester,
+		TahunPelajaranID: req.TahunPelajaranID,
+		Summary: dtos.SummaryAbsensiSiswa{
+			TotalTepatWaktu: totalTepatWaktu,
+			TotalTerlambat:  totalTerlambat,
+			TotalHadir:      totalHadir,
+			TotalSakit:      totalSakit,
+			TotalIzin:       totalIzin,
+			TotalAlpa:       totalAlpa,
+		},
+		HariIni: dtos.AbsensiHariIni{
+			JamDatang: jamDatangHariIni,
+			JamPulang: jamPulangHariIni,
+		},
+		DetailAbsensi:    detailAbsensi,
 	}, nil
 }

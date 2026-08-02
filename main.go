@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	"pintu-backend/src/middleware"
 	"pintu-backend/src/routes"
@@ -15,16 +16,20 @@ import (
 )
 
 func main() {
+	// Force UTC timezone for entire application
+	time.Local = time.UTC
+
 	// Load .env
 	godotenv.Load()
 
-	// Database connection
+	// Database connection with timezone set to UTC
 	dsn := "host=" + os.Getenv("DB_HOST") +
 		" port=" + os.Getenv("DB_PORT") +
 		" user=" + os.Getenv("DB_USER") +
 		" password=" + os.Getenv("DB_PASSWORD") +
 		" dbname=" + os.Getenv("DB_NAME") +
-		" sslmode=" + os.Getenv("DB_SSLMODE")
+		" sslmode=" + os.Getenv("DB_SSLMODE") +
+		" TimeZone=UTC"
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -108,6 +113,7 @@ func main() {
 	routes.RegisterPengumumanKelulusanRoutes(router, db)
 	routes.RegisterLayananSPMBRoutes(router, db)
 	routes.RegisterMutasiSiswaRoutes(router, db)
+	routes.RegisterFormulirRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
