@@ -230,7 +230,7 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetAllEkstrakurikulerSiswa(req 
 			siswaMap[pesertaDidikRombelID] = &dtos.SiswaEkstrakurikuler{
 				PesertaDidikRombelID: pesertaDidikRombelID,
 				PesertaDidikID:       reg.PesertaDidikRombel.PesertaDidikID,
-				NamaLengkap:          reg.PesertaDidikRombel.PesertaDidik.NamaLengkap,
+				NamaLengkap:          reg.PesertaDidikRombel.PesertaDidik.Nama,
 				NISN:                 reg.PesertaDidikRombel.PesertaDidik.NISN,
 				Ekstrakurikuler:      []dtos.PesertaDidikEkstrakurikulerResponse{},
 			}
@@ -608,7 +608,7 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetStatistikEkstrakurikuler(req
 			response.SiswaTidakIkutEkskul = append(response.SiswaTidakIkutEkskul, dtos.SiswaTidakIkutEkskul{
 				PesertaDidikRombelID: student.ID,
 				PesertaDidikID:       student.PesertaDidikID,
-				NamaLengkap:          student.PesertaDidik.NamaLengkap,
+				NamaLengkap:          student.PesertaDidik.Nama,
 				NISN:                 student.PesertaDidik.NISN,
 				RombelID:             student.RombelID,
 				NamaRombel:           student.Rombel.Name,
