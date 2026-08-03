@@ -64,5 +64,11 @@ func RegisterEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Get comprehensive statistics for monitoring
 		protected.POST("/get-all-statistic-ekstrakurikuler-siswa", pesertaDidikEkskulController.GetStatistikEkstrakurikuler)
+
+		// Get rekapitulasi data per ekstrakurikuler
+		protected.POST("/rekapitulasi-data-per-ekskul", pesertaDidikEkskulController.GetRekapitulasiPerEkskul)
+
+		// Get rekapitulasi data per rombel
+		protected.POST("/rekapitulasi-data-per-rombel", pesertaDidikEkskulController.GetRekapitulasiPerRombel)
 	}
 }

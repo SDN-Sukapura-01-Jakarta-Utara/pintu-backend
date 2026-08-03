@@ -14,6 +14,8 @@ type PesertaDidikEkstrakurikulerService interface {
 	GetAllEkstrakurikulerSiswa(req *dtos.GetAllEkstrakurikulerSiswaRequest) (*dtos.GetAllEkstrakurikulerSiswaResponse, error)
 	RegisterAllEkstrakurikulerSiswa(req *dtos.RegisterAllEkstrakurikulerSiswaRequest, userID uint) (*dtos.RegisterAllEkstrakurikulerSiswaResponse, error)
 	GetStatistikEkstrakurikuler(req *dtos.GetStatistikEkstrakurikulerRequest) (*dtos.GetStatistikEkstrakurikulerResponse, error)
+	GetRekapitulasiPerEkskul(req *dtos.RekapitulasiPerEkskulRequest) (*dtos.RekapitulasiPerEkskulResponse, error)
+	GetRekapitulasiPerRombel(req *dtos.RekapitulasiPerRombelRequest) (*dtos.RekapitulasiPerRombelResponse, error)
 }
 
 type PesertaDidikEkstrakurikulerServiceImpl struct {
@@ -628,4 +630,199 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetStatistikEkstrakurikuler(req
 	}
 
 	return response, nil
+}
+
+
+func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerEkskul(req *dtos.RekapitulasiPerEkskulRequest) (*dtos.RekapitulasiPerEkskulResponse, error) {
+	// Set default pagination
+	limit := 10
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
+	}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
+	}
+	offset := (page - 1) * limit
+	
+	// Get data from repository (already sorted by: ekstrakurikuler_id ASC, rombel.name ASC, nama ASC)
+	registrations, total, err := s.repository.GetRekapPerEkskul(
+		req.Search.TahunPelajaranID,
+		req.Search.Nama,
+		req.Search.NIS,
+		req.Search.RombelID,
+		req.EkstrakurikulerID,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data rekapitulasi")
+	}
+	
+	// Group by ekstrakurikuler (preserving order from DB)
+	ekskulMap := make(map[uint]*dtos.EkskulWithSiswa)
+	var ekskulOrder []uint // Track order of ekstrakurikuler IDs
+	
+	for _, reg := range registrations {
+		if reg.Ekstrakurikuler == nil || reg.PesertaDidikRombel == nil || reg.PesertaDidikRombel.PesertaDidik == nil {
+			continue
+		}
+		
+		ekskulID := reg.EkstrakurikulerID
+		
+		// Initialize ekstrakurikuler if not exists
+		if _, exists := ekskulMap[ekskulID]; !exists {
+			ekskulMap[ekskulID] = &dtos.EkskulWithSiswa{
+				EkstrakurikulerID:   ekskulID,
+				NamaEkstrakurikuler: reg.Ekstrakurikuler.Name,
+				Kategori:            reg.Ekstrakurikuler.Kategori,
+				Siswa:               []dtos.SiswaPerEkskul{},
+			}
+			ekskulOrder = append(ekskulOrder, ekskulID)
+		}
+		
+		// Add student to ekstrakurikuler (already sorted by rombel.name ASC, nama ASC from DB)
+		siswa := dtos.SiswaPerEkskul{
+			PesertaDidikRombelID: reg.PesertaDidikRombelID,
+			PesertaDidikID:       reg.PesertaDidikRombel.PesertaDidikID,
+			Nama:                 reg.PesertaDidikRombel.PesertaDidik.Nama,
+			NIS:                  reg.PesertaDidikRombel.PesertaDidik.NIS,
+			NISN:                 reg.PesertaDidikRombel.PesertaDidik.NISN,
+			TanggalDaftar:        reg.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		
+		if reg.PesertaDidikRombel.Rombel != nil {
+			siswa.RombelID = reg.PesertaDidikRombel.RombelID
+			siswa.NamaRombel = reg.PesertaDidikRombel.Rombel.Name
+		}
+		
+		ekskulMap[ekskulID].Siswa = append(ekskulMap[ekskulID].Siswa, siswa)
+		ekskulMap[ekskulID].TotalSiswa++
+	}
+	
+	// Convert map to slice maintaining order
+	var ekskulList []dtos.EkskulWithSiswa
+	for _, ekskulID := range ekskulOrder {
+		if ekskul, exists := ekskulMap[ekskulID]; exists {
+			ekskulList = append(ekskulList, *ekskul)
+		}
+	}
+	
+	totalPages := (int(total) + limit - 1) / limit
+	
+	return &dtos.RekapitulasiPerEkskulResponse{
+		TahunPelajaranID:     req.Search.TahunPelajaranID,
+		Ekstrakurikuler:      ekskulList,
+		TotalEkstrakurikuler: len(ekskulList),
+		Pagination: dtos.PaginationInfo{
+			Limit:      limit,
+			Offset:     offset,
+			Page:       page,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
+}
+
+func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerRombel(req *dtos.RekapitulasiPerRombelRequest) (*dtos.RekapitulasiPerRombelResponse, error) {
+	// Set default pagination
+	limit := 10
+	page := 1
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+		limit = req.Pagination.Limit
+	}
+	if req.Pagination.Page > 0 {
+		page = req.Pagination.Page
+	}
+	offset := (page - 1) * limit
+	
+	// Get data from repository (already sorted by: nama ASC from DB)
+	registrations, total, err := s.repository.GetRekapPerRombel(
+		req.RombelID,
+		req.TahunPelajaranID,
+		req.Search.Nama,
+		req.Search.NIS,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data rekapitulasi")
+	}
+	
+	// Group by student (preserving order from DB)
+	siswaMap := make(map[uint]*dtos.SiswaWithEkskul)
+	var siswaOrder []uint // Track order of student IDs
+	namaRombel := ""
+	
+	for _, reg := range registrations {
+		if reg.PesertaDidikRombel == nil || reg.PesertaDidikRombel.PesertaDidik == nil {
+			continue
+		}
+		
+		studentID := reg.PesertaDidikRombelID
+		
+		// Get nama rombel
+		if namaRombel == "" && reg.PesertaDidikRombel.Rombel != nil {
+			namaRombel = reg.PesertaDidikRombel.Rombel.Name
+		}
+		
+		// Initialize student if not exists
+		if _, exists := siswaMap[studentID]; !exists {
+			siswaMap[studentID] = &dtos.SiswaWithEkskul{
+				PesertaDidikRombelID: studentID,
+				PesertaDidikID:       reg.PesertaDidikRombel.PesertaDidikID,
+				Nama:                 reg.PesertaDidikRombel.PesertaDidik.Nama,
+				NIS:                  reg.PesertaDidikRombel.PesertaDidik.NIS,
+				NISN:                 reg.PesertaDidikRombel.PesertaDidik.NISN,
+				Ekstrakurikuler:      []struct {
+					EkstrakurikulerID   uint   `json:"ekstrakurikuler_id"`
+					NamaEkstrakurikuler string `json:"nama_ekstrakurikuler"`
+					Kategori            string `json:"kategori"`
+					TanggalDaftar       string `json:"tanggal_daftar"`
+				}{},
+			}
+			siswaOrder = append(siswaOrder, studentID)
+		}
+		
+		// Add ekstrakurikuler to student (only if ekstrakurikuler exists)
+		if reg.Ekstrakurikuler != nil {
+			siswaMap[studentID].Ekstrakurikuler = append(siswaMap[studentID].Ekstrakurikuler, struct {
+				EkstrakurikulerID   uint   `json:"ekstrakurikuler_id"`
+				NamaEkstrakurikuler string `json:"nama_ekstrakurikuler"`
+				Kategori            string `json:"kategori"`
+				TanggalDaftar       string `json:"tanggal_daftar"`
+			}{
+				EkstrakurikulerID:   reg.EkstrakurikulerID,
+				NamaEkstrakurikuler: reg.Ekstrakurikuler.Name,
+				Kategori:            reg.Ekstrakurikuler.Kategori,
+				TanggalDaftar:       reg.CreatedAt.Format("2006-01-02 15:04:05"),
+			})
+			siswaMap[studentID].TotalEkskul++
+		}
+	}
+	
+	// Convert map to slice maintaining order from DB (already sorted by nama A-Z)
+	var siswaList []dtos.SiswaWithEkskul
+	for _, studentID := range siswaOrder {
+		if siswa, exists := siswaMap[studentID]; exists {
+			siswaList = append(siswaList, *siswa)
+		}
+	}
+	
+	totalPages := (int(total) + limit - 1) / limit
+	
+	return &dtos.RekapitulasiPerRombelResponse{
+		RombelID:         req.RombelID,
+		NamaRombel:       namaRombel,
+		TahunPelajaranID: req.TahunPelajaranID,
+		Siswa:            siswaList,
+		TotalSiswa:       int(total),
+		Pagination: dtos.PaginationInfo{
+			Limit:      limit,
+			Offset:     offset,
+			Page:       page,
+			Total:      total,
+			TotalPages: totalPages,
+		},
+	}, nil
 }

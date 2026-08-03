@@ -169,3 +169,58 @@ func (c *PesertaDidikEkstrakurikulerController) GetStatistikEkstrakurikuler(ctx 
 
 	ctx.JSON(http.StatusOK, gin.H{"data": data})
 }
+
+
+// GetRekapitulasiPerEkskul handles getting rekapitulasi data per ekstrakurikuler
+// @Summary Get rekapitulasi per ekstrakurikuler
+// @Description Get list of students per ekstrakurikuler with filters and pagination
+// @Tags ekstrakurikuler-rekapitulasi
+// @Accept json
+// @Produce json
+// @Param body body dtos.RekapitulasiPerEkskulRequest true "Request body"
+// @Success 200 {object} dtos.RekapitulasiPerEkskulResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Router /api/v1/ekstrakurikuler/rekapitulasi-data-per-ekskul [post]
+func (c *PesertaDidikEkstrakurikulerController) GetRekapitulasiPerEkskul(ctx *gin.Context) {
+	var req dtos.RekapitulasiPerEkskulRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetRekapitulasiPerEkskul(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}
+
+// GetRekapitulasiPerRombel handles getting rekapitulasi data per rombel
+// @Summary Get rekapitulasi per rombel
+// @Description Get list of students in a rombel with their ekstrakurikuler
+// @Tags ekstrakurikuler-rekapitulasi
+// @Accept json
+// @Produce json
+// @Param body body dtos.RekapitulasiPerRombelRequest true "Request body"
+// @Success 200 {object} dtos.RekapitulasiPerRombelResponse
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Router /api/v1/ekstrakurikuler/rekapitulasi-data-per-rombel [post]
+func (c *PesertaDidikEkstrakurikulerController) GetRekapitulasiPerRombel(ctx *gin.Context) {
+	var req dtos.RekapitulasiPerRombelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, err := c.service.GetRekapitulasiPerRombel(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}

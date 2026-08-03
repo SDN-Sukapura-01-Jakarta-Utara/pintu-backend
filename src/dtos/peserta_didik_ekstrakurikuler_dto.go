@@ -167,3 +167,88 @@ type GetStatistikEkstrakurikulerResponse struct {
 	// List of students not joining any ekstrakurikuler
 	SiswaTidakIkutEkskul []SiswaTidakIkutEkskul `json:"siswa_tidak_ikut_ekskul"`
 }
+
+
+// RekapitulasiPerEkskulRequest represents the request for rekap data per ekstrakurikuler
+type RekapitulasiPerEkskulRequest struct {
+	EkstrakurikulerID uint `json:"ekstrakurikuler_id"`
+	Search            struct {
+		Nama             string `json:"nama"`
+		NIS              string `json:"nis"`
+		RombelID         uint   `json:"rombel_id"`
+		TahunPelajaranID uint   `json:"tahun_pelajaran_id" binding:"required"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// SiswaPerEkskul represents student data in ekstrakurikuler rekap
+type SiswaPerEkskul struct {
+	PesertaDidikRombelID uint   `json:"peserta_didik_rombel_id"`
+	PesertaDidikID       uint   `json:"peserta_didik_id"`
+	Nama                 string `json:"nama"`
+	NIS                  string `json:"nis"`
+	NISN                 string `json:"nisn"`
+	RombelID             uint   `json:"rombel_id"`
+	NamaRombel           string `json:"nama_rombel"`
+	TanggalDaftar        string `json:"tanggal_daftar"`
+}
+
+// EkskulWithSiswa represents ekstrakurikuler with list of students
+type EkskulWithSiswa struct {
+	EkstrakurikulerID   uint             `json:"ekstrakurikuler_id"`
+	NamaEkstrakurikuler string           `json:"nama_ekstrakurikuler"`
+	Kategori            string           `json:"kategori"`
+	TotalSiswa          int              `json:"total_siswa"`
+	Siswa               []SiswaPerEkskul `json:"siswa"`
+}
+
+// RekapitulasiPerEkskulResponse represents the response for rekap per ekstrakurikuler
+type RekapitulasiPerEkskulResponse struct {
+	TahunPelajaranID    uint                `json:"tahun_pelajaran_id"`
+	Ekstrakurikuler     []EkskulWithSiswa   `json:"ekstrakurikuler"`
+	TotalEkstrakurikuler int                `json:"total_ekstrakurikuler"`
+	Pagination          PaginationInfo      `json:"pagination"`
+}
+
+// RekapitulasiPerRombelRequest represents the request for rekap data per rombel
+type RekapitulasiPerRombelRequest struct {
+	RombelID         uint   `json:"rombel_id" binding:"required"`
+	TahunPelajaranID uint   `json:"tahun_pelajaran_id" binding:"required"`
+	Search           struct {
+		Nama string `json:"nama"`
+		NIS  string `json:"nis"`
+	} `json:"search"`
+	Pagination struct {
+		Limit int `json:"limit"`
+		Page  int `json:"page"`
+	} `json:"pagination"`
+}
+
+// SiswaWithEkskul represents student with their ekstrakurikuler list
+type SiswaWithEkskul struct {
+	PesertaDidikRombelID uint   `json:"peserta_didik_rombel_id"`
+	PesertaDidikID       uint   `json:"peserta_didik_id"`
+	Nama                 string `json:"nama"`
+	NIS                  string `json:"nis"`
+	NISN                 string `json:"nisn"`
+	Ekstrakurikuler      []struct {
+		EkstrakurikulerID   uint   `json:"ekstrakurikuler_id"`
+		NamaEkstrakurikuler string `json:"nama_ekstrakurikuler"`
+		Kategori            string `json:"kategori"`
+		TanggalDaftar       string `json:"tanggal_daftar"`
+	} `json:"ekstrakurikuler"`
+	TotalEkskul int `json:"total_ekskul"`
+}
+
+// RekapitulasiPerRombelResponse represents the response for rekap per rombel
+type RekapitulasiPerRombelResponse struct {
+	RombelID         uint              `json:"rombel_id"`
+	NamaRombel       string            `json:"nama_rombel"`
+	TahunPelajaranID uint              `json:"tahun_pelajaran_id"`
+	Siswa            []SiswaWithEkskul `json:"siswa"`
+	TotalSiswa       int               `json:"total_siswa"`
+	Pagination       PaginationInfo    `json:"pagination"`
+}
