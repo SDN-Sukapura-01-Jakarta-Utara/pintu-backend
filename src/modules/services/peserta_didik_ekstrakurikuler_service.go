@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"sort"
+	"time"
 	"pintu-backend/src/dtos"
 	"pintu-backend/src/modules/models"
 	"pintu-backend/src/modules/repositories"
@@ -16,6 +18,8 @@ type PesertaDidikEkstrakurikulerService interface {
 	GetStatistikEkstrakurikuler(req *dtos.GetStatistikEkstrakurikulerRequest) (*dtos.GetStatistikEkstrakurikulerResponse, error)
 	GetRekapitulasiPerEkskul(req *dtos.RekapitulasiPerEkskulRequest) (*dtos.RekapitulasiPerEkskulResponse, error)
 	GetRekapitulasiPerRombel(req *dtos.RekapitulasiPerRombelRequest) (*dtos.RekapitulasiPerRombelResponse, error)
+	ExportExcelPerEkskul(req *dtos.ExportExcelPerEkskulRequest) ([]byte, string, error)
+	ExportExcelPerRombel(req *dtos.ExportExcelPerRombelRequest) ([]byte, string, error)
 }
 
 type PesertaDidikEkstrakurikulerServiceImpl struct {
@@ -645,6 +649,12 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerEkskul(req *d
 	}
 	offset := (page - 1) * limit
 	
+	// Load WIB timezone
+	wibLoc, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		wibLoc = time.FixedZone("WIB", 7*60*60) // Fallback to UTC+7
+	}
+	
 	// Get data from repository (already sorted by: ekstrakurikuler_id ASC, rombel.name ASC, nama ASC)
 	registrations, total, err := s.repository.GetRekapPerEkskul(
 		req.Search.TahunPelajaranID,
@@ -681,6 +691,9 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerEkskul(req *d
 			ekskulOrder = append(ekskulOrder, ekskulID)
 		}
 		
+		// Convert timestamp to WIB timezone
+		tanggalDaftar := reg.CreatedAt.In(wibLoc).Format("2006-01-02 15:04:05")
+		
 		// Add student to ekstrakurikuler (already sorted by rombel.name ASC, nama ASC from DB)
 		siswa := dtos.SiswaPerEkskul{
 			PesertaDidikRombelID: reg.PesertaDidikRombelID,
@@ -688,7 +701,7 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerEkskul(req *d
 			Nama:                 reg.PesertaDidikRombel.PesertaDidik.Nama,
 			NIS:                  reg.PesertaDidikRombel.PesertaDidik.NIS,
 			NISN:                 reg.PesertaDidikRombel.PesertaDidik.NISN,
-			TanggalDaftar:        reg.CreatedAt.Format("2006-01-02 15:04:05"),
+			TanggalDaftar:        tanggalDaftar,
 		}
 		
 		if reg.PesertaDidikRombel.Rombel != nil {
@@ -707,6 +720,11 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerEkskul(req *d
 			ekskulList = append(ekskulList, *ekskul)
 		}
 	}
+	
+	// Sort ekstrakurikuler list by ekstrakurikuler_id to ensure consistency
+	sort.Slice(ekskulList, func(i, j int) bool {
+		return ekskulList[i].EkstrakurikulerID < ekskulList[j].EkstrakurikulerID
+	})
 	
 	totalPages := (int(total) + limit - 1) / limit
 	
@@ -736,6 +754,12 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerRombel(req *d
 	}
 	offset := (page - 1) * limit
 	
+	// Load WIB timezone
+	wibLoc, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		wibLoc = time.FixedZone("WIB", 7*60*60) // Fallback to UTC+7
+	}
+	
 	// Get data from repository (already sorted by: nama ASC from DB)
 	registrations, total, err := s.repository.GetRekapPerRombel(
 		req.RombelID,
@@ -749,9 +773,8 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerRombel(req *d
 		return nil, errors.New("gagal mengambil data rekapitulasi")
 	}
 	
-	// Group by student (preserving order from DB)
+	// Group by student
 	siswaMap := make(map[uint]*dtos.SiswaWithEkskul)
-	var siswaOrder []uint // Track order of student IDs
 	namaRombel := ""
 	
 	for _, reg := range registrations {
@@ -781,11 +804,13 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerRombel(req *d
 					TanggalDaftar       string `json:"tanggal_daftar"`
 				}{},
 			}
-			siswaOrder = append(siswaOrder, studentID)
 		}
 		
 		// Add ekstrakurikuler to student (only if ekstrakurikuler exists)
 		if reg.Ekstrakurikuler != nil {
+			// Convert timestamp to WIB timezone
+			tanggalDaftar := reg.CreatedAt.In(wibLoc).Format("2006-01-02 15:04:05")
+			
 			siswaMap[studentID].Ekstrakurikuler = append(siswaMap[studentID].Ekstrakurikuler, struct {
 				EkstrakurikulerID   uint   `json:"ekstrakurikuler_id"`
 				NamaEkstrakurikuler string `json:"nama_ekstrakurikuler"`
@@ -795,19 +820,22 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerRombel(req *d
 				EkstrakurikulerID:   reg.EkstrakurikulerID,
 				NamaEkstrakurikuler: reg.Ekstrakurikuler.Name,
 				Kategori:            reg.Ekstrakurikuler.Kategori,
-				TanggalDaftar:       reg.CreatedAt.Format("2006-01-02 15:04:05"),
+				TanggalDaftar:       tanggalDaftar,
 			})
 			siswaMap[studentID].TotalEkskul++
 		}
 	}
 	
-	// Convert map to slice maintaining order from DB (already sorted by nama A-Z)
+	// Convert map to slice
 	var siswaList []dtos.SiswaWithEkskul
-	for _, studentID := range siswaOrder {
-		if siswa, exists := siswaMap[studentID]; exists {
-			siswaList = append(siswaList, *siswa)
-		}
+	for _, siswa := range siswaMap {
+		siswaList = append(siswaList, *siswa)
 	}
+	
+	// Sort siswaList by Nama A-Z
+	sort.Slice(siswaList, func(i, j int) bool {
+		return siswaList[i].Nama < siswaList[j].Nama
+	})
 	
 	totalPages := (int(total) + limit - 1) / limit
 	

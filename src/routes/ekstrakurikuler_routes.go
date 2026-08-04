@@ -70,5 +70,11 @@ func RegisterEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB) {
 
 		// Get rekapitulasi data per rombel
 		protected.POST("/rekapitulasi-data-per-rombel", pesertaDidikEkskulController.GetRekapitulasiPerRombel)
+
+		// Export Excel per ekstrakurikuler
+		protected.POST("/download-excel-data-per-ekskul", pesertaDidikEkskulController.ExportExcelPerEkskul)
+
+		// Export Excel per rombel
+		protected.POST("/download-excel-data-per-rombel", pesertaDidikEkskulController.ExportExcelPerRombel)
 	}
 }

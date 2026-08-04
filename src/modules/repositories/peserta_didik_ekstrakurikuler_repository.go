@@ -31,6 +31,11 @@ func NewPesertaDidikEkstrakurikulerRepository(db *gorm.DB) PesertaDidikEkstrakur
 	return &PesertaDidikEkstrakurikulerRepositoryImpl{db: db}
 }
 
+// GetDB returns the database instance
+func (r *PesertaDidikEkstrakurikulerRepositoryImpl) GetDB() *gorm.DB {
+	return r.db
+}
+
 func (r *PesertaDidikEkstrakurikulerRepositoryImpl) Create(data *models.PesertaDidikEkstrakurikuler) error {
 	return r.db.Create(data).Error
 }

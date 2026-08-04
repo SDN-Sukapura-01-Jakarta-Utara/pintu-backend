@@ -252,3 +252,15 @@ type RekapitulasiPerRombelResponse struct {
 	TotalSiswa       int               `json:"total_siswa"`
 	Pagination       PaginationInfo    `json:"pagination"`
 }
+
+// ExportExcelPerEkskulRequest represents the request for export excel per ekstrakurikuler
+type ExportExcelPerEkskulRequest struct {
+	TahunPelajaranID  uint `json:"tahun_pelajaran_id" binding:"required"`
+	EkstrakurikulerID uint `json:"ekstrakurikuler_id"`
+}
+
+// ExportExcelPerRombelRequest represents the request for export excel per rombel
+type ExportExcelPerRombelRequest struct {
+	RombelID         uint `json:"rombel_id" binding:"required"`
+	TahunPelajaranID uint `json:"tahun_pelajaran_id" binding:"required"`
+}

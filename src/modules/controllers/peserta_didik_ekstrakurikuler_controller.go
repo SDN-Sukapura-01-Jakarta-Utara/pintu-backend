@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"pintu-backend/src/dtos"
@@ -223,4 +224,64 @@ func (c *PesertaDidikEkstrakurikulerController) GetRekapitulasiPerRombel(ctx *gi
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"data": data})
+}
+
+// ExportExcelPerEkskul handles exporting ekstrakurikuler data per ekskul to Excel
+// @Summary Export Excel per ekstrakurikuler
+// @Description Export list of students per ekstrakurikuler to Excel file
+// @Tags ekstrakurikuler-export
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Param body body dtos.ExportExcelPerEkskulRequest true "Request body"
+// @Success 200 {file} file
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Router /api/v1/ekstrakurikuler/download-excel-data-per-ekskul [post]
+func (c *PesertaDidikEkstrakurikulerController) ExportExcelPerEkskul(ctx *gin.Context) {
+	var req dtos.ExportExcelPerEkskulRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, filename, err := c.service.ExportExcelPerEkskul(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", "attachment; filename="+filename)
+	ctx.Header("Content-Length", fmt.Sprintf("%d", len(data)))
+	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
+}
+
+// ExportExcelPerRombel handles exporting ekstrakurikuler data per rombel to Excel
+// @Summary Export Excel per rombel
+// @Description Export list of students in a rombel with their ekstrakurikuler to Excel file
+// @Tags ekstrakurikuler-export
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Param body body dtos.ExportExcelPerRombelRequest true "Request body"
+// @Success 200 {file} file
+// @Failure 400 {object} gin.H{error=string}
+// @Failure 401 {object} gin.H{error=string}
+// @Router /api/v1/ekstrakurikuler/download-excel-data-per-rombel [post]
+func (c *PesertaDidikEkstrakurikulerController) ExportExcelPerRombel(ctx *gin.Context) {
+	var req dtos.ExportExcelPerRombelRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	data, filename, err := c.service.ExportExcelPerRombel(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", "attachment; filename="+filename)
+	ctx.Header("Content-Length", fmt.Sprintf("%d", len(data)))
+	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", data)
 }
