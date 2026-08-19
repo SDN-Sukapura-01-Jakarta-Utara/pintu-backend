@@ -53,6 +53,10 @@ func main() {
 		"http://sdnsukapura01.sch.id",
 		"https://www.sdnsukapura01.sch.id",
 		"http://www.sdnsukapura01.sch.id",
+		"http://sieksa.sdnsukapura01.sch.id",
+		"https://sieksa.sdnsukapura01.sch.id",
+		"http://www.sieksa.sdnsukapura01.sch.id",
+		"https://www.sieksa.sdnsukapura01.sch.id",
 	}
 
 	// Handle OPTIONS globally BEFORE any middleware (for CORS preflight)
