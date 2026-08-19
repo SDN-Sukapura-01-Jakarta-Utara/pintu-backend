@@ -94,3 +94,79 @@ func (c *LoginController) LogoutStudent(ctx *gin.Context) {
 		"student_id": userID,
 	})
 }
+
+// LoginSieksa handles user login for SIEKSA application
+func (c *LoginController) LoginSieksa(ctx *gin.Context) {
+	var req dtos.LoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	response, err := c.service.LoginSieksa(&req)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   response,
+	})
+}
+
+// LogoutSieksa handles user logout for SIEKSA application
+func (c *LoginController) LogoutSieksa(ctx *gin.Context) {
+	// In JWT stateless approach, logout is client-side
+	// Just return success message, client should delete token from environment
+
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Logout successful, please delete your token",
+		"user_id": userID,
+	})
+}
+
+// LoginStudentSieksa handles student login for SIEKSA application
+func (c *LoginController) LoginStudentSieksa(ctx *gin.Context) {
+	var req dtos.LoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	response, err := c.service.LoginStudentSieksa(&req)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   response,
+	})
+}
+
+// LogoutStudentSieksa handles student logout for SIEKSA application
+func (c *LoginController) LogoutStudentSieksa(ctx *gin.Context) {
+	// In JWT stateless approach, logout is client-side
+	// Just return success message, client should delete token from environment
+
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Logout successful, please delete your token",
+		"student_id": userID,
+	})
+}

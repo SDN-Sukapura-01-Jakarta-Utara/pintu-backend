@@ -482,7 +482,8 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetStatistikEkstrakurikuler(req
 	}
 
 	// Create maps for processing
-	studentsWithEkskul := make(map[uint]bool) // peserta_didik_rombel_id
+	studentsWithEkskul := make(map[uint]bool) // peserta_didik_rombel_id - for ANY ekskul
+	studentsWithEkskulTidakWajib := make(map[uint]bool) // peserta_didik_rombel_id - for "tidak wajib" only
 	ekskulMap := make(map[uint]map[uint]int) // ekstrakurikuler_id -> rombel_id -> count
 	rombelMap := make(map[uint]map[uint]int) // rombel_id -> ekstrakurikuler_id -> count
 	ekskulNames := make(map[uint]string)
@@ -498,6 +499,11 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetStatistikEkstrakurikuler(req
 		}
 
 		studentsWithEkskul[reg.PesertaDidikRombelID] = true
+		
+		// Track students with "tidak wajib" ekstrakurikuler
+		if reg.Ekstrakurikuler.Kategori == "tidak wajib" {
+			studentsWithEkskulTidakWajib[reg.PesertaDidikRombelID] = true
+		}
 		
 		ekskulID := reg.EkstrakurikulerID
 		rombelID := reg.PesertaDidikRombel.RombelID
@@ -604,9 +610,9 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetStatistikEkstrakurikuler(req
 		response.StatistikPerRombel = append(response.StatistikPerRombel, stat)
 	}
 
-	// Find students not joining any ekstrakurikuler
+	// Find students not joining any "tidak wajib" ekstrakurikuler
 	for _, student := range allStudents {
-		if !studentsWithEkskul[student.ID] {
+		if !studentsWithEkskulTidakWajib[student.ID] {
 			if student.PesertaDidik == nil || student.Rombel == nil {
 				continue
 			}
@@ -622,9 +628,9 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetStatistikEkstrakurikuler(req
 		}
 	}
 
-	// Calculate overall summary
+	// Calculate overall summary (based on "tidak wajib" ekstrakurikuler only)
 	response.Summary.TotalSiswa = len(allStudents)
-	response.Summary.TotalSiswaIkutEkskul = len(studentsWithEkskul)
+	response.Summary.TotalSiswaIkutEkskul = len(studentsWithEkskulTidakWajib)
 	response.Summary.TotalSiswaTidakIkutEkskul = len(response.SiswaTidakIkutEkskul)
 	response.Summary.TotalEkstrakurikuler = len(ekskulSet)
 	response.Summary.TotalRombel = len(rombelSet)

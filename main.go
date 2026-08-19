@@ -44,19 +44,58 @@ func main() {
 	// Create router
 	router := gin.Default()
 
-	// Setup CORS middleware
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{
+	// Define allowed origins
+	allowedOrigins := []string{
 		"http://localhost:3001",
 		"http://localhost:3000",
+		"http://localhost:4001",
 		"https://sdnsukapura01.sch.id",
 		"http://sdnsukapura01.sch.id",
 		"https://www.sdnsukapura01.sch.id",
 		"http://www.sdnsukapura01.sch.id",
 	}
-	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
-	corsConfig.AllowCredentials = true
+
+	// Handle OPTIONS globally BEFORE any middleware (for CORS preflight)
+	router.Use(func(c *gin.Context) {
+		if c.Request.Method == "OPTIONS" {
+			origin := c.GetHeader("Origin")
+			
+			// Validate origin is in allowed list
+			isAllowed := false
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					isAllowed = true
+					break
+				}
+			}
+			
+			if !isAllowed {
+				c.AbortWithStatus(403)
+				return
+			}
+			
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+			c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Accept, Authorization, X-Requested-With")
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Max-Age", "43200")
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	// Setup CORS middleware - must be before other middlewares
+	corsConfig := cors.Config{
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type", "Content-Disposition"},
+		AllowCredentials: true,
+		MaxAge:           12 * 3600, // Preflight cache for 12 hours
+		AllowWildcard:    false,
+		AllowAllOrigins:  false,
+	}
 	router.Use(cors.New(corsConfig))
 
 	// Setup Prometheus middleware
@@ -80,6 +119,20 @@ func main() {
 
 	// Register routes
 	routes.RegisterAuthRoutes(router, db)
+	routes.RegisterSieksaAuthRoutes(router, db) // SIEKSA authentication routes
+	routes.RegisterSieksaKelasRoutes(router, db) // SIEKSA kelas routes
+	routes.RegisterSieksaRoleRoutes(router, db) // SIEKSA role routes
+	routes.RegisterSieksaEkstrakurikulerRoutes(router, db) // SIEKSA ekstrakurikuler CRUD routes
+	routes.RegisterSieksaPelatihRoutes(router, db) // SIEKSA pelatih routes
+	routes.RegisterSieksaRegisterEkstrakurikulerRoutes(router, db) // SIEKSA register ekstrakurikuler routes
+	routes.RegisterSieksaRekapitulasiEkstrakurikulerRoutes(router, db) // SIEKSA rekapitulasi ekstrakurikuler routes
+	routes.RegisterSieksaMonitoringEkstrakurikulerRoutes(router, db) // SIEKSA monitoring ekstrakurikuler routes
+	routes.RegisterSieksaAbsensiEkstrakurikulerRoutes(router, db) // SIEKSA absensi ekstrakurikuler routes
+	routes.RegisterSieksaKegiatanEkstrakurikulerRoutes(router, db) // SIEKSA kegiatan ekstrakurikuler routes
+	routes.RegisterSieksaRombelRoutes(router, db) // SIEKSA rombel routes
+	routes.RegisterSieksaTahunPelajaranRoutes(router, db) // SIEKSA tahun pelajaran routes
+	routes.RegisterSieksaPesertaDidikRoutes(router, db) // SIEKSA peserta didik routes
+	routes.RegisterSieksaPesertaDidikRombelRoutes(router, db) // SIEKSA peserta didik rombel routes
 	routes.RegisterSystemRoutes(router, db)
 	routes.RegisterPermissionRoutes(router, db)
 	routes.RegisterRoleRoutes(router, db)

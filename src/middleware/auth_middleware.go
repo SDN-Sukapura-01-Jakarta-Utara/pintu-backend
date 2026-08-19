@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware verifies JWT token
+// AuthMiddleware verifies JWT token with automatic app detection from request path
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -33,8 +33,15 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		tokenString := parts[1]
 
-		// Verify token
-		claims, err := utils.VerifyToken(tokenString)
+		// Auto-detect application from request path
+		appName := "PINTU" // default
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api/sieksa") {
+			appName = "SIEKSA"
+		}
+
+		// Verify token with app-specific secret
+		claims, err := utils.VerifyToken(tokenString, appName)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid or expired token",
@@ -49,6 +56,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("nama", claims.Nama)
 		c.Set("roleID", claims.RoleID)
 		c.Set("status", claims.Status)
+		c.Set("appName", claims.AppName)
 
 		c.Next()
 	}

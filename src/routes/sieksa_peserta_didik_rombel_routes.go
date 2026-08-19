@@ -1,0 +1,57 @@
+package routes
+
+import (
+	"pintu-backend/src/middleware"
+	"pintu-backend/src/modules/controllers"
+	"pintu-backend/src/modules/repositories"
+	"pintu-backend/src/modules/services"
+	"pintu-backend/src/utils"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+)
+
+// RegisterSieksaPesertaDidikRombelRoutes registers all SIEKSA PesertaDidikRombel routes
+func RegisterSieksaPesertaDidikRombelRoutes(router *gin.Engine, db *gorm.DB) {
+	// Initialize repositories (reuse existing implementations)
+	pesertaDidikRombelRepo := repositories.NewPesertaDidikRombelRepository(db)
+	pesertaDidikRepo := repositories.NewPesertaDidikRepository(db)
+
+	// Initialize R2 storage
+	r2Storage := utils.NewR2Storage()
+
+	// Initialize service
+	service := services.NewPesertaDidikRombelService(pesertaDidikRombelRepo, pesertaDidikRepo, r2Storage)
+
+	// Initialize controller
+	controller := controllers.NewPesertaDidikRombelController(service)
+
+	// Protected routes for SIEKSA (auth required with SIEKSA token)
+	api := router.Group("/api/sieksa/peserta-didik")
+	api.Use(middleware.AuthMiddleware()) // Middleware will auto-detect SIEKSA from path
+	{
+		// Bulk create pemetaan rombel
+		api.POST("/create-pemetaan-rombel", controller.BulkCreate)
+		
+		// Get pemetaan rombel with filters
+		api.POST("/get-pemetaan-rombel", controller.GetAll)
+		
+		// Get pemetaan rombel by ID
+		api.POST("/get-pemetaan-rombel-by-id", controller.GetByID)
+		
+		// Update pemetaan rombel
+		api.POST("/edit-pemetaan-rombel-by-id", controller.Update)
+		
+		// Delete pemetaan rombel
+		api.POST("/delete-pemetaan-rombel-by-id", controller.Delete)
+		
+		// Download Template
+		api.POST("/download-template-pemetaan-rombel", controller.DownloadTemplate)
+		
+		// Import Excel
+		api.POST("/import-excel-pemetaan-rombel", controller.ImportExcel)
+		
+		// Reset pemetaan rombel
+		api.POST("/reset-pemetaan-rombel", controller.Reset)
+	}
+}

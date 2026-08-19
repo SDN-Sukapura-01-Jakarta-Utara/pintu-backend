@@ -34,6 +34,7 @@ func (s *RoleSeeder) Run() error {
 		{Name: "Kepala Sekolah (PINTU)", Description: "Kepala Sekolah Khusus Sistem PINTU", SystemID: 1, Status: "active"},
 		{Name: "Administrator (SIEKSA)", Description: "Administrator Khusus Sistem SIEKSA", SystemID: 2, Status: "active"},
 		{Name: "Kepala Sekolah (SIEKSA)", Description: "Kepala Sekolah Khusus Sistem SIEKSA", SystemID: 2, Status: "active"},
+		{Name: "Pelatih (SIEKSA)", Description: "Pelatih Ekstrakurikuler Khusus Sistem SIEKSA", SystemID: 2, Status: "active"},
 	}
 
 	// Check if roles already exist

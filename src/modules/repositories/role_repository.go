@@ -11,6 +11,7 @@ import (
 type RoleRepository interface {
 	Create(data *models.Role) error
 	GetByID(id uint) (*models.Role, error)
+	GetByName(name string) (*models.Role, error)
 	GetAll() ([]models.Role, error)
 	GetAllWithFilter(params GetRolesParams) ([]models.Role, int64, error)
 	Update(data *models.Role) error
@@ -53,6 +54,15 @@ func (r *RoleRepositoryImpl) Create(data *models.Role) error {
 func (r *RoleRepositoryImpl) GetByID(id uint) (*models.Role, error) {
 	var data models.Role
 	if err := r.db.Preload("System").First(&data, id).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+// GetByName retrieves Role by name
+func (r *RoleRepositoryImpl) GetByName(name string) (*models.Role, error) {
+	var data models.Role
+	if err := r.db.Preload("System").Preload("Permissions").Where("name = ?", name).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil

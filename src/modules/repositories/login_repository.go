@@ -11,6 +11,7 @@ type LoginRepository interface {
 	GetByUsername(username string) (*models.User, error)
 	GetKepegawaianByUsername(username string) (*models.Kepegawaian, error)
 	GetPesertaDidikByUsername(username string) (*models.PesertaDidik, error)
+	GetPelatihByUsername(username string) (*models.Pelatih, error)
 	GetPesertaDidikRombelByStudentID(studentID uint) ([]models.PesertaDidikRombel, error)
 }
 
@@ -48,6 +49,15 @@ func (r *LoginRepositoryImpl) GetPesertaDidikByUsername(username string) (*model
 		return nil, err
 	}
 	return &pesertaDidik, nil
+}
+
+// GetPelatihByUsername retrieves pelatih by username
+func (r *LoginRepositoryImpl) GetPelatihByUsername(username string) (*models.Pelatih, error) {
+	var pelatih models.Pelatih
+	if err := r.db.Preload("Roles.System").Preload("Roles.Permissions").Where("username = ?", username).First(&pelatih).Error; err != nil {
+		return nil, err
+	}
+	return &pelatih, nil
 }
 
 // GetPesertaDidikRombelByStudentID retrieves all rombel for a student

@@ -47,6 +47,31 @@ func NewR2Storage() *R2Storage {
 	}
 }
 
+// NewSieksaR2Storage initializes R2 storage for SIEKSA
+func NewSieksaR2Storage() *R2Storage {
+	accessKeyID := os.Getenv("SIEKSA_R2_ACCESS_KEY_ID")
+	secretAccessKey := os.Getenv("SIEKSA_R2_SECRET_ACCESS_KEY")
+	bucketName := os.Getenv("SIEKSA_R2_BUCKET_NAME")
+	endpoint := os.Getenv("SIEKSA_R2_ENDPOINT")
+	publicDomain := os.Getenv("SIEKSA_R2_PUBLIC_DOMAIN")
+
+	// Create credentials
+	creds := credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, "")
+
+	// Create S3 client with R2 endpoint
+	client := s3.NewFromConfig(aws.Config{
+		Region:      "auto",
+		Credentials: creds,
+		BaseEndpoint: aws.String(endpoint),
+	})
+
+	return &R2Storage{
+		client:     client,
+		bucketName: bucketName,
+		publicURL:  publicDomain,
+	}
+}
+
 // UploadFile uploads file to R2 storage
 func (r *R2Storage) UploadFile(file *multipart.FileHeader, directory string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
