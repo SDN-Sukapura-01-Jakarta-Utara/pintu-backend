@@ -58,6 +58,7 @@ type AbsensiSiswaDetail struct {
 	ID                   uint    `json:"id"`
 	PesertaDidikRombelID uint    `json:"peserta_didik_rombel_id"`
 	NamaSiswa            string  `json:"nama_siswa"`
+	NIS                  string  `json:"nis"`
 	NISN                 string  `json:"nisn"`
 	NamaKelas            string  `json:"nama_kelas"`
 	NamaRombel           string  `json:"nama_rombel"`
@@ -284,4 +285,13 @@ type KegiatanEkskulDetailResponse struct {
 	TotalSiswaIzin      int                    `json:"total_siswa_izin"`
 	TotalSiswaAlpa      int                    `json:"total_siswa_alpa"`
 	TotalPelatihHadir   int                    `json:"total_pelatih_hadir"`
+}
+
+// AbsensiPelatihExportRequest represents request for exporting pelatih attendance (all pelatih)
+type AbsensiPelatihExportRequest struct {
+	TahunPelajaranID  uint  `json:"tahun_pelajaran_id" binding:"required"`
+	PelatihID         *uint `json:"pelatih_id"`         // Optional filter by specific pelatih
+	EkstrakurikulerID *uint `json:"ekstrakurikuler_id"` // Optional filter by ekstrakurikuler
+	Bulan             *int  `json:"bulan"`              // Optional filter by month (1-12)
+	Tahun             *int  `json:"tahun"`              // Optional filter by year (e.g., 2026)
 }

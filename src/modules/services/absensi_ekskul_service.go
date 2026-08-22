@@ -272,6 +272,7 @@ func (s *AbsensiEkskulService) GetAbsensiSiswa(req *dtos.AbsensiEkskulGetRequest
 			if absensi.PesertaDidikRombel != nil {
 				if absensi.PesertaDidikRombel.PesertaDidik != nil {
 					detail.NamaSiswa = absensi.PesertaDidikRombel.PesertaDidik.Nama
+					detail.NIS = absensi.PesertaDidikRombel.PesertaDidik.NIS
 					detail.NISN = absensi.PesertaDidikRombel.PesertaDidik.NISN
 				}
 				if absensi.PesertaDidikRombel.Rombel != nil {
@@ -1036,6 +1037,7 @@ func (s *AbsensiEkskulService) GetKegiatanEkskulByID(req *dtos.KegiatanEkskulGet
 		if absensi.PesertaDidikRombel != nil {
 			if absensi.PesertaDidikRombel.PesertaDidik != nil {
 				detail.NamaSiswa = absensi.PesertaDidikRombel.PesertaDidik.Nama
+				detail.NIS = absensi.PesertaDidikRombel.PesertaDidik.NIS
 				detail.NISN = absensi.PesertaDidikRombel.PesertaDidik.NISN
 			}
 			if absensi.PesertaDidikRombel.Rombel != nil {

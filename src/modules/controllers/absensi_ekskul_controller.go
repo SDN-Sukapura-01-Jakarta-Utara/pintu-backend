@@ -307,3 +307,106 @@ func (c *AbsensiEkskulController) GetKegiatanEkskulByID(ctx *gin.Context) {
 		"data":    response,
 	})
 }
+
+
+// DownloadExcelAbsensiSiswa handles downloading Excel file for student attendance
+func (c *AbsensiEkskulController) DownloadExcelAbsensiSiswa(ctx *gin.Context) {
+	var req dtos.AbsensiEkskulGetRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate Excel file
+	file, filename, err := c.service.DownloadExcelAbsensiSiswa(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write file to response
+	if err := file.Write(ctx.Writer); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write file"})
+		return
+	}
+}
+
+// DownloadPDFAbsensiSiswa handles downloading PDF file for student attendance
+func (c *AbsensiEkskulController) DownloadPDFAbsensiSiswa(ctx *gin.Context) {
+	var req dtos.AbsensiEkskulGetRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate PDF file
+	pdfBytes, filename, err := c.service.DownloadPDFAbsensiSiswa(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/pdf")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write PDF to response
+	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}
+
+// DownloadExcelAbsensiPelatih handles downloading Excel file for pelatih attendance
+func (c *AbsensiEkskulController) DownloadExcelAbsensiPelatih(ctx *gin.Context) {
+	var req dtos.AbsensiPelatihExportRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate Excel file
+	file, filename, err := c.service.DownloadExcelAbsensiPelatih(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write file to response
+	if err := file.Write(ctx.Writer); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write file"})
+		return
+	}
+}
+
+// DownloadPDFAbsensiPelatih handles downloading PDF file for pelatih attendance
+func (c *AbsensiEkskulController) DownloadPDFAbsensiPelatih(ctx *gin.Context) {
+	var req dtos.AbsensiPelatihExportRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate PDF file
+	pdfBytes, filename, err := c.service.DownloadPDFAbsensiPelatih(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/pdf")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write PDF to response
+	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}

@@ -41,5 +41,17 @@ func RegisterSieksaAbsensiEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB)
 		
 		// Update/toggle pelatih attendance
 		protected.POST("/update-absensi-pelatih", absensiEkskulController.UpdateAbsensiPelatih)
+		
+		// Download Excel absensi siswa
+		protected.POST("/download-excel-absensi-siswa", absensiEkskulController.DownloadExcelAbsensiSiswa)
+		
+		// Download PDF absensi siswa
+		protected.POST("/download-pdf-absensi-siswa", absensiEkskulController.DownloadPDFAbsensiSiswa)
+		
+		// Download Excel absensi pelatih
+		protected.POST("/download-excel-absensi-pelatih", absensiEkskulController.DownloadExcelAbsensiPelatih)
+		
+		// Download PDF absensi pelatih
+		protected.POST("/download-pdf-absensi-pelatih", absensiEkskulController.DownloadPDFAbsensiPelatih)
 	}
 }
