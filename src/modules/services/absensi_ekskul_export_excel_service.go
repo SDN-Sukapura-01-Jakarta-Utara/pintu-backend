@@ -231,8 +231,11 @@ func (s *AbsensiEkskulService) DownloadExcelAbsensiSiswa(req *dtos.AbsensiEkskul
 		})
 	}
 
-	// Sort students by name
+	// Sort students by rombel first, then by name alphabetically
 	sort.Slice(students, func(i, j int) bool {
+		if students[i].NamaRombel != students[j].NamaRombel {
+			return students[i].NamaRombel < students[j].NamaRombel
+		}
 		return students[i].Nama < students[j].Nama
 	})
 

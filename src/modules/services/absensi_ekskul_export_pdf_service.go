@@ -89,6 +89,9 @@ func (s *AbsensiEkskulService) DownloadPDFAbsensiSiswa(req *dtos.AbsensiEkskulGe
 	}
 
 	sort.Slice(students, func(i, j int) bool {
+		if students[i].NamaRombel != students[j].NamaRombel {
+			return students[i].NamaRombel < students[j].NamaRombel
+		}
 		return students[i].Nama < students[j].Nama
 	})
 

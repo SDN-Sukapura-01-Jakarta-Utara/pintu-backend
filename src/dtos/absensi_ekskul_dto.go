@@ -112,6 +112,7 @@ type AbsensiSiswaDetailResponse struct {
 	KegiatanEkskulID     uint    `json:"kegiatan_ekskul_id"`
 	PesertaDidikRombelID uint    `json:"peserta_didik_rombel_id"`
 	NamaSiswa            string  `json:"nama_siswa"`
+	NIS                  string  `json:"nis"`
 	NISN                 string  `json:"nisn"`
 	NamaKelas            string  `json:"nama_kelas"`
 	NamaRombel           string  `json:"nama_rombel"`
@@ -129,11 +130,13 @@ type AbsensiSiswaDetailResponse struct {
 	TahunPelajaran       string `json:"tahun_pelajaran"`
 }
 
-// AbsensiSiswaUpdateRequest represents request to update absensi siswa
+// AbsensiSiswaUpdateRequest represents request to update or create absensi siswa
 type AbsensiSiswaUpdateRequest struct {
-	ID         uint    `json:"id" binding:"required"`
-	Status     string  `json:"status" binding:"required,oneof=hadir sakit izin alpa alpha"`
-	Keterangan *string `json:"keterangan"`
+	ID                   *uint   `json:"id"`                                                       // Optional: if null, create new record
+	KegiatanEkskulID     uint    `json:"kegiatan_ekskul_id" binding:"required"`                   // Required for create
+	PesertaDidikRombelID uint    `json:"peserta_didik_rombel_id" binding:"required"`              // Required for create
+	Status               string  `json:"status" binding:"required,oneof=hadir sakit izin alpa alpha"`
+	Keterangan           *string `json:"keterangan"`
 }
 
 // AbsensiPelatihGetRequest represents request to get pelatih attendance

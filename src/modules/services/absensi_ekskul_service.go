@@ -394,78 +394,127 @@ func (s *AbsensiEkskulService) GetAbsensiSiswaByID(req *dtos.AbsensiSiswaGetByID
 	return response, nil
 }
 
-// UpdateAbsensiSiswa updates absensi siswa status and keterangan
+// UpdateAbsensiSiswa updates or creates absensi siswa (upsert)
 func (s *AbsensiEkskulService) UpdateAbsensiSiswa(req *dtos.AbsensiSiswaUpdateRequest) (*dtos.AbsensiSiswaDetailResponse, error) {
-	// Get existing absensi siswa
-	absensi, err := s.repo.GetAbsensiSiswaByID(req.ID)
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.New("absensi siswa not found")
-		}
-		return nil, err
-	}
-
 	// Normalize status: "alpha" → "alpa" for consistency (Indonesian spelling)
 	status := req.Status
 	if status == "alpha" {
 		status = "alpa"
 	}
 
-	// Update fields
-	absensi.Status = status
-	absensi.Keterangan = req.Keterangan
+	var absensi *models.AbsensiEkskul
+	var err error
 
-	// Save to database
-	if err := s.repo.UpdateAbsensiSiswa(absensi); err != nil {
-		return nil, fmt.Errorf("failed to update absensi siswa: %w", err)
+	// If ID is provided, update existing record
+	if req.ID != nil && *req.ID > 0 {
+		// Get existing absensi siswa
+		absensi, err = s.repo.GetAbsensiSiswaByID(*req.ID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return nil, errors.New("absensi siswa not found")
+			}
+			return nil, err
+		}
+
+		// Update fields
+		absensi.Status = status
+		absensi.Keterangan = req.Keterangan
+
+		// Save to database
+		if err := s.repo.UpdateAbsensiSiswa(absensi); err != nil {
+			return nil, fmt.Errorf("failed to update absensi siswa: %w", err)
+		}
+	} else {
+		// Create new record
+		// Validate kegiatan exists
+		var kegiatan models.KegiatanEkskul
+		if err := s.db.First(&kegiatan, req.KegiatanEkskulID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return nil, errors.New("kegiatan ekstrakurikuler not found")
+			}
+			return nil, err
+		}
+
+		// Validate peserta didik rombel exists
+		var pesertaDidikRombel models.PesertaDidikRombel
+		if err := s.db.First(&pesertaDidikRombel, req.PesertaDidikRombelID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return nil, errors.New("peserta didik rombel not found")
+			}
+			return nil, err
+		}
+
+		// Check if absensi already exists for this kegiatan and peserta didik
+		var existingAbsensi models.AbsensiEkskul
+		err := s.db.Where("kegiatan_ekskul_id = ? AND peserta_didik_rombel_id = ?", 
+			req.KegiatanEkskulID, req.PesertaDidikRombelID).First(&existingAbsensi).Error
+		if err == nil {
+			// Already exists, return error
+			return nil, errors.New("absensi siswa already exists for this kegiatan, use update with ID")
+		} else if err != gorm.ErrRecordNotFound {
+			return nil, err
+		}
+
+		// Create new absensi
+		absensi = &models.AbsensiEkskul{
+			KegiatanEkskulID:     req.KegiatanEkskulID,
+			PesertaDidikRombelID: req.PesertaDidikRombelID,
+			Status:               status,
+			Keterangan:           req.Keterangan,
+		}
+
+		if err := s.db.Create(absensi).Error; err != nil {
+			return nil, fmt.Errorf("failed to create absensi siswa: %w", err)
+		}
 	}
 
-	// Get updated data with relations
-	updatedAbsensi, err := s.repo.GetAbsensiSiswaByID(req.ID)
+	// Get updated/created data with relations
+	finalAbsensi, err := s.repo.GetAbsensiSiswaByID(absensi.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build response
 	response := &dtos.AbsensiSiswaDetailResponse{
-		ID:                   updatedAbsensi.ID,
-		KegiatanEkskulID:     updatedAbsensi.KegiatanEkskulID,
-		PesertaDidikRombelID: updatedAbsensi.PesertaDidikRombelID,
-		Status:               updatedAbsensi.Status,
-		Keterangan:           updatedAbsensi.Keterangan,
+		ID:                   finalAbsensi.ID,
+		KegiatanEkskulID:     finalAbsensi.KegiatanEkskulID,
+		PesertaDidikRombelID: finalAbsensi.PesertaDidikRombelID,
+		Status:               finalAbsensi.Status,
+		Keterangan:           finalAbsensi.Keterangan,
 	}
 
 	// Add student info
-	if updatedAbsensi.PesertaDidikRombel != nil {
-		if updatedAbsensi.PesertaDidikRombel.PesertaDidik != nil {
-			response.NamaSiswa = updatedAbsensi.PesertaDidikRombel.PesertaDidik.Nama
-			response.NISN = updatedAbsensi.PesertaDidikRombel.PesertaDidik.NISN
+	if finalAbsensi.PesertaDidikRombel != nil {
+		if finalAbsensi.PesertaDidikRombel.PesertaDidik != nil {
+			response.NamaSiswa = finalAbsensi.PesertaDidikRombel.PesertaDidik.Nama
+			response.NIS = finalAbsensi.PesertaDidikRombel.PesertaDidik.NIS
+			response.NISN = finalAbsensi.PesertaDidikRombel.PesertaDidik.NISN
 		}
-		if updatedAbsensi.PesertaDidikRombel.Rombel != nil {
-			response.NamaRombel = updatedAbsensi.PesertaDidikRombel.Rombel.Name
-			if updatedAbsensi.PesertaDidikRombel.Rombel.Kelas != nil {
-				response.NamaKelas = updatedAbsensi.PesertaDidikRombel.Rombel.Kelas.Name
+		if finalAbsensi.PesertaDidikRombel.Rombel != nil {
+			response.NamaRombel = finalAbsensi.PesertaDidikRombel.Rombel.Name
+			if finalAbsensi.PesertaDidikRombel.Rombel.Kelas != nil {
+				response.NamaKelas = finalAbsensi.PesertaDidikRombel.Rombel.Kelas.Name
 			}
 		}
 	}
 
 	// Add kegiatan info
-	if updatedAbsensi.KegiatanEkskul != nil {
-		response.TanggalKegiatan = updatedAbsensi.KegiatanEkskul.TanggalKegiatan.Format("2006-01-02")
-		response.WaktuMulai = updatedAbsensi.KegiatanEkskul.WaktuMulai
-		response.WaktuSelesai = updatedAbsensi.KegiatanEkskul.WaktuSelesai
-		response.MateriKegiatan = updatedAbsensi.KegiatanEkskul.MateriKegiatan
+	if finalAbsensi.KegiatanEkskul != nil {
+		response.TanggalKegiatan = finalAbsensi.KegiatanEkskul.TanggalKegiatan.Format("2006-01-02")
+		response.WaktuMulai = finalAbsensi.KegiatanEkskul.WaktuMulai
+		response.WaktuSelesai = finalAbsensi.KegiatanEkskul.WaktuSelesai
+		response.MateriKegiatan = finalAbsensi.KegiatanEkskul.MateriKegiatan
 
 		// Add ekstrakurikuler info
-		if updatedAbsensi.KegiatanEkskul.Ekstrakurikuler != nil {
-			response.EkstrakurikulerID = updatedAbsensi.KegiatanEkskul.Ekstrakurikuler.ID
-			response.NamaEkstrakurikuler = updatedAbsensi.KegiatanEkskul.Ekstrakurikuler.Name
+		if finalAbsensi.KegiatanEkskul.Ekstrakurikuler != nil {
+			response.EkstrakurikulerID = finalAbsensi.KegiatanEkskul.Ekstrakurikuler.ID
+			response.NamaEkstrakurikuler = finalAbsensi.KegiatanEkskul.Ekstrakurikuler.Name
 		}
 
 		// Add tahun pelajaran info
-		if updatedAbsensi.KegiatanEkskul.TahunPelajaran != nil {
-			response.TahunPelajaranID = updatedAbsensi.KegiatanEkskul.TahunPelajaran.ID
-			response.TahunPelajaran = updatedAbsensi.KegiatanEkskul.TahunPelajaran.TahunPelajaran
+		if finalAbsensi.KegiatanEkskul.TahunPelajaran != nil {
+			response.TahunPelajaranID = finalAbsensi.KegiatanEkskul.TahunPelajaran.ID
+			response.TahunPelajaran = finalAbsensi.KegiatanEkskul.TahunPelajaran.TahunPelajaran
 		}
 	}
 
