@@ -647,7 +647,7 @@ func (s *PesertaDidikEkstrakurikulerServiceImpl) GetRekapitulasiPerEkskul(req *d
 	// Set default pagination
 	limit := 10
 	page := 1
-	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+	if req.Pagination.Limit > 0 && req.Pagination.Limit <= 10000 { // Increased limit to 10000
 		limit = req.Pagination.Limit
 	}
 	if req.Pagination.Page > 0 {
