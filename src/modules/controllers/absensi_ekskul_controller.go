@@ -410,3 +410,53 @@ func (c *AbsensiEkskulController) DownloadPDFAbsensiPelatih(ctx *gin.Context) {
 	// Write PDF to response
 	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
+
+// DownloadWordDokumentasiEkskul handles downloading Word file for ekstrakurikuler documentation
+func (c *AbsensiEkskulController) DownloadWordDokumentasiEkskul(ctx *gin.Context) {
+	var req dtos.KegiatanEkskulDownloadWordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate Word file
+	wordBytes, filename, err := c.service.DownloadWordDokumentasiEkskul(&req)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write Word to response
+	ctx.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", wordBytes)
+}
+
+// DownloadPDFDokumentasiEkskul handles downloading PDF file for ekstrakurikuler documentation
+func (c *AbsensiEkskulController) DownloadPDFDokumentasiEkskul(ctx *gin.Context) {
+	var req dtos.KegiatanEkskulDownloadWordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Generate PDF file
+	pdfBytes, filename, err := c.service.DownloadPDFDokumentasiEkskul(&req)
+	if err != nil {
+		// Log the error for debugging
+		fmt.Printf("Error generating PDF: %v\n", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set headers for file download
+	ctx.Header("Content-Type", "application/pdf")
+	ctx.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	ctx.Header("Content-Transfer-Encoding", "binary")
+
+	// Write PDF to response
+	ctx.Data(http.StatusOK, "application/pdf", pdfBytes)
+}

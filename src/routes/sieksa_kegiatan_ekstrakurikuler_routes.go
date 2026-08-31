@@ -29,5 +29,11 @@ func RegisterSieksaKegiatanEkstrakurikulerRoutes(router *gin.Engine, db *gorm.DB
 		
 		// Update kegiatan (edit tanggal, waktu, materi, upload/delete foto)
 		protected.POST("/update-kegiatan-ekskul", absensiEkskulController.UpdateKegiatan)
+		
+		// Download Word documentation
+		protected.POST("/download-word-dokumentasi-ekskul", absensiEkskulController.DownloadWordDokumentasiEkskul)
+		
+		// Download PDF documentation
+		protected.POST("/download-pdf-dokumentasi-ekskul", absensiEkskulController.DownloadPDFDokumentasiEkskul)
 	}
 }
