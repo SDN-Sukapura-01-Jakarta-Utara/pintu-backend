@@ -71,9 +71,9 @@ func (s *AbsensiEkskulService) DownloadWordDokumentasiEkskul(req *dtos.KegiatanE
 
 	// Loop through each kegiatan
 	for idx, kegiatan := range kegiatanList {
-		// Add space between activities
+		// Add page break for each activity (except the first one)
 		if idx > 0 {
-			docContent.WriteString(createParagraphWithSpacing("", false, false, 0, 160)) // 8pt spacing between tables
+			docContent.WriteString(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`)
 		}
 
 		// Format date

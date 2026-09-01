@@ -70,9 +70,9 @@ func (s *AbsensiEkskulService) DownloadPDFDokumentasiEkskul(req *dtos.KegiatanEk
 
 	// Loop through each kegiatan
 	for idx, kegiatan := range kegiatanList {
-		// Add space between activities (8pt = 3mm)
+		// Add new page for each activity (except the first one)
 		if idx > 0 {
-			pdf.Ln(3)
+			pdf.AddPage()
 		}
 
 		// Format date
