@@ -160,6 +160,8 @@ func (s *AbsensiEkskulService) DownloadPDFDokumentasiEkskul(req *dtos.KegiatanEk
 		// Check for photos
 		hasPhotos := false
 		photoCount := 0
+		isFirstPhoto := true
+		
 		if kegiatan.FotoKegiatan != nil && *kegiatan.FotoKegiatan != "" {
 			var fotoUrls []string
 			if err := json.Unmarshal([]byte(*kegiatan.FotoKegiatan), &fotoUrls); err == nil && len(fotoUrls) > 0 {
@@ -209,29 +211,60 @@ func (s *AbsensiEkskulService) DownloadPDFDokumentasiEkskul(req *dtos.KegiatanEk
 						imgInfo := pdf.RegisterImageOptionsReader(url, imgOpt, reader)
 						
 						if imgInfo != nil {
-							// Calculate image dimensions (max width 100mm, maintain aspect ratio)
-							maxWidth := 100.0
+							// Fixed dimensions for each photo: 120mm width, maintain aspect ratio
+							fixedWidth := 120.0
 							imgWidth := imgInfo.Width() / 2.83 // Convert pixels to mm (72 DPI)
 							imgHeight := imgInfo.Height() / 2.83
 							
-							if imgWidth > maxWidth {
-								ratio := maxWidth / imgWidth
-								imgWidth = maxWidth
-								imgHeight = imgHeight * ratio
+							// Calculate height based on fixed width
+							ratio := fixedWidth / imgWidth
+							fixedHeight := imgHeight * ratio
+							
+							// Limit max height to 90mm
+							if fixedHeight > 90.0 {
+								fixedHeight = 90.0
+								ratio = fixedHeight / imgHeight
+								fixedWidth = imgWidth * ratio
 							}
 							
-							// Check if we need new page
-							if pdf.GetY()+imgHeight > 270 {
+							// Check if we need new page (image + 4mm margin)
+							_, pageHeight := pdf.GetPageSize()
+							bottomMargin := 15.0 // Bottom margin
+							needsNewPage := pdf.GetY()+fixedHeight+4 > pageHeight-bottomMargin
+							
+							if needsNewPage && !isFirstPhoto {
+								// Close current dokumentasi section
+								pdf.CellFormat(tableWidth, 0, "", "LBR", 1, "", false, 0, "")
+								
+								// Add new page
 								pdf.AddPage()
+								
+								// Redraw dokumentasi header on new page
+								pdf.SetFont("Arial", "B", 10)
+								pdf.CellFormat(tableWidth, 7, "Dokumentasi (lanjutan)", "LTR", 1, "L", false, 0, "")
 							}
 							
-							// Center the image
-							xPos := (pageWidth - imgWidth) / 2
-							pdf.ImageOptions(url, xPos, pdf.GetY(), imgWidth, imgHeight, false, imgOpt, 0, "")
-							pdf.Ln(imgHeight + 2)
+							// Save current position
+							currentY := pdf.GetY()
+							
+							// Calculate centered position for image
+							xPos := leftMargin + (tableWidth-fixedWidth)/2
+							
+							// Draw left border only
+							pdf.Line(leftMargin, currentY, leftMargin, currentY+fixedHeight+4)
+							
+							// Draw right border only
+							pdf.Line(leftMargin+tableWidth, currentY, leftMargin+tableWidth, currentY+fixedHeight+4)
+							
+							// Place the image centered
+							pdf.ImageOptions(url, xPos, currentY+2, fixedWidth, fixedHeight, false, imgOpt, 0, "")
+							
+							// Move to next line after image
+							pdf.SetY(currentY + fixedHeight + 4)
 							
 							photoCount++
 							hasPhotos = true
+							isFirstPhoto = false
 						}
 					}()
 				}
