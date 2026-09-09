@@ -133,8 +133,8 @@ type AbsensiSiswaDetailResponse struct {
 // AbsensiSiswaUpdateRequest represents request to update or create absensi siswa
 type AbsensiSiswaUpdateRequest struct {
 	ID                   *uint   `json:"id"`                                                       // Optional: if null, create new record
-	KegiatanEkskulID     uint    `json:"kegiatan_ekskul_id" binding:"required"`                   // Required for create
-	PesertaDidikRombelID uint    `json:"peserta_didik_rombel_id" binding:"required"`              // Required for create
+	KegiatanEkskulID     *uint   `json:"kegiatan_ekskul_id"`                                      // Required only for create (when ID is null)
+	PesertaDidikRombelID *uint   `json:"peserta_didik_rombel_id"`                                 // Required only for create (when ID is null)
 	Status               string  `json:"status" binding:"required,oneof=hadir sakit izin alpa alpha"`
 	Keterangan           *string `json:"keterangan"`
 }

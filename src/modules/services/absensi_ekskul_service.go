@@ -425,10 +425,17 @@ func (s *AbsensiEkskulService) UpdateAbsensiSiswa(req *dtos.AbsensiSiswaUpdateRe
 			return nil, fmt.Errorf("failed to update absensi siswa: %w", err)
 		}
 	} else {
-		// Create new record
+		// Create new record - validate required fields
+		if req.KegiatanEkskulID == nil || *req.KegiatanEkskulID == 0 {
+			return nil, errors.New("kegiatan_ekskul_id is required for creating new absensi")
+		}
+		if req.PesertaDidikRombelID == nil || *req.PesertaDidikRombelID == 0 {
+			return nil, errors.New("peserta_didik_rombel_id is required for creating new absensi")
+		}
+
 		// Validate kegiatan exists
 		var kegiatan models.KegiatanEkskul
-		if err := s.db.First(&kegiatan, req.KegiatanEkskulID).Error; err != nil {
+		if err := s.db.First(&kegiatan, *req.KegiatanEkskulID).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return nil, errors.New("kegiatan ekstrakurikuler not found")
 			}
@@ -437,7 +444,7 @@ func (s *AbsensiEkskulService) UpdateAbsensiSiswa(req *dtos.AbsensiSiswaUpdateRe
 
 		// Validate peserta didik rombel exists
 		var pesertaDidikRombel models.PesertaDidikRombel
-		if err := s.db.First(&pesertaDidikRombel, req.PesertaDidikRombelID).Error; err != nil {
+		if err := s.db.First(&pesertaDidikRombel, *req.PesertaDidikRombelID).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return nil, errors.New("peserta didik rombel not found")
 			}
@@ -447,7 +454,7 @@ func (s *AbsensiEkskulService) UpdateAbsensiSiswa(req *dtos.AbsensiSiswaUpdateRe
 		// Check if absensi already exists for this kegiatan and peserta didik
 		var existingAbsensi models.AbsensiEkskul
 		err := s.db.Where("kegiatan_ekskul_id = ? AND peserta_didik_rombel_id = ?", 
-			req.KegiatanEkskulID, req.PesertaDidikRombelID).First(&existingAbsensi).Error
+			*req.KegiatanEkskulID, *req.PesertaDidikRombelID).First(&existingAbsensi).Error
 		if err == nil {
 			// Already exists, return error
 			return nil, errors.New("absensi siswa already exists for this kegiatan, use update with ID")
@@ -457,8 +464,8 @@ func (s *AbsensiEkskulService) UpdateAbsensiSiswa(req *dtos.AbsensiSiswaUpdateRe
 
 		// Create new absensi
 		absensi = &models.AbsensiEkskul{
-			KegiatanEkskulID:     req.KegiatanEkskulID,
-			PesertaDidikRombelID: req.PesertaDidikRombelID,
+			KegiatanEkskulID:     *req.KegiatanEkskulID,
+			PesertaDidikRombelID: *req.PesertaDidikRombelID,
 			Status:               status,
 			Keterangan:           req.Keterangan,
 		}
