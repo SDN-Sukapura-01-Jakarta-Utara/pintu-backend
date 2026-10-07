@@ -143,39 +143,54 @@ func (r *monitoringInklusiBulananRepository) GetSummaryByTahun(tahun int16, bula
 func (r *monitoringInklusiBulananRepository) GetPPIsByTahun(tahun int16, rombelID *uint) ([]models.PPIInklusi, error) {
 	var ppiList []models.PPIInklusi
 	
-	query := r.db.Preload("AnakInklusiRombel").
+	// Get unique PPI IDs from monitoring_inklusi_bulanan for the given year
+	subQuery := r.db.Table("monitoring_inklusi_bulanan").
+		Select("DISTINCT ppi_inklusi_id").
+		Where("tahun = ?", tahun)
+	
+	if rombelID != nil && *rombelID > 0 {
+		subQuery = subQuery.Joins("JOIN ppi_inklusi ppi ON ppi.id = monitoring_inklusi_bulanan.ppi_inklusi_id").
+			Joins("JOIN anak_inklusi_rombel air ON air.id = ppi.anak_inklusi_rombel_id").
+			Joins("JOIN peserta_didik_rombel pdr ON pdr.id = air.peserta_didik_rombel_id").
+			Where("pdr.rombel_id = ?", *rombelID)
+	}
+	
+	// Get full PPI data
+	err := r.db.Preload("AnakInklusiRombel").
 		Preload("AnakInklusiRombel.AnakInklusi").
 		Preload("AnakInklusiRombel.AnakInklusi.PesertaDidik").
 		Preload("AnakInklusiRombel.PesertaDidikRombel").
 		Preload("AnakInklusiRombel.PesertaDidikRombel.Rombel").
 		Preload("AnakInklusiRombel.PesertaDidikRombel.TahunPelajaran").
-		Joins("JOIN anak_inklusi_rombel air ON air.id = ppi_inklusi.anak_inklusi_rombel_id").
-		Joins("JOIN peserta_didik_rombel pdr ON pdr.id = air.peserta_didik_rombel_id").
-		Joins("JOIN tahun_pelajaran tp ON tp.id = pdr.tahun_pelajaran_id").
-		Where("tp.tahun_mulai = ?", tahun)
+		Where("id IN (?)", subQuery).
+		Find(&ppiList).Error
 	
-	if rombelID != nil && *rombelID > 0 {
-		query = query.Where("pdr.rombel_id = ?", *rombelID)
-	}
-	
-	err := query.Find(&ppiList).Error
 	return ppiList, err
 }
 
 func (r *monitoringInklusiBulananRepository) GetAnakInklusiByTahun(tahun int16, rombelID *uint) ([]models.AnakInklusi, error) {
 	var anakInklusiList []models.AnakInklusi
 	
-	query := r.db.Preload("PesertaDidik").
-		Joins("JOIN anak_inklusi_rombel air ON air.anak_inklusi_id = anak_inklusi.id").
-		Joins("JOIN peserta_didik_rombel pdr ON pdr.id = air.peserta_didik_rombel_id").
-		Joins("JOIN tahun_pelajaran tp ON tp.id = pdr.tahun_pelajaran_id").
-		Where("tp.tahun_mulai = ?", tahun).
-		Distinct()
+	// Get unique anak inklusi IDs from monitoring via PPI
+	subQuery := r.db.Table("monitoring_inklusi_bulanan").
+		Select("DISTINCT ppi.anak_inklusi_rombel_id").
+		Joins("JOIN ppi_inklusi ppi ON ppi.id = monitoring_inklusi_bulanan.ppi_inklusi_id").
+		Where("monitoring_inklusi_bulanan.tahun = ?", tahun)
 	
 	if rombelID != nil && *rombelID > 0 {
-		query = query.Where("pdr.rombel_id = ?", *rombelID)
+		subQuery = subQuery.Joins("JOIN anak_inklusi_rombel air ON air.id = ppi.anak_inklusi_rombel_id").
+			Joins("JOIN peserta_didik_rombel pdr ON pdr.id = air.peserta_didik_rombel_id").
+			Where("pdr.rombel_id = ?", *rombelID)
 	}
 	
-	err := query.Find(&anakInklusiList).Error
+	// Get anak inklusi from anak_inklusi_rombel
+	subQuery2 := r.db.Table("anak_inklusi_rombel").
+		Select("DISTINCT anak_inklusi_id").
+		Where("id IN (?)", subQuery)
+	
+	err := r.db.Preload("PesertaDidik").
+		Where("id IN (?)", subQuery2).
+		Find(&anakInklusiList).Error
+	
 	return anakInklusiList, err
 }

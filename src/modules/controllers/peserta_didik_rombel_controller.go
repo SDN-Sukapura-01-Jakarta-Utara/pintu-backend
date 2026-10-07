@@ -77,8 +77,8 @@ func (c *PesertaDidikRombelController) GetAll(ctx *gin.Context) {
 	if limit == 0 {
 		limit = 10
 	}
-	if limit > 100 {
-		limit = 100
+	if limit > 10000 {
+		limit = 10000 // Max 10000 records per request
 	}
 	if page < 1 {
 		page = 1
