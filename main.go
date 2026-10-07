@@ -171,6 +171,7 @@ func main() {
 	routes.RegisterLayananSPMBRoutes(router, db)
 	routes.RegisterMutasiSiswaRoutes(router, db)
 	routes.RegisterFormulirRoutes(router, db)
+	routes.RegisterMonitoringInklusiRoutes(router, db)
 
 	// Start server
 	port := os.Getenv("PORT")
