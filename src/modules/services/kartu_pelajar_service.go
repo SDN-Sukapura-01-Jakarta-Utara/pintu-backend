@@ -33,7 +33,7 @@ var colors = cardColors{
 	AccentR: 196, AccentG: 148, AccentB: 66, // Coklat keemasan (warna aksen)
 	TextDarkR: 25, TextDarkG: 25, TextDarkB: 25,
 	TextMutedR: 115, TextMutedG: 115, TextMutedB: 115,
-	LightBgR: 246, LightBgG: 244, LightBgB: 241,
+	LightBgR: 242, LightBgG: 236, LightBgB: 224, // Background cream lebih pekat
 }
 
 const (
@@ -126,8 +126,8 @@ func GenerateKartuPelajarPDF(data *KartuPelajarData) ([]byte, error) {
 // ============================================================================
 
 func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.Kepegawaian, y, x float64, logoDKI, logoSekolah, ttdKepsek, elemenDekor []byte) {
-	// Base kartu dengan background cream muda
-	pdf.SetFillColor(254, 253, 250) // Warna cream lebih muda dan lembut
+	// Base kartu dengan background cream yang lebih pekat
+	pdf.SetFillColor(248, 245, 238) // Warna cream lebih pekat
 	pdf.SetDrawColor(colors.PrimaryR, colors.PrimaryG, colors.PrimaryB)
 	pdf.SetLineWidth(0.4)
 	pdf.Rect(x, y, cardWidth, cardHeight, "FD")
@@ -135,55 +135,48 @@ func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.
 	// Header flat modern + aksen geometris diagonal di pojok
 	drawHeaderBlock(pdf, x, y, cardWidth, headerH)
 
-	// Logo — lebar tetap tapi tinggi menyesuaikan rasio asli gambar (h: 0 = auto),
-	// supaya logo tidak gepeng/terdistorsi seperti saat dipaksa persegi.
-	logoDKIW := 7.5
-	logoSekolahW := 9.0 // Dikecilkan dari 10.0 ke 9.0
+	// Logo — posisi dinaikkan agar lebih center di header
+	logoDKIW := 8.5
+	logoSekolahW := 10.0
 	if logoDKI != nil {
 		pdf.RegisterImageOptionsReader("logoDKI", gofpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(logoDKI))
-		pdf.Image("logoDKI", x+3, y+2, logoDKIW, 0, false, "", 0, "")
+		pdf.Image("logoDKI", x+3, y+1.5, logoDKIW, 0, false, "", 0, "") // Dinaikkan dari y+2.5 ke y+1.5
 	}
 	if logoSekolah != nil {
 		pdf.RegisterImageOptionsReader("logoSekolah", gofpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(logoSekolah))
-		pdf.Image("logoSekolah", x+cardWidth-3-logoSekolahW, y+0.8, logoSekolahW, 0, false, "", 0, "")
+		pdf.Image("logoSekolah", x+cardWidth-3-logoSekolahW, y+0.8, logoSekolahW, 0, false, "", 0, "") // Dinaikkan dari y+1.5 ke y+0.8
 	}
 
-	// Teks header
+	// Teks header - KARTU PELAJAR di atas, SDN SUKAPURA 01 di tengah, alamat di bawah
 	pdf.SetTextColor(255, 255, 255)
-	pdf.SetFont("Helvetica", "B", 6.0) // Diubah ke Bold
-	pdf.SetXY(x+14, y+1.2)
-	pdf.CellFormat(cardWidth-28, 2.0, "PEMERINTAH PROVINSI DKI JAKARTA", "", 0, "C", false, 0, "")
-	pdf.SetXY(x+14, y+3.2)
-	pdf.CellFormat(cardWidth-28, 2.0, "DINAS PENDIDIKAN", "", 0, "C", false, 0, "")
-	pdf.SetFont("Helvetica", "B", 8.5)
-	pdf.SetXY(x+14, y+5.5)
+	// KARTU PELAJAR di atas (dikecilkan)
+	pdf.SetFont("Helvetica", "B", 8.0) // Dikecilkan dari 9.0 ke 8.0
+	pdf.SetXY(x+14, y+1.5)
+	pdf.CellFormat(cardWidth-28, 2.8, "KARTU PELAJAR", "", 0, "C", false, 0, "")
+	
+	// SDN SUKAPURA 01 di tengah (lebih besar dan menonjol)
+	pdf.SetFont("Helvetica", "B", 9.5)
+	pdf.SetXY(x+14, y+4.8)
 	pdf.CellFormat(cardWidth-28, 3.2, "SDN SUKAPURA 01", "", 0, "C", false, 0, "")
-	pdf.SetFont("Helvetica", "", 5.5) // Alamat diperbesar dari 5.0 ke 5.5
-	pdf.SetXY(x+14, y+8.9)
-	pdf.MultiCell(cardWidth-28, 1.4, "Jl. Beo No.15, Komp.Walikota No.2, Cilincing, Jakarta Utara", "", "C", false)
-	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
-
-	// Judul "KARTU PELAJAR" — dengan garis aksen tipis di bawahnya
-	pdf.SetFont("Helvetica", "B", 9.0)
-	pdf.SetTextColor(colors.PrimaryR, colors.PrimaryG, colors.PrimaryB)
-	titleY := y + headerH + accentBarH + 2.0 // Diturunkan dari +1.5 ke +2.0
-	pdf.SetXY(x, titleY)
-	pdf.CellFormat(cardWidth, 3.4, "KARTU PELAJAR", "", 0, "C", false, 0, "")
-	pdf.SetFillColor(colors.AccentR, colors.AccentG, colors.AccentB)
-	pdf.Rect(x+cardWidth/2-8, titleY+3.9, 16, 0.6, "F") // Spacing diperlonggar dari 3.6 ke 3.9
+	
+	// Alamat 1 baris di bawah
+	pdf.SetFont("Helvetica", "", 5.0)
+	pdf.SetXY(x+14, y+8.5)
+	pdf.CellFormat(cardWidth-28, 1.8, "Jl. Beo No.15, Komp.Walikota No.2, Sukapura, Cilincing, Jakarta Utara", "", 0, "C", false, 0, "")
+	
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 
 	// ---- Body ----
-	bodyY := titleY + 5.5
-	footerLineY := y + cardHeight - 16 // Diturunkan sedikit dari -17 ke -16
+	bodyY := y + headerH + accentBarH + 1.0
+	footerLineY := y + cardHeight - 16
 
-	// Background dekoratif transparan — dibatasi mulai dari bawah header,
-	// supaya warna header tetap solid murni tanpa terkena opacity elemen ini
+	// Background dekoratif transparan
 	drawBackgroundDecor(pdf, x, y, y+headerH+accentBarH, logoSekolah, elemenDekor)
 
-	photoX := x + 3 // Digeser ke kiri dari x+4 ke x+3
-	photoW, photoH := 17.0, 21.0 // Diperbesar lagi dari 16.0x20.0 ke 17.0x21.0
-	photoY := bodyY + 1.0 // Diturunkan sedikit ke bawah
+	// FOTO DI KIRI
+	photoW, photoH := 19.0, 24.0
+	photoX := x + 3 // Posisi di kiri
+	photoY := bodyY + 2.0
 
 	// Kotak foto dengan bingkai kuning penuh (warna aksen)
 	pdf.SetFillColor(colors.LightBgR, colors.LightBgG, colors.LightBgB)
@@ -225,19 +218,14 @@ func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.
 	}
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 
-	// Kolom info data siswa dengan QR code di kanan
-	infoX := photoX + photoW + 0.8 // Dikurangi dari +1.0 ke +0.8 agar lebih dekat foto
-	qrSize := 11.0
-	infoWidth := (x + cardWidth - 3) - infoX - qrSize - 2 // Ada pengurangan untuk QR code
+	// Kolom info data siswa di KANAN (karena foto sudah di kiri)
+	infoX := photoX + photoW + 2.5 // Digeser lebih ke kanan dari +1.5 ke +2.5
+	infoWidth := (x + cardWidth - 3) - infoX // Lebar sampai ujung kanan kartu
 	labelW := 22.0
-	rowY := bodyY + 1.0 // Diturunkan sejajar dengan foto
+	rowY := bodyY + 2.0 // Sejajar dengan foto
 
-	// Nama - bisa multi-line, terbatas karena ada QR code
+	// Nama - bisa multi-line
 	namaHeight := drawInfoRowMultiLine(pdf, infoX, rowY, "Nama", siswa.Nama, labelW, infoWidth)
-	
-	namaRowY := rowY // Simpan posisi Y untuk Nama (untuk QR code sejajar)
-	
-	// Field lainnya - spacing sama semua
 	rowY += namaHeight + 0.4
 	
 	// NIS / NISN - gabungkan kedua nilai, gunakan "-" jika kosong
@@ -271,24 +259,6 @@ func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.
 	}
 	drawInfoRow(pdf, infoX, rowY, "Jenis Kelamin", jenisKelamin, labelW, infoWidth)
 
-	// QR code, sejajar dengan baris Nama di kanan
-	if siswa.Barcode != "" {
-		qrData, err := qrcode.Encode(siswa.Barcode, qrcode.Medium, 256)
-		if err == nil {
-			qrX := x + cardWidth - qrSize - 3
-			qrY := namaRowY // Sejajar dengan Nama
-			// Kotak background putih tanpa padding (persis ukuran barcode) dengan garis tebal
-			pdf.SetFillColor(255, 255, 255)
-			pdf.SetDrawColor(220, 220, 220)
-			pdf.SetLineWidth(0.8) // Garis dipertebal dari 0.5 ke 0.8
-			pdf.Rect(qrX, qrY, qrSize, qrSize, "FD") // Tanpa padding, persis ukuran barcode
-			pdf.SetLineWidth(0.4) // Reset ke line width normal
-			qrName := fmt.Sprintf("qr_%s", siswa.NIS)
-			pdf.RegisterImageOptionsReader(qrName, gofpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(qrData))
-			pdf.Image(qrName, qrX, qrY, qrSize, qrSize, false, "", 0, "")
-		}
-	}
-
 	// ---- Footer / tanda tangan ----
 	footerY := footerLineY
 	currentDate := formatTanggalIndonesia(time.Now())
@@ -305,18 +275,18 @@ func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.
 	if kepsek != nil {
 		pdf.SetFont("Helvetica", "B", 5.5)
 		pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
-		pdf.SetXY(sigX, footerY+10.5) // Diperbesar spacing dari 9.8 ke 10.5
+		pdf.SetXY(sigX, footerY+10.5)
 		pdf.CellFormat(sigW, 2.2, kepsek.Nama, "", 0, "C", false, 0, "")
 		pdf.SetFont("Helvetica", "", 4.8)
 		pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
-		pdf.SetXY(sigX, footerY+12.5) // Disesuaikan dari 11.8 ke 12.5
+		pdf.SetXY(sigX, footerY+12.5)
 		pdf.CellFormat(sigW, 2.2, fmt.Sprintf("NIP. %s", kepsek.NIP), "", 0, "C", false, 0, "")
 	}
 
 	// Tanda tangan asli kepala sekolah (PNG transparan)
 	if ttdKepsek != nil {
 		pdf.RegisterImageOptionsReader("ttdKepsek", gofpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(ttdKepsek))
-		ttdW := 12.5 // Diperbesar dari 11.0 ke 12.5
+		ttdW := 12.5
 		ttdX := sigX + (sigW-ttdW)/2
 		ttdY := footerY + 3.4
 		pdf.Image("ttdKepsek", ttdX, ttdY, ttdW, 0, false, "", 0, "")
@@ -324,9 +294,31 @@ func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.
 
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 
-	// Catatan kecil masa berlaku kartu - mepet bawah
+	// BARCODE DI TENGAH BAWAH (di antara tulisan "berlaku selama..." dan tanda tangan)
+	if siswa.Barcode != "" {
+		qrData, err := qrcode.Encode(siswa.Barcode, qrcode.Medium, 256)
+		if err == nil {
+			barcodeSize := 14.5
+			// Posisi tengah antara kiri kartu dan tanda tangan
+			barcodeX := x + (cardWidth / 2) - (barcodeSize / 2)
+			barcodeY := y + cardHeight - 16.0 // Dinaikkan dari -15.2 ke -16.0
+			
+			// Kotak background putih dengan garis tebal
+			pdf.SetFillColor(255, 255, 255)
+			pdf.SetDrawColor(220, 220, 220)
+			pdf.SetLineWidth(0.8)
+			pdf.Rect(barcodeX, barcodeY, barcodeSize, barcodeSize, "FD")
+			pdf.SetLineWidth(0.4) // Reset ke line width normal
+			
+			qrName := fmt.Sprintf("qr_%s", siswa.NIS)
+			pdf.RegisterImageOptionsReader(qrName, gofpdf.ImageOptions{ImageType: "PNG"}, bytes.NewReader(qrData))
+			pdf.Image(qrName, barcodeX, barcodeY, barcodeSize, barcodeSize, false, "", 0, "")
+		}
+	}
+
+	// Catatan kecil masa berlaku kartu - di kiri bawah
 	noteW := 27.0
-	noteY := y + cardHeight - 5.8 // Dinaikkan dari -4.8 ke -5.8
+	noteY := y + cardHeight - 5.8
 	noteH := 3.0
 	pdf.SetAlpha(0.08, "Normal")
 	pdf.SetFillColor(colors.AccentR, colors.AccentG, colors.AccentB)
@@ -345,8 +337,8 @@ func drawFrontCard(pdf *gofpdf.Fpdf, siswa *models.PesertaDidik, kepsek *models.
 // ============================================================================
 
 func drawBackCard(pdf *gofpdf.Fpdf, visiMisi *models.VisiMisi, y, x float64, logoSekolah, elemenDekor []byte) {
-	// Base kartu dengan background cream muda
-	pdf.SetFillColor(254, 253, 250) // Warna cream lebih muda dan lembut
+	// Base kartu dengan background cream yang lebih pekat
+	pdf.SetFillColor(248, 245, 238) // Warna cream lebih pekat
 	pdf.SetDrawColor(colors.PrimaryR, colors.PrimaryG, colors.PrimaryB)
 	pdf.SetLineWidth(0.4)
 	pdf.Rect(x, y, cardWidth, cardHeight, "FD")
@@ -370,11 +362,11 @@ func drawBackCard(pdf *gofpdf.Fpdf, visiMisi *models.VisiMisi, y, x float64, log
 	// Hard-coded Visi
 	contentY = drawSectionBadge(pdf, contentX, contentY, "VISI")
 	visiText := "Menciptakan lingkungan pendidikan yang mendukung peserta didik untuk menjadi cerdas secara holistik, kreatif, dan adaptif di era teknologi, serta memiliki karakter dan nilai-nilai Pancasila yang kuat"
-	pdf.SetFont("Helvetica", "I", 6.0) // Diperbesar dari 5.5 ke 6.0
+	pdf.SetFont("Helvetica", "I", 6.3) // Diperbesar dari 6.0 ke 6.3
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 	pdf.SetXY(contentX+2, contentY)
-	pdf.MultiCell(maxWidth-2, 2.4, visiText, "", "L", false) // Line height dari 2.3 ke 2.4
-	contentY = pdf.GetY() + 1.2 // Dikurangi dari 1.5 ke 1.2
+	pdf.MultiCell(maxWidth-2, 2.4, visiText, "", "L", false)
+	contentY = pdf.GetY() + 1.2
 
 	// Hard-coded Misi
 	contentY = drawSectionBadge(pdf, contentX, contentY, "MISI")
@@ -384,13 +376,13 @@ func drawBackCard(pdf *gofpdf.Fpdf, visiMisi *models.VisiMisi, y, x float64, log
 		"Mengintegrasikan teknologi pendidikan dalam proses pembelajaran untuk meningkatkan kreativitas dan inovasi peserta didik.",
 		"Mengembangkan kurikulum yang adaptif dan relevan dengan perkembangan zaman dan kebutuhan peserta didik.",
 	}
-	pdf.SetFont("Helvetica", "", 5.6) // Diperbesar dari 5.2 ke 5.6
+	pdf.SetFont("Helvetica", "", 5.8) // Diperbesar dari 5.6 ke 5.8
 	for _, item := range misiItems {
 		pdf.SetFillColor(colors.AccentR, colors.AccentG, colors.AccentB)
-		pdf.Rect(contentX+1, contentY+0.8, 1.2, 1.2, "F") // Bullet diperbesar dari 1.1 ke 1.2
-		pdf.SetXY(contentX+3.2, contentY) // Disesuaikan dari 3 ke 3.2
-		pdf.MultiCell(maxWidth-3.2, 2.4, item, "", "L", false) // Line height dari 2.3 ke 2.4
-		contentY = pdf.GetY() + 0.4 // Dikurangi dari 0.5 ke 0.4
+		pdf.Rect(contentX+1, contentY+0.8, 1.2, 1.2, "F")
+		pdf.SetXY(contentX+3.2, contentY)
+		pdf.MultiCell(maxWidth-3.2, 2.4, item, "", "L", false)
+		contentY = pdf.GetY() + 0.4
 		if contentY > y+cardHeight-2 {
 			break
 		}
@@ -398,9 +390,9 @@ func drawBackCard(pdf *gofpdf.Fpdf, visiMisi *models.VisiMisi, y, x float64, log
 }
 
 func drawSectionBadge(pdf *gofpdf.Fpdf, x, y float64, label string) float64 {
-	pdf.SetFont("Helvetica", "B", 5.0)
+	pdf.SetFont("Helvetica", "B", 5.5) // Diperbesar dari 5.0 ke 5.5
 	w := pdf.GetStringWidth(label) + 4
-	h := 3.2
+	h := 3.5 // Diperbesar dari 3.2 ke 3.5
 	pdf.SetFillColor(colors.AccentR, colors.AccentG, colors.AccentB)
 	pdf.Rect(x, y, w, h, "F")
 	pdf.SetTextColor(255, 255, 255)
@@ -479,76 +471,76 @@ func drawBackgroundDecor(pdf *gofpdf.Fpdf, x, y, bodyTop float64, logoSekolah, e
 // drawInfoRow menggambar satu baris "label : nilai" — label dan nilai sama-sama
 // warna hitam, bedanya nilai dibuat bold supaya lebih menonjol.
 func drawInfoRow(pdf *gofpdf.Fpdf, x, y float64, label, value string, labelW, maxWidth float64) {
-	const baseFont = 7.0 // Diperbesar dari 6.5 ke 7.0
+	const baseFont = 7.5
 
 	pdf.SetFont("Helvetica", "", baseFont)
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 	pdf.SetXY(x, y)
 	pdf.CellFormat(labelW, 3.6, label, "", 0, "L", false, 0, "")
-	pdf.SetXY(x+labelW-6.5, y) // Digeser lebih jauh ke kiri dari -5.5 ke -6.5
+	pdf.SetXY(x+labelW-5.0, y) // Digeser lebih ke kanan dari -6.5 ke -5.0
 	pdf.CellFormat(2, 3.6, ":", "", 0, "L", false, 0, "")
 
-	valueW := maxWidth - labelW + 4.5 // Disesuaikan dari +3.5 ke +4.5
+	valueW := maxWidth - labelW + 3.0 // Dikurangi dari +4.5 ke +3.0
 	fontSize := baseFont
 	pdf.SetFont("Helvetica", "B", fontSize)
-	for pdf.GetStringWidth(value) > valueW && fontSize > 4.8 {
+	for pdf.GetStringWidth(value) > valueW && fontSize > 5.0 {
 		fontSize -= 0.2
 		pdf.SetFont("Helvetica", "B", fontSize)
 	}
-	pdf.SetXY(x+labelW-4.5, y) // Disesuaikan dari -3.5 ke -4.5
+	pdf.SetXY(x+labelW-3.0, y) // Digeser dari -4.5 ke -3.0
 	pdf.CellFormat(valueW, 3.6, value, "", 0, "L", false, 0, "")
 }
 
 // drawInfoRowWithAutoResize menggambar satu baris dengan auto-resize yang lebih agresif
 // untuk menghindari tabrakan dengan barcode
 func drawInfoRowWithAutoResize(pdf *gofpdf.Fpdf, x, y float64, label, value string, labelW, maxWidth float64) {
-	const baseFont = 7.0 // Diperbesar dari 6.5 ke 7.0
+	const baseFont = 7.5
 
 	pdf.SetFont("Helvetica", "", baseFont)
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 	pdf.SetXY(x, y)
 	pdf.CellFormat(labelW, 3.6, label, "", 0, "L", false, 0, "")
-	pdf.SetXY(x+labelW-6.5, y) // Digeser lebih jauh ke kiri dari -5.5 ke -6.5
+	pdf.SetXY(x+labelW-5.0, y) // Digeser lebih ke kanan dari -6.5 ke -5.0
 	pdf.CellFormat(2, 3.6, ":", "", 0, "L", false, 0, "")
 
-	valueW := maxWidth - labelW + 4.5 // Disesuaikan dari +3.5 ke +4.5
+	valueW := maxWidth - labelW + 3.0 // Dikurangi dari +4.5 ke +3.0
 	fontSize := baseFont
 	pdf.SetFont("Helvetica", "B", fontSize)
-	// Resize lebih agresif untuk menghindari barcode, minimal 4.5
-	for pdf.GetStringWidth(value) > valueW && fontSize > 4.5 {
+	// Resize lebih agresif untuk menghindari barcode, minimal 4.8
+	for pdf.GetStringWidth(value) > valueW && fontSize > 4.8 {
 		fontSize -= 0.15
 		pdf.SetFont("Helvetica", "B", fontSize)
 	}
-	pdf.SetXY(x+labelW-4.5, y) // Disesuaikan dari -3.5 ke -4.5
+	pdf.SetXY(x+labelW-3.0, y) // Digeser dari -4.5 ke -3.0
 	pdf.CellFormat(valueW, 3.6, value, "", 0, "L", false, 0, "")
 }
 
 // drawInfoRowMultiLine menggambar satu baris "label : nilai" dengan dukungan multi-line untuk value
 // dan mengembalikan tinggi total yang digunakan
 func drawInfoRowMultiLine(pdf *gofpdf.Fpdf, x, y float64, label, value string, labelW, maxWidth float64) float64 {
-	const baseFont = 7.0 // Diperbesar dari 6.5 ke 7.0
+	const baseFont = 7.5
 	const lineHeight = 3.6
 
 	pdf.SetFont("Helvetica", "", baseFont)
 	pdf.SetTextColor(colors.TextDarkR, colors.TextDarkG, colors.TextDarkB)
 	pdf.SetXY(x, y)
 	pdf.CellFormat(labelW, lineHeight, label, "", 0, "L", false, 0, "")
-	pdf.SetXY(x+labelW-6.5, y) // Digeser lebih jauh ke kiri dari -5.5 ke -6.5
+	pdf.SetXY(x+labelW-5.0, y) // Digeser lebih ke kanan dari -6.5 ke -5.0
 	pdf.CellFormat(2, lineHeight, ":", "", 0, "L", false, 0, "")
 
-	valueW := maxWidth - labelW + 4.5 // Disesuaikan dari +3.5 ke +4.5
+	valueW := maxWidth - labelW + 3.0 // Dikurangi dari +4.5 ke +3.0
 	pdf.SetFont("Helvetica", "B", baseFont)
 	
 	// Cek apakah value muat dalam satu baris
 	if pdf.GetStringWidth(value) <= valueW {
 		// Muat dalam satu baris, gunakan CellFormat biasa
-		pdf.SetXY(x+labelW-4.5, y) // Disesuaikan dari -3.5 ke -4.5
+		pdf.SetXY(x+labelW-3.0, y) // Digeser dari -4.5 ke -3.0
 		pdf.CellFormat(valueW, lineHeight, value, "", 0, "L", false, 0, "")
 		return lineHeight
 	}
 	
 	// Jika tidak muat, gunakan MultiCell untuk multi-line
-	pdf.SetXY(x+labelW-4.5, y) // Disesuaikan dari -3.5 ke -4.5
+	pdf.SetXY(x+labelW-3.0, y) // Digeser dari -4.5 ke -3.0
 	startY := pdf.GetY()
 	pdf.MultiCell(valueW, lineHeight, value, "", "L", false)
 	endY := pdf.GetY()
