@@ -535,7 +535,12 @@ func (c *PesertaDidikController) DownloadKartuPelajar(ctx *gin.Context) {
 		req.PesertaDidikIDs = []uint{}
 	}
 	
-	pdfBytes, err := c.service.DownloadKartuPelajar(req.PesertaDidikIDs)
+	// Default layout adalah "keduanya" jika tidak diisi
+	if req.Layout == "" {
+		req.Layout = "keduanya"
+	}
+	
+	pdfBytes, err := c.service.DownloadKartuPelajar(req.PesertaDidikIDs, req.Layout)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

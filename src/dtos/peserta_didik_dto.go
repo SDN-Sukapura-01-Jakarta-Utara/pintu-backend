@@ -187,6 +187,7 @@ type GenerateBarcodeResponse struct {
 // DownloadKartuPelajarRequest represents the request payload for downloading kartu pelajar
 type DownloadKartuPelajarRequest struct {
 	PesertaDidikIDs []uint `json:"peserta_didik_ids" binding:"omitempty"` // Optional, jika kosong download semua
+	Layout          string `json:"layout" binding:"omitempty,oneof=depan belakang keduanya"` // Optional: "depan", "belakang", "keduanya" (default: "keduanya")
 }
 
 // ExportDataIndukSiswaRequest represents the request payload for exporting data induk siswa

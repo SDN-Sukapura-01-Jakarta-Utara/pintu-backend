@@ -71,6 +71,7 @@ type KartuPelajarData struct {
 	Siswa         []models.PesertaDidik
 	KepalaSekolah *models.Kepegawaian
 	VisiMisi      *models.VisiMisi
+	Layout        string // "depan", "belakang", atau "keduanya"
 }
 
 // GenerateKartuPelajarPDF generates PDF for student cards
@@ -94,23 +95,66 @@ func GenerateKartuPelajarPDF(data *KartuPelajarData) ([]byte, error) {
 		elemenDekor = nil
 	}
 
-	// 4 kartu per halaman (depan kiri, belakang kanan)
-	for i := 0; i < len(data.Siswa); i += 4 {
-		pdf.AddPage()
+	// Default layout adalah "keduanya" jika tidak diisi
+	if data.Layout == "" {
+		data.Layout = "keduanya"
+	}
 
-		end := i + 4
-		if end > len(data.Siswa) {
-			end = len(data.Siswa)
+	if data.Layout == "keduanya" {
+		// Layout keduanya: 4 siswa per halaman (1 siswa = 2 kartu: depan kiri, belakang kanan)
+		for i := 0; i < len(data.Siswa); i += 4 {
+			pdf.AddPage()
+
+			end := i + 4
+			if end > len(data.Siswa) {
+				end = len(data.Siswa)
+			}
+			pageStudents := data.Siswa[i:end]
+
+			for idx, siswa := range pageStudents {
+				yPos := 10.0 + float64(idx)*68.0
+				s := siswa
+				// Kiri depan, kanan belakang untuk siswa yang sama
+				drawFrontCard(pdf, &s, data.KepalaSekolah, yPos, 10.0, logoDKI, logoSekolah, ttdKepsek, elemenDekor)
+				drawBackCard(pdf, data.VisiMisi, yPos, 110.0, logoSekolah, elemenDekor)
+				drawCutMarks(pdf, 10.0, yPos, cardWidth, cardHeight)
+				drawCutMarks(pdf, 110.0, yPos, cardWidth, cardHeight)
+			}
 		}
-		pageStudents := data.Siswa[i:end]
+	} else {
+		// Layout depan/belakang saja: 8 siswa per halaman (2 siswa per baris: kiri & kanan)
+		for i := 0; i < len(data.Siswa); i += 8 {
+			pdf.AddPage()
 
-		for idx, siswa := range pageStudents {
-			yPos := 10.0 + float64(idx)*68.0
-			s := siswa
-			drawFrontCard(pdf, &s, data.KepalaSekolah, yPos, 10.0, logoDKI, logoSekolah, ttdKepsek, elemenDekor)
-			drawBackCard(pdf, data.VisiMisi, yPos, 110.0, logoSekolah, elemenDekor)
-			drawCutMarks(pdf, 10.0, yPos, cardWidth, cardHeight)
-			drawCutMarks(pdf, 110.0, yPos, cardWidth, cardHeight)
+			end := i + 8
+			if end > len(data.Siswa) {
+				end = len(data.Siswa)
+			}
+			pageStudents := data.Siswa[i:end]
+
+			for idx := 0; idx < len(pageStudents); idx += 2 {
+				yPos := 10.0 + float64(idx/2)*68.0
+				
+				// Siswa kiri
+				siswaKiri := pageStudents[idx]
+				if data.Layout == "depan" {
+					drawFrontCard(pdf, &siswaKiri, data.KepalaSekolah, yPos, 10.0, logoDKI, logoSekolah, ttdKepsek, elemenDekor)
+				} else {
+					drawBackCard(pdf, data.VisiMisi, yPos, 10.0, logoSekolah, elemenDekor)
+				}
+				drawCutMarks(pdf, 10.0, yPos, cardWidth, cardHeight)
+				
+				// Siswa kanan (jika ada)
+				if idx+1 < len(pageStudents) {
+					siswaKanan := pageStudents[idx+1]
+					if data.Layout == "depan" {
+						drawFrontCard(pdf, &siswaKanan, data.KepalaSekolah, yPos, 110.0, logoDKI, logoSekolah, ttdKepsek, elemenDekor)
+					} else {
+						drawBackCard(pdf, data.VisiMisi, yPos, 110.0, logoSekolah, elemenDekor)
+					}
+					drawCutMarks(pdf, 110.0, yPos, cardWidth, cardHeight)
+				}
+			}
 		}
 	}
 

@@ -36,7 +36,7 @@ type PesertaDidikService interface {
 	ExportDataIndukSiswaPDF(status string) ([]byte, error)
 	ExportPemetaanRombelExcel(rombelID uint, tahunPelajaranID uint, status string) (*excelize.File, error)
 	ExportPemetaanRombelPDF(rombelID uint, tahunPelajaranID uint, status string) ([]byte, error)
-	DownloadKartuPelajar(pesertaDidikIDs []uint) ([]byte, error)
+	DownloadKartuPelajar(pesertaDidikIDs []uint, layout string) ([]byte, error)
 	GetTotalSiswa() (*dtos.TotalSiswaResponse, error)
 	GenerateBarcodeAllPesertaDidik() (*dtos.GenerateBarcodeResponse, error)
 	GenerateBarcodePesertaDidikByID(id uint) (*dtos.GenerateBarcodeResponse, error)
@@ -1824,7 +1824,7 @@ func (s *PesertaDidikServiceImpl) ImportSiswaLulus(file multipart.File, userID u
 }
 
 // DownloadKartuPelajar generates PDF for student cards (status active only)
-func (s *PesertaDidikServiceImpl) DownloadKartuPelajar(pesertaDidikIDs []uint) ([]byte, error) {
+func (s *PesertaDidikServiceImpl) DownloadKartuPelajar(pesertaDidikIDs []uint, layout string) ([]byte, error) {
 	var siswa []models.PesertaDidik
 	var err error
 	
@@ -1871,6 +1871,7 @@ func (s *PesertaDidikServiceImpl) DownloadKartuPelajar(pesertaDidikIDs []uint) (
 		Siswa:         siswa,
 		KepalaSekolah: kepalaSekolah,
 		VisiMisi:      visiMisi,
+		Layout:        layout,
 	}
 	
 	// Generate PDF
