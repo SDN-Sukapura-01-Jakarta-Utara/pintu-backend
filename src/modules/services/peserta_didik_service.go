@@ -36,7 +36,7 @@ type PesertaDidikService interface {
 	ExportDataIndukSiswaPDF(status string) ([]byte, error)
 	ExportPemetaanRombelExcel(rombelID uint, tahunPelajaranID uint, status string) (*excelize.File, error)
 	ExportPemetaanRombelPDF(rombelID uint, tahunPelajaranID uint, status string) ([]byte, error)
-	DownloadKartuPelajar(pesertaDidikIDs []uint, layout string) ([]byte, error)
+	DownloadKartuPelajar(pesertaDidikIDs []uint, tahunPelajaranID uint, rombelID uint, layout string) ([]byte, error)
 	GetTotalSiswa() (*dtos.TotalSiswaResponse, error)
 	GenerateBarcodeAllPesertaDidik() (*dtos.GenerateBarcodeResponse, error)
 	GenerateBarcodePesertaDidikByID(id uint) (*dtos.GenerateBarcodeResponse, error)
@@ -1824,19 +1824,44 @@ func (s *PesertaDidikServiceImpl) ImportSiswaLulus(file multipart.File, userID u
 }
 
 // DownloadKartuPelajar generates PDF for student cards (status active only)
-func (s *PesertaDidikServiceImpl) DownloadKartuPelajar(pesertaDidikIDs []uint, layout string) ([]byte, error) {
+func (s *PesertaDidikServiceImpl) DownloadKartuPelajar(pesertaDidikIDs []uint, tahunPelajaranID uint, rombelID uint, layout string) ([]byte, error) {
 	var siswa []models.PesertaDidik
 	var err error
 	
-	// Jika IDs kosong, ambil semua siswa aktif
-	if len(pesertaDidikIDs) == 0 {
-		siswa, err = s.repository.GetAllActive()
+	// Priority logic:
+	// 1. Jika ada peserta_didik_ids, gunakan itu (ignore tahun_pelajaran_id & rombel_id)
+	// 2. Jika ada tahun_pelajaran_id DAN rombel_id, ambil siswa dari peserta_didik_rombel
+	// 3. Jika hanya ada tahun_pelajaran_id, ambil semua siswa di tahun pelajaran tersebut
+	// 4. Jika hanya ada rombel_id, ambil semua siswa di rombel tersebut (semua tahun pelajaran)
+	// 5. Jika tidak ada filter sama sekali, ambil semua siswa aktif
+	
+	if len(pesertaDidikIDs) > 0 {
+		// Priority 1: Gunakan IDs yang diberikan
+		siswa, err = s.repository.GetByIDs(pesertaDidikIDs)
+		if err != nil {
+			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
+		}
+	} else if tahunPelajaranID > 0 && rombelID > 0 {
+		// Priority 2: Filter by tahun pelajaran DAN rombel
+		siswa, err = s.repository.GetPesertaDidikByTahunPelajaranAndRombel(tahunPelajaranID, rombelID)
+		if err != nil {
+			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
+		}
+	} else if tahunPelajaranID > 0 {
+		// Priority 3: Filter by tahun pelajaran saja
+		siswa, err = s.repository.GetPesertaDidikByTahunPelajaran(tahunPelajaranID)
+		if err != nil {
+			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
+		}
+	} else if rombelID > 0 {
+		// Priority 4: Filter by rombel saja (semua tahun pelajaran)
+		siswa, err = s.repository.GetPesertaDidikByRombelID(rombelID)
 		if err != nil {
 			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
 		}
 	} else {
-		// Jika IDs ada, ambil siswa berdasarkan IDs
-		siswa, err = s.repository.GetByIDs(pesertaDidikIDs)
+		// Priority 5: Ambil semua siswa aktif
+		siswa, err = s.repository.GetAllActive()
 		if err != nil {
 			return nil, fmt.Errorf("gagal mengambil data siswa: %s", err.Error())
 		}

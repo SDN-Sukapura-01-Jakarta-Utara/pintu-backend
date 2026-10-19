@@ -540,7 +540,7 @@ func (c *PesertaDidikController) DownloadKartuPelajar(ctx *gin.Context) {
 		req.Layout = "keduanya"
 	}
 	
-	pdfBytes, err := c.service.DownloadKartuPelajar(req.PesertaDidikIDs, req.Layout)
+	pdfBytes, err := c.service.DownloadKartuPelajar(req.PesertaDidikIDs, req.TahunPelajaranID, req.RombelID, req.Layout)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
