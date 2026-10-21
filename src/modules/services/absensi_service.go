@@ -31,6 +31,8 @@ type AbsensiService interface {
 	ExportAbsensiExcel(req *dtos.ExportAbsensiExcelRequest) (*excelize.File, error)
 	ExportAbsensiPDF(req *dtos.ExportAbsensiExcelRequest) ([]byte, error)
 	GetRekapAbsensiByPesertaDidik(req *dtos.GetRekapAbsensiByPesertaDidikRequest) (*dtos.GetRekapAbsensiByPesertaDidikResponse, error)
+	GetRekapKedatanganKepulangan(req *dtos.RekapKedatanganKepulanganRequest) (*dtos.RekapKedatanganKepulanganResponse, error)
+	GetGrafikKedatanganKepulangan(req *dtos.GrafikKedatanganKepulanganRequest) (*dtos.GrafikKedatanganKepulanganResponse, error)
 }
 
 type AbsensiServiceImpl struct {
@@ -2088,4 +2090,282 @@ func (s *AbsensiServiceImpl) GetRekapAbsensiByPesertaDidik(req *dtos.GetRekapAbs
 		},
 		DetailAbsensi:    detailAbsensi,
 	}, nil
+}
+
+// GetRekapKedatanganKepulangan retrieves attendance arrival and departure recap for all students in a rombel (or all rombel if rombelID is nil) on a specific date
+func (s *AbsensiServiceImpl) GetRekapKedatanganKepulangan(req *dtos.RekapKedatanganKepulanganRequest) (*dtos.RekapKedatanganKepulanganResponse, error) {
+	// Parse tanggal (YYYY-MM-DD format)
+	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+	if err != nil {
+		return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
+	}
+	
+	// Get konfigurasi absensi untuk jam maksimal datang
+	var konfigAbsensi models.KonfigurasiAbsensi
+	if err := s.db.First(&konfigAbsensi).Error; err != nil {
+		return nil, errors.New("konfigurasi absensi tidak ditemukan")
+	}
+	
+	// Get rombel name if rombelID is provided
+	rombelNama := ""
+	if req.RombelID != nil {
+		var rombel models.Rombel
+		if err := s.db.First(&rombel, *req.RombelID).Error; err == nil {
+			rombelNama = rombel.Name
+		}
+	}
+	
+	// Get absensi and rekapitulasi data for all students on this date
+	// If rombelID is provided, filter by rombel_id; otherwise get all rombel
+	absensiData, rekapData, err := s.repository.GetRekapKedatanganKepulangan(req.RombelID, tanggal)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data absensi")
+	}
+	
+	// Create map for quick lookup of absensi scan data
+	absensiMap := make(map[uint]*models.Absensi) // key: peserta_didik_id
+	for i := range absensiData {
+		absensiMap[absensiData[i].PesertaDidikID] = &absensiData[i]
+	}
+	
+	var dataSiswa []dtos.RekapKedatanganKepulanganSiswa
+	
+	// Process each rekapitulasi record
+	for _, rekap := range rekapData {
+		if rekap.PesertaDidikRombel == nil || rekap.PesertaDidikRombel.PesertaDidik == nil {
+			continue
+		}
+		
+		pesertaDidik := rekap.PesertaDidikRombel.PesertaDidik
+		pesertaDidikID := pesertaDidik.ID
+		
+		// Get rombel name for this student (from preloaded data)
+		studentRombelNama := ""
+		if rekap.Rombel != nil {
+			studentRombelNama = rekap.Rombel.Name
+		}
+		
+		siswa := dtos.RekapKedatanganKepulanganSiswa{
+			PesertaDidikID:   pesertaDidikID,
+			NIS:              pesertaDidik.NIS,
+			Nama:             pesertaDidik.Nama,
+			RombelNama:       studentRombelNama, // Use student's actual rombel name
+			JamKedatangan:    nil,
+			JamKepulangan:    nil,
+			StatusKedatangan: nil,
+			StatusKehadiran:  rekap.Status, // from rekapitulasi_absensi
+			Keterangan:       rekap.Keterangan,
+			FileSurat:        s.r2Storage.GetPublicURL(rekap.FileSurat),
+			MetodeInput:      rekap.MetodeInput,
+		}
+		
+		// Check if there's absensi scan data for this student
+		if absensi, exists := absensiMap[pesertaDidikID]; exists {
+			siswa.JamKedatangan = absensi.JamDatang
+			siswa.JamKepulangan = absensi.JamPulang
+			
+			// Determine status kedatangan (tepat waktu / terlambat)
+			if absensi.JamDatang != nil {
+				statusKedatangan := "Tepat Waktu"
+				if *absensi.JamDatang > konfigAbsensi.JamMaxDatang {
+					statusKedatangan = "Terlambat"
+				}
+				siswa.StatusKedatangan = &statusKedatangan
+			}
+		}
+		
+		dataSiswa = append(dataSiswa, siswa)
+	}
+	
+	return &dtos.RekapKedatanganKepulanganResponse{
+		RombelID:   req.RombelID,
+		RombelNama: rombelNama, // Will be empty if filtering all rombel
+		Tanggal:    req.Tanggal,
+		TotalSiswa: len(dataSiswa),
+		DataSiswa:  dataSiswa,
+	}, nil
+}
+
+
+// GetGrafikKedatanganKepulangan retrieves chart data for arrival and departure analysis on a specific date
+func (s *AbsensiServiceImpl) GetGrafikKedatanganKepulangan(req *dtos.GrafikKedatanganKepulanganRequest) (*dtos.GrafikKedatanganKepulanganResponse, error) {
+	// Parse tanggal
+	tanggal, err := time.Parse("2006-01-02", req.Tanggal)
+	if err != nil {
+		return nil, errors.New("format tanggal tidak valid, gunakan YYYY-MM-DD")
+	}
+	
+	// Get konfigurasi absensi untuk jam maksimal datang
+	var konfigAbsensi models.KonfigurasiAbsensi
+	if err := s.db.First(&konfigAbsensi).Error; err != nil {
+		return nil, errors.New("konfigurasi absensi tidak ditemukan")
+	}
+	
+	// Get absensi and rekapitulasi data
+	absensiData, rekapData, err := s.repository.GetGrafikKedatanganKepulangan(req.RombelID, tanggal)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data absensi")
+	}
+	
+	// Create map for absensi scan data (key: peserta_didik_id)
+	absensiMap := make(map[uint]*models.Absensi)
+	for i := range absensiData {
+		absensiMap[absensiData[i].PesertaDidikID] = &absensiData[i]
+	}
+	
+	// Initialize counters
+	totalHadir := 0
+	tepatWaktu := 0
+	terlambat := 0
+	inputManual := 0
+	inputAuto := 0
+	
+	// Distribusi keterlambatan counters
+	tepatWaktuCount := 0     // 0 menit
+	telat1_5 := 0            // 1-5 menit
+	telat6_15 := 0           // 6-15 menit
+	telat16_30 := 0          // 16-30 menit
+	telatLebih30 := 0        // >30 menit
+	
+	// Process rekapitulasi data
+	for _, rekap := range rekapData {
+		// Only count "hadir" status
+		if rekap.Status != "hadir" {
+			continue
+		}
+		
+		totalHadir++
+		
+		// Count metode input
+		if rekap.MetodeInput == "manual" {
+			inputManual++
+		} else if rekap.MetodeInput == "auto" {
+			inputAuto++
+		}
+		
+		// Get peserta_didik_id for this rekap
+		var pesertaDidikRombel models.PesertaDidikRombel
+		if err := s.db.Select("peserta_didik_id").First(&pesertaDidikRombel, rekap.PesertaDidikRombelID).Error; err != nil {
+			continue
+		}
+		
+		// Check if there's absensi scan data
+		if absensi, exists := absensiMap[pesertaDidikRombel.PesertaDidikID]; exists && absensi.JamDatang != nil {
+			// Calculate lateness in minutes
+			jamDatang := *absensi.JamDatang
+			jamMax := konfigAbsensi.JamMaxDatang
+			
+			// Parse time strings to calculate difference
+			datangTime, _ := time.Parse("15:04:05", jamDatang)
+			maxTime, _ := time.Parse("15:04:05", jamMax)
+			
+			diffMinutes := int(datangTime.Sub(maxTime).Minutes())
+			
+			if diffMinutes <= 0 {
+				// Tepat waktu
+				tepatWaktu++
+				tepatWaktuCount++
+			} else {
+				// Terlambat
+				terlambat++
+				
+				// Categorize lateness
+				if diffMinutes >= 1 && diffMinutes <= 5 {
+					telat1_5++
+				} else if diffMinutes >= 6 && diffMinutes <= 15 {
+					telat6_15++
+				} else if diffMinutes >= 16 && diffMinutes <= 30 {
+					telat16_30++
+				} else if diffMinutes > 30 {
+					telatLebih30++
+				}
+			}
+		}
+	}
+	
+	// Calculate percentages
+	tepatWaktuPersen := 0.0
+	terlambatPersen := 0.0
+	inputManualPersen := 0.0
+	inputAutoPersen := 0.0
+	
+	if totalHadir > 0 {
+		tepatWaktuPersen = float64(tepatWaktu) / float64(totalHadir) * 100
+		terlambatPersen = float64(terlambat) / float64(totalHadir) * 100
+		inputManualPersen = float64(inputManual) / float64(totalHadir) * 100
+		inputAutoPersen = float64(inputAuto) / float64(totalHadir) * 100
+	}
+	
+	// Total untuk distribusi keterlambatan (hanya yang ada data scan)
+	totalDistribusi := tepatWaktuCount + telat1_5 + telat6_15 + telat16_30 + telatLebih30
+	
+	// Calculate distribusi percentages
+	tepatWaktuDistPersen := 0.0
+	telat1_5Persen := 0.0
+	telat6_15Persen := 0.0
+	telat16_30Persen := 0.0
+	telatLebih30Persen := 0.0
+	
+	if totalDistribusi > 0 {
+		tepatWaktuDistPersen = float64(tepatWaktuCount) / float64(totalDistribusi) * 100
+		telat1_5Persen = float64(telat1_5) / float64(totalDistribusi) * 100
+		telat6_15Persen = float64(telat6_15) / float64(totalDistribusi) * 100
+		telat16_30Persen = float64(telat16_30) / float64(totalDistribusi) * 100
+		telatLebih30Persen = float64(telatLebih30) / float64(totalDistribusi) * 100
+	}
+	
+	// Build response
+	response := &dtos.GrafikKedatanganKepulanganResponse{
+		Summary: dtos.SummaryKedatanganKepulangan{
+			TotalHadir:        totalHadir,
+			TepatWaktu:        tepatWaktu,
+			TepatWaktuPersen:  float64(int(tepatWaktuPersen*100)) / 100,
+			Terlambat:         terlambat,
+			TerlambatPersen:   float64(int(terlambatPersen*100)) / 100,
+			InputManual:       inputManual,
+			InputManualPersen: float64(int(inputManualPersen*100)) / 100,
+			InputAuto:         inputAuto,
+			InputAutoPersen:   float64(int(inputAutoPersen*100)) / 100,
+		},
+		DistribusiTelat: dtos.DistribusiKeterlambatan{
+			Labels:     []string{"Tepat Waktu", "Terlambat 1-5 Menit", "Terlambat 6-15 Menit", "Terlambat 16-30 Menit", "Terlambat >30 Menit"},
+			Data:       []int{tepatWaktuCount, telat1_5, telat6_15, telat16_30, telatLebih30},
+			Persentase: []float64{
+				float64(int(tepatWaktuDistPersen*100)) / 100,
+				float64(int(telat1_5Persen*100)) / 100,
+				float64(int(telat6_15Persen*100)) / 100,
+				float64(int(telat16_30Persen*100)) / 100,
+				float64(int(telatLebih30Persen*100)) / 100,
+			},
+			Detail: []dtos.DetailDistribusiTelat{
+				{
+					Kategori:   "Tepat Waktu",
+					Jumlah:     tepatWaktuCount,
+					Persentase: float64(int(tepatWaktuDistPersen*100)) / 100,
+				},
+				{
+					Kategori:   "Terlambat 1-5 Menit",
+					Jumlah:     telat1_5,
+					Persentase: float64(int(telat1_5Persen*100)) / 100,
+				},
+				{
+					Kategori:   "Terlambat 6-15 Menit",
+					Jumlah:     telat6_15,
+					Persentase: float64(int(telat6_15Persen*100)) / 100,
+				},
+				{
+					Kategori:   "Terlambat 16-30 Menit",
+					Jumlah:     telat16_30,
+					Persentase: float64(int(telat16_30Persen*100)) / 100,
+				},
+				{
+					Kategori:   "Terlambat >30 Menit",
+					Jumlah:     telatLebih30,
+					Persentase: float64(int(telatLebih30Persen*100)) / 100,
+				},
+			},
+		},
+	}
+	
+	return response, nil
 }

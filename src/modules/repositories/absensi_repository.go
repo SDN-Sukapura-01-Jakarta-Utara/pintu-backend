@@ -30,6 +30,8 @@ type AbsensiRepository interface {
 	GetAbsensiScanByMonth(bulan, tahun int) ([]models.Absensi, error)
 	GetRekapByRombelTanggalBidangStudi(rombelID, tahunPelajaranID uint, tanggal time.Time, bidangStudiID *uint) ([]models.RekapitulasiAbsensi, error)
 	GetRekapAbsensiByPesertaDidik(tahunPelajaranID, rombelID, pesertaDidikID, pesertaDidikRombelID uint, bulan, tahun, semester int) ([]models.Absensi, []models.RekapitulasiAbsensi, error)
+	GetRekapKedatanganKepulangan(rombelID *uint, tanggal time.Time) ([]models.Absensi, []models.RekapitulasiAbsensi, error)
+	GetGrafikKedatanganKepulangan(rombelID *uint, tanggal time.Time) ([]models.Absensi, []models.RekapitulasiAbsensi, error)
 }
 
 type AbsensiRepositoryImpl struct {
@@ -476,6 +478,89 @@ func (r *AbsensiRepositoryImpl) GetRekapAbsensiByPesertaDidik(tahunPelajaranID, 
 		Order("tanggal ASC").
 		Find(&rekapData).Error; err != nil {
 		return nil, nil, err
+	}
+	
+	return absensiData, rekapData, nil
+}
+
+// GetRekapKedatanganKepulangan retrieves attendance arrival and departure data for all students in a rombel (or all rombel if rombelID is nil) on a specific date
+func (r *AbsensiRepositoryImpl) GetRekapKedatanganKepulangan(rombelID *uint, tanggal time.Time) ([]models.Absensi, []models.RekapitulasiAbsensi, error) {
+	// Get all rekapitulasi absensi for this date (with peserta didik data)
+	// If rombelID is provided, filter by rombel_id; otherwise get all rombel
+	// Sorted by rombel name (alfabetik) and then by student name (A-Z)
+	var rekapData []models.RekapitulasiAbsensi
+	query := r.db.Preload("PesertaDidikRombel.PesertaDidik").Preload("Rombel").
+		Joins("LEFT JOIN rombel ON rombel.id = rekapitulasi_absensi.rombel_id").
+		Joins("LEFT JOIN peserta_didik_rombel ON peserta_didik_rombel.id = rekapitulasi_absensi.peserta_didik_rombel_id").
+		Joins("LEFT JOIN peserta_didik ON peserta_didik.id = peserta_didik_rombel.peserta_didik_id").
+		Where("rekapitulasi_absensi.tanggal = ? AND rekapitulasi_absensi.bidang_studi_id IS NULL", tanggal)
+	
+	// Add rombel_id filter if provided
+	if rombelID != nil {
+		query = query.Where("rekapitulasi_absensi.rombel_id = ?", *rombelID)
+	}
+	
+	if err := query.Order("rombel.name ASC, peserta_didik.nama ASC").
+		Find(&rekapData).Error; err != nil {
+		return nil, nil, err
+	}
+	
+	// Collect all peserta_didik_ids from rekapitulasi
+	pesertaDidikIDs := []uint{}
+	for _, rekap := range rekapData {
+		if rekap.PesertaDidikRombel != nil && rekap.PesertaDidikRombel.PesertaDidik != nil {
+			pesertaDidikIDs = append(pesertaDidikIDs, rekap.PesertaDidikRombel.PesertaDidik.ID)
+		}
+	}
+	
+	// Get absensi scan data for these students on this date
+	var absensiData []models.Absensi
+	if len(pesertaDidikIDs) > 0 {
+		if err := r.db.Where("peserta_didik_id IN ? AND tanggal = ?", pesertaDidikIDs, tanggal).
+			Find(&absensiData).Error; err != nil {
+			return nil, nil, err
+		}
+	}
+	
+	return absensiData, rekapData, nil
+}
+
+
+// GetGrafikKedatanganKepulangan retrieves data for arrival and departure chart on a specific date
+func (r *AbsensiRepositoryImpl) GetGrafikKedatanganKepulangan(rombelID *uint, tanggal time.Time) ([]models.Absensi, []models.RekapitulasiAbsensi, error) {
+	// Get all rekapitulasi absensi for this date
+	// If rombelID is provided, filter by rombel_id; otherwise get all rombel
+	var rekapData []models.RekapitulasiAbsensi
+	query := r.db.Where("tanggal = ? AND bidang_studi_id IS NULL", tanggal)
+	
+	// Add rombel_id filter if provided
+	if rombelID != nil {
+		query = query.Where("rombel_id = ?", *rombelID)
+	}
+	
+	if err := query.Find(&rekapData).Error; err != nil {
+		return nil, nil, err
+	}
+	
+	// Collect all peserta_didik_ids from rekapitulasi
+	pesertaDidikIDs := []uint{}
+	for _, rekap := range rekapData {
+		if rekap.PesertaDidikRombelID != 0 {
+			// Get peserta_didik_id from peserta_didik_rombel
+			var pesertaDidikRombel models.PesertaDidikRombel
+			if err := r.db.Select("peserta_didik_id").First(&pesertaDidikRombel, rekap.PesertaDidikRombelID).Error; err == nil {
+				pesertaDidikIDs = append(pesertaDidikIDs, pesertaDidikRombel.PesertaDidikID)
+			}
+		}
+	}
+	
+	// Get absensi scan data for these students on this date
+	var absensiData []models.Absensi
+	if len(pesertaDidikIDs) > 0 {
+		if err := r.db.Where("peserta_didik_id IN ? AND tanggal = ?", pesertaDidikIDs, tanggal).
+			Find(&absensiData).Error; err != nil {
+			return nil, nil, err
+		}
 	}
 	
 	return absensiData, rekapData, nil

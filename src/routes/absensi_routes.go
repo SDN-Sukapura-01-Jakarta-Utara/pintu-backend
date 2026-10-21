@@ -36,6 +36,12 @@ func RegisterAbsensiRoutes(router *gin.Engine, db *gorm.DB) {
 		// Get rekap absensi by peserta didik
 		api.POST("/get-rekap-absensi-by-peserta-didik", controller.GetRekapAbsensiByPesertaDidik)
 		
+		// Get rekap kedatangan kepulangan
+		api.POST("/rekap-kedatangan-kepulangan", controller.GetRekapKedatanganKepulangan)
+		
+		// Get grafik kedatangan kepulangan
+		api.POST("/grafik-kedatangan-kepulangan", controller.GetGrafikKedatanganKepulangan)
+		
 		// Update rekap absensi
 		api.POST("/update-rekap-absensi", controller.UpdateRekapAbsensi)
 		

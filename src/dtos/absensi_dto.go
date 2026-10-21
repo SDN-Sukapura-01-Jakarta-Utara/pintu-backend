@@ -509,3 +509,73 @@ type DetailAbsensiHarian struct {
 	FileSurat        string  `json:"file_surat"`        // from rekapitulasi_absensi
 	MetodeInput      string  `json:"metode_input"`      // from rekapitulasi_absensi (auto/manual)
 }
+
+// RekapKedatanganKepulanganRequest represents request for attendance arrival and departure recap
+type RekapKedatanganKepulanganRequest struct {
+	RombelID *uint  `json:"rombel_id"` // Optional: if null, get all students from all rombel
+	Tanggal  string `json:"tanggal" binding:"required"` // Format: YYYY-MM-DD
+}
+
+// RekapKedatanganKepulanganSiswa represents attendance arrival and departure for a single student
+type RekapKedatanganKepulanganSiswa struct {
+	PesertaDidikID   uint    `json:"peserta_didik_id"`
+	NIS              string  `json:"nis"`
+	Nama             string  `json:"nama"`
+	RombelNama       string  `json:"rombel_nama"`
+	JamKedatangan    *string `json:"jam_kedatangan"`    // from absensi table (jam_datang)
+	JamKepulangan    *string `json:"jam_kepulangan"`    // from absensi table (jam_pulang)
+	StatusKedatangan *string `json:"status_kedatangan"` // from absensi table (tepat waktu / terlambat)
+	StatusKehadiran  string  `json:"status_kehadiran"`  // from rekapitulasi_absensi (status)
+	Keterangan       string  `json:"keterangan"`        // from rekapitulasi_absensi
+	FileSurat        string  `json:"file_surat"`        // from rekapitulasi_absensi
+	MetodeInput      string  `json:"metode_input"`      // from rekapitulasi_absensi (auto/manual)
+}
+
+// RekapKedatanganKepulanganResponse represents response for attendance arrival and departure recap
+type RekapKedatanganKepulanganResponse struct {
+	RombelID   *uint                            `json:"rombel_id,omitempty"` // null if filtering all rombel
+	RombelNama string                           `json:"rombel_nama,omitempty"`
+	Tanggal    string                           `json:"tanggal"`
+	TotalSiswa int                              `json:"total_siswa"`
+	DataSiswa  []RekapKedatanganKepulanganSiswa `json:"data_siswa"`
+}
+
+// GrafikKedatanganKepulanganRequest represents request for arrival and departure chart
+type GrafikKedatanganKepulanganRequest struct {
+	RombelID *uint  `json:"rombel_id"`                       // Optional: if null, get all rombel
+	Tanggal  string `json:"tanggal" binding:"required"`      // Format: YYYY-MM-DD
+}
+
+// GrafikKedatanganKepulanganResponse represents response for arrival and departure chart
+type GrafikKedatanganKepulanganResponse struct {
+	Summary          SummaryKedatanganKepulangan     `json:"summary"`
+	DistribusiTelat  DistribusiKeterlambatan         `json:"distribusi_keterlambatan"`
+}
+
+// SummaryKedatanganKepulangan represents summary of arrival and departure
+type SummaryKedatanganKepulangan struct {
+	TotalHadir         int     `json:"total_hadir"`
+	TepatWaktu         int     `json:"tepat_waktu"`
+	TepatWaktuPersen   float64 `json:"tepat_waktu_persen"`
+	Terlambat          int     `json:"terlambat"`
+	TerlambatPersen    float64 `json:"terlambat_persen"`
+	InputManual        int     `json:"input_manual"`
+	InputManualPersen  float64 `json:"input_manual_persen"`
+	InputAuto          int     `json:"input_auto"`
+	InputAutoPersen    float64 `json:"input_auto_persen"`
+}
+
+// DistribusiKeterlambatan represents distribution of tardiness
+type DistribusiKeterlambatan struct {
+	Labels      []string                  `json:"labels"`
+	Data        []int                     `json:"data"`
+	Persentase  []float64                 `json:"persentase"`
+	Detail      []DetailDistribusiTelat   `json:"detail"`
+}
+
+// DetailDistribusiTelat represents detail of tardiness distribution
+type DetailDistribusiTelat struct {
+	Kategori    string  `json:"kategori"`
+	Jumlah      int     `json:"jumlah"`
+	Persentase  float64 `json:"persentase"`
+}

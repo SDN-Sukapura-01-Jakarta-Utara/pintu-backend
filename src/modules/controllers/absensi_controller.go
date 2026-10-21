@@ -433,3 +433,42 @@ func (c *AbsensiController) GetRekapAbsensiByPesertaDidik(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"data": result})
 }
+
+// GetRekapKedatanganKepulangan retrieves attendance arrival and departure recap for all students in a rombel on a specific date
+func (c *AbsensiController) GetRekapKedatanganKepulangan(ctx *gin.Context) {
+	var req dtos.RekapKedatanganKepulanganRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetRekapKedatanganKepulangan(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
+
+
+// GetGrafikKedatanganKepulangan retrieves chart data for arrival and departure analysis
+func (c *AbsensiController) GetGrafikKedatanganKepulangan(ctx *gin.Context) {
+	var req dtos.GrafikKedatanganKepulanganRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		errors := utils.FormatValidationError(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"errors": errors})
+		return
+	}
+
+	// Call service
+	result, err := c.service.GetGrafikKedatanganKepulangan(&req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"data": result})
+}
